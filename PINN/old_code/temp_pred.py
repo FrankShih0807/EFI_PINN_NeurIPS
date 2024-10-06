@@ -93,7 +93,7 @@ temps = eq(times)
 # Make training data
 n_samples = 10
 t = torch.linspace(0, 300, 10).reshape(n_samples, -1)
-T = eq(t) +  2 * torch.randn(10).reshape(n_samples, -1)
+T = eq(t) +  torch.randn(10).reshape(n_samples, -1)
 
 # print(t.shape, T.shape)
 # print(temps.shape, times.shape)
