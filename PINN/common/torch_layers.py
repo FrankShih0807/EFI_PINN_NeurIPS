@@ -43,7 +43,82 @@ class SparseDNN(BaseNetwork):
         self.sparse_sd = sparse_sd
         
         self.gmm = GaussianMixtureModel(prior_sd, sparse_sd)
+        
+        for p in self.parameters():
+            p.data = torch.randn_like(p.data) * 0.02
+        #     print(p)
+        # raise
+    
+    def mixture_gaussian_prior(self, sparsity=None):
+        if sparsity is None:
+            sparsity = self.sparsity
+        log_prior = 0
+        for p in self.parameters():
+            # print(p.shape)
+            log_prior += self.gmm.log_prob(p.flatten(), sparsity).sum()
+        return log_prior
 
+    
+class GaussianMixtureModel:
+    def __init__(self, prior_sd, sparse_sd):
+        """
+        Initialize the GMM with means, standard deviations, and mixture weights for each component.
+        :param means: A tensor of shape (2,) containing the means of the two Gaussians.
+        :param stds: A tensor of shape (2,) containing the standard deviations of the two Gaussians.
+        :param mixture_weights: A tensor of shape (2,) containing the mixture weights of the two Gaussians.
+        """
+        self.means = torch.tensor([0.0, 0.0])  # Means of the two Gaussians
+        self.stds = torch.tensor([prior_sd, sparse_sd])   # Standard deviations of the two Gaussians
+        self.components = dist.Normal(self.means, self.stds)
+
+
+    def log_prob(self, x, sparsity):
+        """
+        Calculate the log probability of data points x under the GMM.
+        :param x: A tensor of data points.
+        :return: A tensor of log probabilities.
+        """
+        # Calculate log probabilities from each component for each data point
+        log_probs = self.components.log_prob(x.unsqueeze(1))  # Shape will be [N, num_components]
+        # Weight log probabilities by the log of mixture weights
+        self.mixture_weights = torch.tensor([sparsity, 1-sparsity])  # Ensure weights sum to 1
+        log_weighted_probs = log_probs + torch.log(self.mixture_weights)
+        # Log-sum-exp trick for numerical stability: log(sum(exp(log_probs)))
+        log_sum_exp = torch.logsumexp(log_weighted_probs, dim=1)
+        return log_sum_exp
+    
+    
+class EncoderSparseDNN(nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_dim, activation_fn=nn.ReLU, prior_sd=0.01, sparse_sd=0.001 , sparsity=0.5):
+        super().__init__()
+        # Define layers
+        self.fc_y = nn.Linear(1, hidden_dim)
+        self.activation_fn = activation_fn()
+        self.fc_x = nn.Linear(input_dim, hidden_dim)
+        self.fc_z = nn.Linear(1, hidden_dim)
+        self.fc2 = nn.Linear(3 * hidden_dim, hidden_dim)
+        self.fc3 = nn.Linear(hidden_dim, output_dim)
+        
+        
+        # Define sparsity
+        self.sparsity = sparsity
+        self.prior_sd = prior_sd
+        self.sparse_sd = sparse_sd
+        
+        self.gmm = GaussianMixtureModel(prior_sd, sparse_sd)
+
+    def forward(self, y, x, z):
+        # Pass inputs through the first layer and apply activation_fn
+        y_out = self.activation_fn(self.fc_y(y))
+        x_out = self.activation_fn(self.fc_x(x))
+        z_out = self.activation_fn(self.fc_z(z))
+
+        # Concatenate the outputs and pass through the next layers
+        concatenated = torch.cat((y_out, x_out, z_out), dim=1)
+        hidden_out = self.activation_fn(self.fc2(concatenated))
+        output = self.fc3(hidden_out)
+
+        return output
     
     def mixture_gaussian_prior(self, sparsity=None):
         if sparsity is None:
