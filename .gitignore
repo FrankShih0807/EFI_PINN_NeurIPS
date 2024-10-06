@@ -1,0 +1,10 @@
+output/
+*pycache*
+*ipynb*
+*.sub
+*.sh
+*log/
+output*
+.DS_Store
+*.egg-info/
+*.ipynb
