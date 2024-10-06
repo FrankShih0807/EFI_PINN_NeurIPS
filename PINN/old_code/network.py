@@ -31,16 +31,17 @@ class Net(nn.Module):
         self.loss2_weight = loss2_weight
         self.lr = lr
         self.n_units = n_units
+        self.activation = nn.ReLU
 
         self.layers = nn.Sequential(
             nn.Linear(input_dim, self.n_units),
-            nn.ReLU(),
+            self.activation(),
             nn.Linear(self.n_units, self.n_units),
-            nn.ReLU(),
+            self.activation(),
             nn.Linear(self.n_units, self.n_units),
-            nn.ReLU(),
+            self.activation(),
             nn.Linear(self.n_units, self.n_units),
-            nn.ReLU(),
+            self.activation(),
         )
         self.out = nn.Linear(self.n_units, output_dim)
 
