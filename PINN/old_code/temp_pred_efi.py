@@ -57,14 +57,24 @@ class Net(nn.Module):
         self.activation = nn.ReLU
 
         self.net = BaseNetwork(input_size=input_dim, output_size=output_dim, hidden_layers=net_arch, activation_fn=nn.ReLU)
+        self.parameter_size = self.net.parameter_size
         
-        # self.inverse_net = SparseDNN(input_size=output_dim, output_size=input_dim, hidden_layers=net_arch, activation_fn=nn.ReLU)
+        self.inverse_net = SparseDNN(input_size=output_dim, output_size=self.parameter_size, hidden_layers=net_arch, activation_fn=nn.ReLU)
 
+    def _build_inverse_net(self, n_samples):
+        return SparseDNN(input_size=self.net.parameter_size, output_size=n_samples, hidden_layers=self.net_arch, activation_fn=nn.ReLU)
+    
+    def _initialize_latent(self, n_samples):
+        self.Z = torch.randn(n_samples, 1).requires_grad_()
+        
 
     def forward(self, x):
         return self.net(x)
 
     def fit(self, X, y):
+        n_samples = y.shape[0]
+        
+        
         optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         self.train()
         losses = []
@@ -96,9 +106,9 @@ temps = eq(times)
 
 # Make training data
 n_samples = 10
-obs_noise = 2
+obs_sd = 2
 t = torch.linspace(0, 300, 10).reshape(n_samples, -1)
-T = eq(t) +  obs_noise * torch.randn(10).reshape(n_samples, -1)
+T = eq(t) +  obs_sd * torch.randn(10).reshape(n_samples, -1)
 
 
 
@@ -111,7 +121,7 @@ def physics_loss(model: torch.nn.Module):
     return torch.mean(pde**2)
 
 # net_arch = [100, 100, 100, 100]
-net_arch = [64, 64]
+net_arch = [32, 32]
 net = Net(1,1, net_arch, loss2=physics_loss, epochs=20000, loss2_weight=1, lr=1e-4).to(DEVICE)
 
 losses = net.fit(t, T)

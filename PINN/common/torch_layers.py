@@ -50,9 +50,9 @@ class SparseDNN(BaseNetwork):
             sparsity = self.sparsity
         log_prior = 0
         for p in self.parameters():
-            print(p.shape)
-            # log_prior += self.gmm.log_prob(p, sparsity).sum()
-        # return log_prior
+            # print(p.shape)
+            log_prior += self.gmm.log_prob(p.flatten(), sparsity).sum()
+        return log_prior
 
     
 class GaussianMixtureModel:
@@ -85,8 +85,12 @@ class GaussianMixtureModel:
 
 if __name__ == '__main__':
     
-    model = SparseDNN(10, 20, hidden_layers=[32, 32], activation_fn=nn.Tanh, prior_sd=0.01, sparse_sd=0.001 , sparsity=0.5)
+    model = SparseDNN(1, 1, hidden_layers=[32, 32], activation_fn=nn.Tanh, prior_sd=0.01, sparse_sd=0.001 , sparsity=0.5)
     print(model.parameter_size)
     
 
-    model.mixture_gaussian_prior()
+    print(model.mixture_gaussian_prior())
+    
+    x = torch.randn(3, 4, 5)
+    print(x.shape)
+    print(x.numel())
