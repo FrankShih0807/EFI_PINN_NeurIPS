@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import seaborn as sns
-from PINN.common import BaseNetwork
+from PINN.common import BaseNetwork, SparseDNN
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -41,6 +41,7 @@ class Net(nn.Module):
         epochs=1000,
         loss=nn.MSELoss(),
         lr=1e-3,
+        sgld_lr=1e-3,
         loss2=None,
         loss2_weight=0.1,
     ) -> None:
@@ -51,23 +52,26 @@ class Net(nn.Module):
         self.loss2 = loss2
         self.loss2_weight = loss2_weight
         self.lr = lr
+        self.sgld_lr = sgld_lr
         self.net_arch = net_arch
         self.activation = nn.ReLU
 
         self.net = BaseNetwork(input_size=input_dim, output_size=output_dim, hidden_layers=net_arch, activation_fn=nn.ReLU)
+        
+        # self.inverse_net = SparseDNN(input_size=output_dim, output_size=input_dim, hidden_layers=net_arch, activation_fn=nn.ReLU)
 
 
     def forward(self, x):
         return self.net(x)
 
-    def fit(self, Xt, yt):
+    def fit(self, X, y):
         optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         self.train()
         losses = []
         for ep in range(self.epochs):
             optimiser.zero_grad()
-            outputs = self.forward(Xt)
-            loss = self.loss(yt, outputs)
+            outputs = self.forward(X)
+            loss = self.loss(y, outputs)
             if self.loss2:
                 loss += self.loss2_weight + self.loss2_weight * self.loss2(self)
             loss.backward()
@@ -92,12 +96,9 @@ temps = eq(times)
 
 # Make training data
 n_samples = 10
+obs_noise = 2
 t = torch.linspace(0, 300, 10).reshape(n_samples, -1)
-T = eq(t) +  2 * torch.randn(10).reshape(n_samples, -1)
-
-# print(t.shape, T.shape)
-# print(temps.shape, times.shape)
-# raise
+T = eq(t) +  obs_noise * torch.randn(10).reshape(n_samples, -1)
 
 
 
@@ -109,8 +110,9 @@ def physics_loss(model: torch.nn.Module):
     
     return torch.mean(pde**2)
 
-net_arch = [100, 100, 100, 100]
-net = Net(1,1, net_arch, loss2=physics_loss, epochs=10000, loss2_weight=1, lr=1e-4).to(DEVICE)
+# net_arch = [100, 100, 100, 100]
+net_arch = [64, 64]
+net = Net(1,1, net_arch, loss2=physics_loss, epochs=20000, loss2_weight=1, lr=1e-4).to(DEVICE)
 
 losses = net.fit(t, T)
 # plt.plot(losses)

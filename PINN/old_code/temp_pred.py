@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import seaborn as sns
-from PINN.common import BaseNetwork
+from PINN.common import BaseNetwork, SparseDNN
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -60,14 +60,14 @@ class Net(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-    def fit(self, Xt, yt):
+    def fit(self, X, y):
         optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         self.train()
         losses = []
         for ep in range(self.epochs):
             optimiser.zero_grad()
-            outputs = self.forward(Xt)
-            loss = self.loss(yt, outputs)
+            outputs = self.forward(X)
+            loss = self.loss(y, outputs)
             if self.loss2:
                 loss += self.loss2_weight + self.loss2_weight * self.loss2(self)
             loss.backward()
@@ -124,4 +124,4 @@ plt.plot(times, preds, alpha=0.8)
 plt.legend(labels=['Equation','Training data', 'PINN'])
 plt.ylabel('Temperature (C)')
 plt.xlabel('Time (s)')
-plt.savefig('temp_pred_efi.png')
+plt.savefig('temp_pred.png')
