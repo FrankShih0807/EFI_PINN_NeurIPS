@@ -6,6 +6,8 @@ requirements are:
 - numpy
 - matplotlib
 - seaborn
+- ruamel.yaml 
+- tqdm
 
 ## install package and requirements
 ```bash
