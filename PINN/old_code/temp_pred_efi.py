@@ -8,11 +8,12 @@ import torch.optim as optim
 import seaborn as sns
 from PINN.common import BaseNetwork, SparseDNN, SGLD
 from PINN.common.net_in_net import EFI_Net
+from collections import deque
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 sns.set_theme()
-# torch.manual_seed(42)
+torch.manual_seed(42)
 
 np.random.seed(10)
 
@@ -64,6 +65,7 @@ class Net(nn.Module):
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         
         # self.parameter_size = self.net.parameter_size
+        self.collection = []
         
 
     def _build_encoder(self, encoder_input_dim):
@@ -136,15 +138,28 @@ class Net(nn.Module):
             
             
             ## 3. Loss calculation
-            
-            loss = self.loss(y, self.net(X))
-            # if self.loss2:
-            #     loss += self.loss2_weight * self.loss2(self)
-            losses.append(loss.item())
             if ep % int(self.epochs / 100) == 0:
+                loss = self.loss(y, self.net(X))
+                losses.append(loss.item())
                 print(f"Epoch {ep}/{self.epochs}, loss: {losses[-1]:.2f}")
+                
+            if ep > self.epochs - 1000:
+                y_pred = self.evaluate()
+                self.collection.append(y_pred)
         return losses
     
+    def evaluate(self):
+        x = torch.linspace(0, T_extend, T_extend).view(-1,1)
+        y = self.net(x).detach().flatten()
+        return y
+    
+    def summary(self):
+        y_pred_mat = torch.stack(self.collection, dim=0)
+        y_pred_upper = torch.quantile(y_pred_mat, 0.975, dim=0)
+        y_pred_lower = torch.quantile(y_pred_mat, 0.025, dim=0)
+        y_pred_mean = torch.mean(y_pred_mat, dim=0)
+        return y_pred_upper, y_pred_lower, y_pred_mean
+        
     def latent_loss(self, n_samples, lambda_1, lambda_2, y , tilde_y, thetas, bar_theta, Z):
         loss = lambda_2 * self.loss(y,tilde_y) + lambda_1 * self.loss(thetas,bar_theta.repeat(n_samples,1)) + torch.mean(Z**2)/2
         if self.loss2 is not None:
@@ -158,7 +173,8 @@ class Net(nn.Module):
         if self.loss2 is not None:
             loss += lambda_2 * self.loss2_weight * self.loss2(self.net)
         return loss
-        
+    
+    
             
 
     def predict(self, X):
@@ -170,12 +186,13 @@ class Net(nn.Module):
 Tenv = 25
 T0 = 100
 R = 0.005
-times = torch.linspace(0, 1000, 1000)
+T_extend = 1000
+times = torch.linspace(0, T_extend, T_extend)
 eq = functools.partial(cooling_law, Tenv=Tenv, T0=T0, R=R)
 temps = eq(times)
 
 # Make training data
-n_samples = 100
+n_samples = 300
 obs_sd = 1
 t = torch.linspace(0, 300, n_samples).reshape(n_samples, -1)
 T = eq(t) +  obs_sd * torch.randn(n_samples).reshape(n_samples, -1)
@@ -183,7 +200,7 @@ T = eq(t) +  obs_sd * torch.randn(n_samples).reshape(n_samples, -1)
 
 
 def physics_loss(model: torch.nn.Module):
-    ts = torch.linspace(0, 1000, steps=1000,).view(-1,1).requires_grad_(True)
+    ts = torch.linspace(0, T_extend, steps=T_extend,).view(-1,1).requires_grad_(True)
     temps = model(ts)
     # print(temps)
     # raise
@@ -194,7 +211,7 @@ def physics_loss(model: torch.nn.Module):
 
 # net_arch = [100, 100, 100, 100]
 net_arch = [15, 15]
-net = Net(1,1, net_arch, loss2=physics_loss, epochs=10000, loss2_weight=1, lr=1e-4, sgld_lr=1e-4)
+net = Net(1,1, net_arch, loss2=physics_loss, epochs=10000, loss2_weight=5, lr=1e-5, sgld_lr=1e-4)
 
 
 losses = net.fit(t, T)
@@ -202,10 +219,12 @@ losses = net.fit(t, T)
 # plt.yscale('log')
 
 preds = net.predict(times.reshape(-1,1))
+preds_upper, preds_lower, preds_mean = net.summary()
 
 plt.plot(times, temps, alpha=0.8)
 plt.plot(t, T, 'o')
-plt.plot(times, preds, alpha=0.8)
+plt.plot(times, preds_mean, alpha=0.8)
+plt.fill_between(times, preds_upper, preds_lower, alpha=0.2)
 plt.legend(labels=['Equation','Training data', 'PINN-EFI'])
 plt.ylabel('Temperature (C)')
 plt.xlabel('Time (s)')

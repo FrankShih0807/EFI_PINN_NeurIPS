@@ -92,7 +92,7 @@ eq = functools.partial(cooling_law, Tenv=Tenv, T0=T0, R=R)
 temps = eq(times)
 
 # Make training data
-n_samples = 500
+n_samples = 300
 t = torch.linspace(0, 300, n_samples).reshape(n_samples, -1)
 T = eq(t) +  torch.randn(n_samples).reshape(n_samples, -1)
 
@@ -111,7 +111,7 @@ def physics_loss(model: torch.nn.Module):
     return torch.mean(pde**2)
 
 net_arch = [15, 15]
-net = Net(1,1, net_arch, loss2=physics_loss, epochs=10000, loss2_weight=1, lr=1e-3).to(DEVICE)
+net = Net(1,1, net_arch, loss2=physics_loss, epochs=10000, loss2_weight=5, lr=1e-3).to(DEVICE)
 # net = Net(1,1, net_arch, loss2=None, epochs=30000, loss2_weight=1, lr=1e-3).to(DEVICE)
 
 losses = net.fit(t, T)

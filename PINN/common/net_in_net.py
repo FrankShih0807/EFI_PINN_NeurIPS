@@ -52,7 +52,7 @@ class NetG(nn.Module):
         return {'w1': w1, 'b1': b1, 'w2': w2, 'b2': b2}
 
 class EFI_Net(nn.Module):
-    def __init__(self, input_dim=1, output_dim=1, hidden_dim=15, activation=nn.ReLU, prior_sd=0.01, sparse_sd=0.001 , sparsity=0.5):
+    def __init__(self, input_dim=1, output_dim=1, hidden_dim=15, activation=nn.ReLU, prior_sd=0.1, sparse_sd=0.001 , sparsity=1.0):
         super(EFI_Net, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -141,10 +141,13 @@ class EncoderNetwork(nn.Module):
         loss4 = self.loss(out4, out4.mean(dim=0).repeat(out4.shape[0], 1))
         loss5 = self.loss(out5, out5.mean(dim=0).repeat(out5.shape[0], 1, 1))
         loss6 = self.loss(out6, out6.mean(dim=0).repeat(out6.shape[0], 1))
-        
-        l2_loss = out1.mean(dim=0).pow(2).sum() + out2.mean(dim=0).pow(2).sum() + out3.mean(dim=0).pow(2).sum() + out4.mean(dim=0).pow(2).sum() + out5.mean(dim=0).pow(2).sum() + out6.mean(dim=0).pow(2).sum()
-        
-        return (loss1 + loss2 + loss3 + loss4 + loss5 + loss6) / self.N + l2_loss
+
+        sparse_loss = self.sparsify(out1.mean(dim=0)) + self.sparsify(out2) + self.sparsify(out3.mean(dim=0)) + self.sparsify(out4) + self.sparsify(out5.mean(dim=0)) + self.sparsify(out6)
+        return (loss1 + loss2 + loss3 + loss4 + loss5 + loss6) / self.N + sparse_loss
+    
+    def sparsify(self, x):
+        masked_loss = torch.where(x.abs() > 0.1, torch.zeros_like(x.abs()), x.abs())
+        return masked_loss.sum()
     
     def forward_mean(self, x):
         x = self.activation_fn(self.fc1(x))  # [batch_size, hidden_dim]
