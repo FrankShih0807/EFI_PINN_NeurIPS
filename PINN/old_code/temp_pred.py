@@ -52,9 +52,10 @@ class Net(nn.Module):
         self.loss2_weight = loss2_weight
         self.lr = lr
         self.net_arch = net_arch
-        self.activation = nn.ReLU
+        self.activation = nn.Softplus
+        # self.activation = nn.ReLU
 
-        self.net = BaseNetwork(input_size=input_dim, output_size=output_dim, hidden_layers=net_arch, activation_fn=nn.ReLU)
+        self.net = BaseNetwork(input_size=input_dim, output_size=output_dim, hidden_layers=net_arch, activation_fn=self.activation)
 
 
     def forward(self, x):
@@ -91,7 +92,7 @@ eq = functools.partial(cooling_law, Tenv=Tenv, T0=T0, R=R)
 temps = eq(times)
 
 # Make training data
-n_samples = 100
+n_samples = 500
 t = torch.linspace(0, 300, n_samples).reshape(n_samples, -1)
 T = eq(t) +  torch.randn(n_samples).reshape(n_samples, -1)
 
@@ -109,8 +110,8 @@ def physics_loss(model: torch.nn.Module):
     
     return torch.mean(pde**2)
 
-net_arch = [20, 20]
-net = Net(1,1, net_arch, loss2=physics_loss, epochs=30000, loss2_weight=1, lr=1e-3).to(DEVICE)
+net_arch = [15, 15]
+net = Net(1,1, net_arch, loss2=physics_loss, epochs=10000, loss2_weight=1, lr=1e-3).to(DEVICE)
 # net = Net(1,1, net_arch, loss2=None, epochs=30000, loss2_weight=1, lr=1e-3).to(DEVICE)
 
 losses = net.fit(t, T)

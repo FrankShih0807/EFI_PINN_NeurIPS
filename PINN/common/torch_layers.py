@@ -158,6 +158,20 @@ class GaussianMixtureModel:
         log_sum_exp = torch.logsumexp(log_weighted_probs, dim=1)
         return log_sum_exp
 
+
+
+class CustomDenseLayer(nn.Module):
+    def __init__(self, input_size, output_size):
+        super(CustomDenseLayer, self).__init__()
+        # Initialize weights and bias manually
+        self.weights = nn.Parameter(torch.randn(input_size, output_size))  # Weight matrix
+        self.bias = nn.Parameter(torch.randn(output_size))  # Bias vector
+
+    def forward(self, x):
+        # Perform matrix multiplication (x * weights) and add the bias
+        return torch.matmul(x, self.weights) + self.bias
+
+
 if __name__ == '__main__':
     
     model = SparseDNN(1, 1, hidden_layers=[32, 32], activation_fn=nn.Tanh, prior_sd=0.01, sparse_sd=0.001 , sparsity=0.5)
