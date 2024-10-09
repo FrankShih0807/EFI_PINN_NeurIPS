@@ -52,7 +52,7 @@ class NetG(nn.Module):
         return {'w1': w1, 'b1': b1, 'w2': w2, 'b2': b2}
 
 class EFI_Net(nn.Module):
-    def __init__(self, input_dim=1, output_dim=1, hidden_dim=15, activation=nn.ReLU, prior_sd=0.1, sparse_sd=0.001 , sparsity=1.0):
+    def __init__(self, input_dim=1, output_dim=1, hidden_dim=15, activation=nn.ReLU, prior_sd=0.1, sparse_sd=0.01 , sparsity=0.5):
         super(EFI_Net, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim

@@ -32,5 +32,6 @@ class BasePINN(ABC):
         raise NotImplementedError()
     
     
-    def train(self, )
+    def train(self, ):
+        pass
         

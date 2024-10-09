@@ -101,17 +101,8 @@ class Net(nn.Module):
             self.net.eval()
             theta_loss = self.net.theta_loss(torch.cat([X, y, self.Z], dim=1))
             y_loss = self.loss(y, self.net(X) + self.Z)
-            # print(self.net(X), y)
-            # raise
             Z_loss = lambda_2 * y_loss + lambda_1 * theta_loss + torch.mean(self.Z**2)/2
             
-            
-            # thetas = self.encoder(torch.cat([X, y, self.Z], dim=1))
-            # bar_theta = thetas.mean(dim=0)
-            # utils.vector_to_parameters(bar_theta, self.net.parameters())
-            # tilde_y = self.net(X) + self.Z
-            
-            # latent_loss = self.latent_loss(n_samples, lambda_1, lambda_2, y, tilde_y, thetas, bar_theta, self.Z)
 
             self.sampler.zero_grad()
             Z_loss.backward()
@@ -125,14 +116,9 @@ class Net(nn.Module):
             prior_loss = - self.net.mixture_gaussian_prior() / n_samples
             
             w_loss = lambda_2 * (y_loss + prior_loss + self.loss2_weight * self.loss2(self.net)) + lambda_1 * theta_loss 
-            # w_loss = self.loss2(self.net)
 
             self.optimiser.zero_grad()
             w_loss.backward()
-            # for p in self.net.parameters():
-            #     print(p.grad)
-                
-            # raise
             self.optimiser.step()
             
             
@@ -174,9 +160,6 @@ class Net(nn.Module):
             loss += lambda_2 * self.loss2_weight * self.loss2(self.net)
         return loss
     
-    
-            
-
     def predict(self, X):
         self.eval()
         out = self.forward(X)
