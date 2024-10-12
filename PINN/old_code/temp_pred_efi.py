@@ -13,7 +13,8 @@ from collections import deque
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 sns.set_theme()
-torch.manual_seed(42)
+# torch.manual_seed(42)
+torch.manual_seed(1234)
 
 np.random.seed(10)
 
@@ -38,9 +39,9 @@ def cooling_law(time, Tenv, T0, R):
 class Net(nn.Module):
     def __init__(
         self,
-        input_dim,
-        output_dim,
-        net_arch,
+        input_dim=1,
+        output_dim=1,
+        net_arch=[15, 15],
         epochs=1000,
         loss=nn.MSELoss(),
         lr=1e-3,
@@ -61,7 +62,7 @@ class Net(nn.Module):
         # self.activation = nn.ReLU
 
         # self.net = BaseNetwork(input_size=input_dim, output_size=output_dim, hidden_layers=net_arch, activation_fn=self.activation)
-        self.net = EFI_Net(activation=self.activation)
+        self.net = EFI_Net()
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         
         # self.parameter_size = self.net.parameter_size
@@ -99,7 +100,7 @@ class Net(nn.Module):
             
             ## 1. Latent variable sampling (Sample Z)
             self.net.eval()
-            theta_loss = self.net.theta_loss(torch.cat([X, y, self.Z], dim=1))
+            theta_loss = self.net.theta_encode(X, y, self.Z)
             y_loss = self.loss(y, self.net(X) + self.Z)
             Z_loss = lambda_2 * y_loss + lambda_1 * theta_loss + torch.mean(self.Z**2)/2
             
@@ -111,9 +112,9 @@ class Net(nn.Module):
             ## 2. DNN weights update (Optimize W)
             
             self.net.train()
-            theta_loss = self.net.theta_loss(torch.cat([X, y, self.Z], dim=1))
+            theta_loss = self.net.theta_encode(X, y, self.Z)
             y_loss = self.loss(y, self.net(X) + self.Z)
-            prior_loss = - self.net.mixture_gaussian_prior() / n_samples
+            prior_loss = - self.net.gmm_prior_loss() / n_samples
             
             w_loss = lambda_2 * (y_loss + prior_loss + self.loss2_weight * self.loss2(self.net)) + lambda_1 * theta_loss 
 
