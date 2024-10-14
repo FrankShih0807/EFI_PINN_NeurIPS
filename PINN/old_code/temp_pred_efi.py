@@ -51,11 +51,9 @@ class PINN_EFI(nn.Module):
         self.lr = lr
         self.sgld_lr = sgld_lr
         self.net_arch = net_arch
-        self.activation = F.softplus
-        # self.activation = nn.ReLU
+        self.activation_fn = F.softplus
 
-        # self.net = BaseNetwork(input_size=input_dim, output_size=output_dim, hidden_layers=net_arch, activation_fn=self.activation)
-        self.net = EFI_Net(input_dim=input_dim, output_dim=output_dim, hidden_layers=net_arch, activation_fn=self.activation)
+        self.net = EFI_Net(input_dim=input_dim, output_dim=output_dim, hidden_layers=net_arch, activation_fn=self.activation_fn)
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         
         # self.parameter_size = self.net.parameter_size

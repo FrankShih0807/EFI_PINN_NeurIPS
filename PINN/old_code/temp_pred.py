@@ -121,7 +121,7 @@ preds = net.predict(times.reshape(-1,1))
 
 plt.plot(times, temps, alpha=0.8, color='b', label='Equation')
 # plt.plot(t, T, 'o')
-plt.plot(times, preds, alpha=0.8, color='g', label='PINN-EFI')
+plt.plot(times, preds, alpha=0.8, color='g', label='PINN')
 plt.vlines(T_end, Tenv, T0, color='r', linestyles='dashed', label='no data beyond this point')
 # plt.legend(labels=['Equation','Training data', 'PINN'])
 plt.legend()
