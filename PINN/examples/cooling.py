@@ -5,29 +5,9 @@ import torch
 import seaborn as sns
 
 from PINN.common.grad_tool import grad
+from PINN.common.base_physics import PhysicsModel
 
 
-
-class PhysicsModel(object):
-    def __init__(self, **kwargs) -> None:
-
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-            
-        self.X, self.y = self._data_generation()
-        self.input_dim = self.X.shape[1]
-        self.output_dim = self.y.shape[1]
-        self.n_samples = self.X.shape[0]
-
-    
-    def physics_law(self):
-        ''' Implement the physics law here '''
-        raise NotImplementedError()
-    
-    def physics_loss(self):
-        ''' Implement the physics loss here '''
-        raise NotImplementedError()
-    
     
     
         
@@ -56,24 +36,9 @@ class CoolingModel(PhysicsModel):
     
 
 
-Tenv = 25
-T0 = 100
-R = 0.005
-
-
 if __name__ == "__main__":
     
-    # physics = CoolingModel(1, 1, Tenv, T0, R)
     physics = CoolingModel()
-    
-    print(physics.input_dim)
-    print(physics.output_dim)
-    
-    print(physics.X.shape)
-    print(physics.y.shape)
-    
-    # t = torch.linspace(0, 300, 10).reshape(10, -1)
-    # T = physics.physics_law(t) +  torch.randn(10).reshape(10, -1)
     
     t, T = physics.X, physics.y
     
@@ -82,9 +47,9 @@ if __name__ == "__main__":
     
     
     
-    plt.plot(times, temps)
-    plt.plot(t, T, 'o')
-    plt.legend(['Equation', 'Training data'])
+    plt.plot(times, temps, label='Equation')
+    plt.plot(t, T, 'x', label='Training data')
+    plt.legend()
     plt.ylabel('Temperature (C)')
     plt.xlabel('Time (s)')
     plt.show()
