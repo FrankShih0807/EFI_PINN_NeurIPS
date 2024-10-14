@@ -30,14 +30,14 @@ class PhysicsModel(object):
     
         
 class CoolingModel(PhysicsModel):
-    def __init__(self, input_dim, output_dim, Tenv, T0, R) -> None:
+    def __init__(self, input_dim=1, output_dim=1, Tenv=25, T0=100, R=0.005) -> None:
         super().__init__(input_dim, output_dim)
         self.Tenv = Tenv
         self.T0 = T0
         self.R = R
     
     def physics_law(self, time):
-        T = self.Tenv + (self.T0 - self.Tenv) * np.exp(-self.R * time)
+        T = self.Tenv + (self.T0 - self.Tenv) * torch.exp(-self.R * time)
         return T
     
     def physics_loss(self, model: torch.nn.Module):
@@ -66,9 +66,9 @@ def physics_loss(model: torch.nn.Module):
 Tenv = 25
 T0 = 100
 R = 0.005
-times = np.linspace(0, 1000, 1000)
-eq = functools.partial(cooling_law, Tenv=Tenv, T0=T0, R=R)
-temps = eq(times)
+# times = np.linspace(0, 1000, 1000)
+# eq = functools.partial(cooling_law, Tenv=Tenv, T0=T0, R=R)
+# temps = eq(times)
 
 # Make training data
 
@@ -78,8 +78,15 @@ if __name__ == "__main__":
     
     physics = CoolingModel(1, 1, Tenv, T0, R)
     
-    t = np.linspace(0, 300, 10)
-    T = eq(t) +  np.random.randn(10)
+    t = torch.linspace(0, 300, 10).reshape(10, -1)
+    T = physics.physics_law(t) +  torch.randn(10).reshape(10, -1)
+    
+    times = torch.linspace(0, 1000, 1000)
+    temps = physics.physics_law(times)
+    
+    
+    # t = np.linspace(0, 300, 10)
+    # T = eq(t) +  np.random.randn(10)
     
     
     plt.plot(times, temps)

@@ -10,6 +10,8 @@ import seaborn as sns
 from PINN.common import SGLD
 from PINN.common.torch_layers import EFI_Net
 from PINN.common.grad_tool import grad
+
+from PINN.examples.cooling import CoolingModel
 # from collections import deque
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -78,7 +80,7 @@ class PINN_EFI(nn.Module):
         self._initialize_latent(n_samples)
         
 
-        self.train()
+        # self.train()
         losses = []
         for ep in range(self.epochs):
             
@@ -146,8 +148,8 @@ class PINN_EFI(nn.Module):
         return loss
     
     def predict(self, X):
-        self.eval()
-        out = self.forward(X)
+        self.net.eval()
+        out = self.net(X)
         return out.detach().cpu().numpy()
     
     
