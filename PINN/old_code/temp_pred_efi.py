@@ -3,12 +3,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.nn import utils
+import torch.nn.functional as F
+# from torch.nn import utils
 import torch.optim as optim
 import seaborn as sns
-from PINN.common import BaseNetwork, SparseDNN, SGLD
-from PINN.common.net_in_net import EFI_Net
-from collections import deque
+from PINN.common import SGLD
+from PINN.common.torch_layers import EFI_Net
+from PINN.common.grad_tool import grad
+# from collections import deque
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -19,24 +21,13 @@ torch.manual_seed(1234)
 np.random.seed(10)
 
 
-def grad(outputs, inputs):
-    """Computes the partial derivative of 
-    an output with respect to an input.
-    Args:
-        outputs: (N, 1) tensor
-        inputs: (N, D) tensor
-    """
-    return torch.autograd.grad(
-        outputs, inputs, grad_outputs=torch.ones_like(outputs), create_graph=True
-    )
-
 
 def cooling_law(time, Tenv, T0, R):
     T = Tenv + (T0 - Tenv) * torch.exp(-R * time)
     return T
 
 
-class Net(nn.Module):
+class PINN_EFI(nn.Module):
     def __init__(
         self,
         input_dim=1,
@@ -58,21 +49,16 @@ class Net(nn.Module):
         self.lr = lr
         self.sgld_lr = sgld_lr
         self.net_arch = net_arch
-        self.activation = nn.Softplus
+        self.activation = F.softplus
         # self.activation = nn.ReLU
 
         # self.net = BaseNetwork(input_size=input_dim, output_size=output_dim, hidden_layers=net_arch, activation_fn=self.activation)
-        self.net = EFI_Net()
+        self.net = EFI_Net(input_dim=input_dim, output_dim=output_dim, hidden_layers=net_arch, activation_fn=self.activation)
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         
         # self.parameter_size = self.net.parameter_size
         self.collection = []
         
-
-    def _build_encoder(self, encoder_input_dim):
-        hidden_size = self.parameter_size
-        net_arch = [hidden_size]
-        self.encoder = SparseDNN(input_size=encoder_input_dim, output_size=self.parameter_size, hidden_layers=net_arch, activation_fn=nn.ReLU, prior_sd=0.01, sparse_sd=0.001, sparsity=1.0)
     
     def _initialize_latent(self, n_samples):
         self.Z = torch.randn(n_samples, 1).requires_grad_()
@@ -84,8 +70,6 @@ class Net(nn.Module):
 
     def fit(self, X, y):
         n_samples = y.shape[0]
-        variable_dim = X.shape[1]
-        encoder_input_dim = 2 + variable_dim
         
         lambda_1 = 10
         lambda_2 = 10
@@ -170,16 +154,17 @@ class Net(nn.Module):
 Tenv = 25
 T0 = 100
 R = 0.005
-T_extend = 1000
+T_end = 300
+T_extend = 1500
 times = torch.linspace(0, T_extend, T_extend)
 eq = functools.partial(cooling_law, Tenv=Tenv, T0=T0, R=R)
 temps = eq(times)
 
 # Make training data
-n_samples = 300
-obs_sd = 1
-t = torch.linspace(0, 300, n_samples).reshape(n_samples, -1)
-T = eq(t) +  obs_sd * torch.randn(n_samples).reshape(n_samples, -1)
+n_samples = 200
+noise_sd = 1
+t = torch.linspace(0, T_end, n_samples).reshape(n_samples, -1)
+T = eq(t) +  noise_sd * torch.randn(n_samples).reshape(n_samples, -1)
 
 
 
@@ -195,7 +180,7 @@ def physics_loss(model: torch.nn.Module):
 
 # net_arch = [100, 100, 100, 100]
 net_arch = [15, 15]
-net = Net(1,1, net_arch, loss2=physics_loss, epochs=10000, loss2_weight=5, lr=1e-5, sgld_lr=1e-4)
+net = PINN_EFI(1,1, net_arch, loss2=physics_loss, epochs=10000, loss2_weight=10, lr=1e-5, sgld_lr=1e-4)
 
 
 losses = net.fit(t, T)
@@ -205,11 +190,13 @@ losses = net.fit(t, T)
 preds = net.predict(times.reshape(-1,1))
 preds_upper, preds_lower, preds_mean = net.summary()
 
-plt.plot(times, temps, alpha=0.8)
-plt.plot(t, T, 'o')
-plt.plot(times, preds_mean, alpha=0.8)
-plt.fill_between(times, preds_upper, preds_lower, alpha=0.2)
-plt.legend(labels=['Equation','Training data', 'PINN-EFI'])
+plt.plot(times, temps, alpha=0.8, color='b', label='Equation')
+# plt.plot(t, T, 'o')
+plt.plot(times, preds_mean, alpha=0.8, color='g', label='PINN-EFI')
+plt.vlines(T_end, Tenv, T0, color='r', linestyles='dashed', label='no data beyond this point')
+plt.fill_between(times, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
+# plt.legend(labels=['Equation','Training data', 'PINN-EFI'])
+plt.legend()
 plt.ylabel('Temperature (C)')
 plt.xlabel('Time (s)')
 plt.savefig('temp_pred_efi.png')

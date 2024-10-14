@@ -42,7 +42,7 @@ def save_yaml(config, file_path):
         
 def create_parser():
     parser = argparse.ArgumentParser(description='Initial Argument Parser')
-    # parser.add_argument('--algo', help="RL Algorithm", type=str, default="dqn", required=False, choices=list(ALGOS.keys()))
+    parser.add_argument('--algo', help="RL Algorithm", type=str, default="dqn", required=False, choices=list(ALGOS.keys()))
     parser.add_argument('--task_id', type=int, default=-1)
 
     parser.add_argument('--exp_name', type=str, default=None)
