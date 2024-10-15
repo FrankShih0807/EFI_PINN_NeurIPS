@@ -4,30 +4,15 @@ import argparse
 from ruamel.yaml import YAML
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
-# from EscapeEnv.common.base_agent import BaseAgent
+from PINN.common.base_pinn import BasePINN
 # from EscapeEnv import DQN, LKTD_SARSA, SGHMC_SARSA, LKTDDA_SARSA, BootDQN, KOVA, BayesianDQN, QRDQN, LKTD_DQN, A2C, LT_A2C, LT_PPO, PPO, LT_A2C_v2, LT_PPO_v2
 yaml = YAML()
 yaml.preserve_quotes = True
 
 
-# ALGOS: Dict[str, Type[BaseAgent]] = {
-#     "dqn": DQN,
-#     "lktd_sarsa": LKTD_SARSA,
-#     "lktd_dqn": LKTD_DQN,
-#     "lktdda_sarsa": LKTDDA_SARSA,
-#     "sghmc_sarsa": SGHMC_SARSA,
-#     "boot_dqn": BootDQN,
-#     "kova": KOVA,
-#     "bdqn": BayesianDQN,
-#     "qrdqn": QRDQN,
-    
-#     "a2c": A2C,
-#     'ppo': PPO,
-#     "lt_a2c": LT_A2C,
-#     "lt_a2c_v2": LT_A2C_v2,
-#     "lt_ppo": LT_PPO,
-#     "lt_ppo_v2": LT_PPO_v2
-# }
+ALGOS: Dict[str, Type[BasePINN]] = {
+    "pinn": PINN 
+}
 
 def create_log_folder(path):
     os.makedirs(path, exist_ok=True)
@@ -42,7 +27,7 @@ def save_yaml(config, file_path):
         
 def create_parser():
     parser = argparse.ArgumentParser(description='Initial Argument Parser')
-    parser.add_argument('--algo', help="RL Algorithm", type=str, default="dqn", required=False, choices=list(ALGOS.keys()))
+    parser.add_argument('--algo', help="PINN algorithms", type=str, default="pinn", required=False, choices=list(ALGOS.keys()))
     parser.add_argument('--task_id', type=int, default=-1)
 
     parser.add_argument('--exp_name', type=str, default=None)

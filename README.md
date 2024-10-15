@@ -2,6 +2,7 @@
 
 requirements are:
 - torch
+- torchbnn
 - scikit-learn
 - numpy
 - matplotlib

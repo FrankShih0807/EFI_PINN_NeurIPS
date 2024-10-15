@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchbnn as bnn
 import numpy as np
 import torch.distributions as dist
 from collections import defaultdict
@@ -36,6 +37,32 @@ class BaseDNN(nn.Module):
         x = self.layers[-1](x)
         return x
     
+    
+class BayesianNN(nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu):
+        super(BayesianNN, self).__init__()
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        if hidden_layers is None:
+            self.hidden_layers = [self.output_dim]
+        else:
+            self.hidden_layers = hidden_layers
+        self.activation_fn = activation_fn
+        # Define layers with Bayesian Linear (weights are distributions)
+        self.layers = nn.ModuleList()
+        self.layers.append(bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=input_dim, out_features=self.hidden_layers[0]))
+        # Add hidden layers
+        for i in range(1, len(self.hidden_layers)):
+            self.layers.append(bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=self.hidden_layers[i-1], out_features=self.hidden_layers[i]))
+        # Add the output layer
+        self.layers.append(bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=self.hidden_layers[-1], out_features=self.output_dim))
+
+    def forward(self, x):
+        for layer in self.layers[:-1]:
+            x = layer(x)
+            x = self.activation_fn(x)
+        x = self.layers[-1](x)
+        return x
 
 
 class EFI_Net(nn.Module):
@@ -160,4 +187,28 @@ class EFI_Net(nn.Module):
         return torch.where(theta.abs() > a * xi, torch.zeros_like(theta.abs()), theta.abs()).sum()
 
 if __name__ == '__main__':
-    pass
+    x = torch.randn(100, 10)  # 100 samples, 10 features each
+    y = torch.randn(100, 1)   # 100 target values
+
+    # Initialize the Bayesian neural network
+    model = BayesianNN(input_dim=10, output_dim=1, hidden_layers=[20, 20])
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    criterion = nn.MSELoss()
+    kl_loss = bnn.BKLLoss(reduction='mean', last_layer_only=False)  
+    kl_weight = 1e-2
+    # Training loop
+    for epoch in range(1000):
+        optimizer.zero_grad()
+        
+        # Forward pass
+        output = model(x)
+        
+        # Compute loss (prediction error + KL divergence)
+        loss = criterion(output, y) + kl_weight * kl_loss(model)
+        
+        # Backward pass and optimization
+        loss.backward()
+        optimizer.step()
+
+        if epoch % 100 == 0:
+            print(f"Epoch {epoch}: Loss = {loss.item()}")

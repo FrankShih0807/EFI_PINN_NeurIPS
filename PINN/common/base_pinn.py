@@ -57,7 +57,7 @@ class BasePINN(object):
             self.update()
             
             ## 3. Loss calculation
-            if ep % int(epochs / 100) == 0:
+            if ep % int(epochs / 10) == 0:
                 loss = self.mse_loss(self.y, self.net(self.X))
                 losses.append(loss.item())
                 print(f"Epoch {ep}/{epochs}, loss: {losses[-1]:.2f}")

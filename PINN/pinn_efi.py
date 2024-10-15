@@ -12,7 +12,7 @@ from PINN.common.torch_layers import EFI_Net
 # from PINN.common.grad_tool import grad
 from PINN.common.base_pinn import BasePINN
 
-from PINN.examples.cooling import Cooling
+from PINN.models.cooling import Cooling
 # from collections import deque
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
