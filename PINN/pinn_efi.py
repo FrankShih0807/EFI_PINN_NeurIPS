@@ -11,7 +11,7 @@ from PINN.common import SGLD
 from PINN.common.torch_layers import EFI_Net
 from PINN.common.grad_tool import grad
 
-from PINN.examples.cooling import CoolingModel
+from PINN.examples.cooling import Cooling
 # from collections import deque
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -29,64 +29,78 @@ def cooling_law(time, Tenv, T0, R):
     return T
 
 
-class PINN_EFI(nn.Module):
+class PINN_EFI(object):
     def __init__(
         self,
-        input_dim=1,
-        output_dim=1,
+        physics_model,
         net_arch=[15, 15],
-        epochs=1000,
-        loss=nn.MSELoss(),
         lr=1e-3,
+        physics_loss_weight=10,
         sgld_lr=1e-3,
-        loss2=None,
-        loss2_weight=0.1,
+        lambda_y=10,
+        lambda_theta=10,
     ) -> None:
         super().__init__()
+        self.physics_model = physics_model
+        # X, y = self.physics_model.X, self.physics_model.y
+        print('transfering model params')
+        for key, value in self.physics_model.__dict__.items():
+            setattr(self, key, value)
+            # print('{}: {}'.format(key, value))
 
-        self.epochs = epochs
-        self.loss = loss
-        self.loss2 = loss2
-        self.loss2_weight = loss2_weight
+        
+        # self.input_dim = self.physics_model.input_dim
+        # self.output_dim = self.physics_model.output_dim
+        
+        # Physics loss
+        self.physics_loss = self.physics_model.physics_loss
+        self.physics_loss_weight = physics_loss_weight
+        
+        # Common configs
         self.lr = lr
-        self.sgld_lr = sgld_lr
         self.net_arch = net_arch
+        self.mse_loss = nn.MSELoss()
         self.activation_fn = F.softplus
-
-        self.net = EFI_Net(input_dim=input_dim, output_dim=output_dim, hidden_layers=net_arch, activation_fn=self.activation_fn)
+        
+        # EFI configs
+        self.sgld_lr = sgld_lr
+        self.lambda_y = lambda_y
+        self.lambda_theta = lambda_theta
+        
+        
+        self.net = EFI_Net(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=net_arch, activation_fn=self.activation_fn)
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         
-        # self.parameter_size = self.net.parameter_size
         self.collection = []
         
     
-    def _initialize_latent(self, n_samples):
-        self.Z = torch.randn(n_samples, 1).requires_grad_()
+    def _pinn_init(self):
+        self.Z = torch.randn(self.n_samples, 1).requires_grad_()
         self.sampler = SGLD([self.Z], self.sgld_lr)
         
 
-    def forward(self, x):
-        return self.net(x)
+    # def forward(self, x):
+    #     return self.net(x)
 
-    def fit(self, X, y):
-        n_samples = y.shape[0]
+    def train(self, epochs):
+        # X, y = self.physics_model.X, self.physics_model.y
+        # n_samples = y.shape[0]
         
-        lambda_1 = 10
-        lambda_2 = 10
+        
         
         # self._build_encoder(encoder_input_dim)
-        self._initialize_latent(n_samples)
+        self._pinn_init()
         
 
         # self.train()
         losses = []
-        for ep in range(self.epochs):
+        for ep in range(epochs):
             
             ## 1. Latent variable sampling (Sample Z)
             self.net.eval()
-            theta_loss = self.net.theta_encode(X, y, self.Z)
-            y_loss = self.loss(y, self.net(X) + self.Z)
-            Z_loss = lambda_2 * y_loss + lambda_1 * theta_loss + torch.mean(self.Z**2)/2
+            theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
+            y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
+            Z_loss = self.lambda_y * y_loss + self.lambda_theta * theta_loss + torch.mean(self.Z**2)/2
             
 
             self.sampler.zero_grad()
@@ -96,11 +110,11 @@ class PINN_EFI(nn.Module):
             ## 2. DNN weights update (Optimize W)
             
             self.net.train()
-            theta_loss = self.net.theta_encode(X, y, self.Z)
-            y_loss = self.loss(y, self.net(X) + self.Z)
-            prior_loss = - self.net.gmm_prior_loss() / n_samples
+            theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
+            y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
+            prior_loss = - self.net.gmm_prior_loss() / self.n_samples
             
-            w_loss = lambda_2 * (y_loss + prior_loss + self.loss2_weight * self.loss2(self.net)) + lambda_1 * theta_loss 
+            w_loss = self.lambda_y * (y_loss + prior_loss + self.physics_loss_weight * self.physics_loss(self.net)) + self.lambda_theta * theta_loss 
 
             self.optimiser.zero_grad()
             w_loss.backward()
@@ -109,12 +123,12 @@ class PINN_EFI(nn.Module):
             
             
             ## 3. Loss calculation
-            if ep % int(self.epochs / 100) == 0:
-                loss = self.loss(y, self.net(X))
+            if ep % int(epochs / 100) == 0:
+                loss = self.mse_loss(self.y, self.net(self.X))
                 losses.append(loss.item())
-                print(f"Epoch {ep}/{self.epochs}, loss: {losses[-1]:.2f}")
+                print(f"Epoch {ep}/{epochs}, loss: {losses[-1]:.2f}")
                 
-            if ep > self.epochs - 1000:
+            if ep > epochs - 1000:
                 y_pred = self.evaluate()
                 self.collection.append(y_pred)
         return losses
@@ -131,19 +145,6 @@ class PINN_EFI(nn.Module):
         y_pred_mean = torch.mean(y_pred_mat, dim=0)
         return y_pred_upper, y_pred_lower, y_pred_mean
         
-    def latent_loss(self, n_samples, lambda_1, lambda_2, y , tilde_y, thetas, bar_theta, Z):
-        loss = lambda_2 * self.loss(y,tilde_y) + lambda_1 * self.loss(thetas,bar_theta.repeat(n_samples,1)) + torch.mean(Z**2)/2
-        if self.loss2 is not None:
-            loss += lambda_2 * self.loss2_weight * self.loss2(self.net)
-        return loss
-    
-    def encoder_loss(self, n_samples, lambda_1, lambda_2, y , tilde_y, thetas, bar_theta):
-        loss = lambda_2 * self.loss(y,tilde_y) + lambda_1 * self.loss(thetas,bar_theta.repeat(n_samples,1))
-        prior_loss = - self.encoder.mixture_gaussian_prior()
-        loss += prior_loss / n_samples
-        if self.loss2 is not None:
-            loss += lambda_2 * self.loss2_weight * self.loss2(self.net)
-        return loss
     
     def predict(self, X):
         self.net.eval()
@@ -156,39 +157,19 @@ T0 = 100
 R = 0.005
 T_end = 300
 T_extend = 1500
+
+physics_model = Cooling()
+pinn_efi = PINN_EFI(physics_model=physics_model, physics_loss_weight=10, lr=1e-5, sgld_lr=1e-4)
+
+# t, T = physics_model.X, physics_model.y
+losses = pinn_efi.train(epochs=10000)
+
+
 times = torch.linspace(0, T_extend, T_extend)
-eq = functools.partial(cooling_law, Tenv=Tenv, T0=T0, R=R)
-temps = eq(times)
+temps = physics_model.physics_law(times)
 
-# Make training data
-n_samples = 200
-noise_sd = 1
-t = torch.linspace(0, T_end, n_samples).reshape(n_samples, -1)
-T = eq(t) +  noise_sd * torch.randn(n_samples).reshape(n_samples, -1)
-
-
-
-def physics_loss(model: torch.nn.Module):
-    ts = torch.linspace(0, T_extend, steps=T_extend,).view(-1,1).requires_grad_(True)
-    temps = model(ts)
-    # print(temps)
-    # raise
-    dT = grad(temps, ts)[0]
-    pde = R*(Tenv - temps) - dT
-    
-    return torch.mean(pde**2)
-
-# net_arch = [100, 100, 100, 100]
-net_arch = [15, 15]
-net = PINN_EFI(1,1, net_arch, loss2=physics_loss, epochs=10000, loss2_weight=10, lr=1e-5, sgld_lr=1e-4)
-
-
-losses = net.fit(t, T)
-# plt.plot(losses)
-# plt.yscale('log')
-
-preds = net.predict(times.reshape(-1,1))
-preds_upper, preds_lower, preds_mean = net.summary()
+preds = pinn_efi.predict(times.reshape(-1,1))
+preds_upper, preds_lower, preds_mean = pinn_efi.summary()
 
 plt.plot(times, temps, alpha=0.8, color='b', label='Equation')
 # plt.plot(t, T, 'o')
