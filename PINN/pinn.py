@@ -1,25 +1,64 @@
-from .examples import *
-from common import BaseNetwork, grad
 import torch
 import torch.nn as nn
-from .old_code.diff_equations import *
-from .examples.cooling import physics_loss
 
-class PINN(object):
-    def __init__(self, ) -> None:
-        pass
+from PINN.common.base_pinn import BasePINN
+from PINN.examples.cooling import Cooling
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+class PINN(BasePINN):
+    def __init__(
+        self,
+        physics_model,
+        hidden_layers=[15, 15],
+        lr=1e-3,
+        physics_loss_weight=10,
+    ) -> None:
+        super().__init__(physics_model, hidden_layers, lr, physics_loss_weight)
+        
+
+    def update(self):
+        self.optimiser.zero_grad()
+        outputs = self.net(self.X)
+        loss = self.mse_loss(self.y, outputs)
+        loss += self.physics_loss_weight * self.physics_loss(self.net)
+        
+        loss.backward()
+        self.optimiser.step()
+        
+        return loss
 
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
+    sns.set_theme()
     
-    input_dim = 1
-    output_dim = 1
-    net_arch = [100, 100, 100, 100]
+    Tenv = 25
+    T0 = 100
+    R = 0.005
+    t_end = 300
+    t_extend = 1500
+    physics_model = Cooling()
     
-    net = BaseNetwork(input_dim, output_dim, net_arch, nn.Tanh)
+    times = torch.linspace(0, t_extend, t_extend)
+    temps = physics_model.physics_law(times)
 
+    pinn = PINN(physics_model=physics_model, physics_loss_weight=10, lr=1e-3)
+
+    losses = pinn.train(epochs=10000, eval_x=times.view(-1,1))
+
+
+
+    # preds = pinn_efi.predict(times.reshape(-1,1))
+    preds_upper, preds_lower, preds_mean = pinn.summary()
     
-    
-    epochs = 30000
-    loss2 = physics_loss
+    # print(preds.shape)
+
+    plt.plot(times, temps, alpha=0.8, color='b', label='Equation')
+    # plt.plot(t, T, 'o')
+    plt.plot(times, preds_mean, alpha=0.8, color='g', label='PINN')
+    plt.vlines(t_end, Tenv, T0, color='r', linestyles='dashed', label='no data beyond this point')
+    plt.fill_between(times, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
+    plt.legend()
+    plt.ylabel('Temperature (C)')
+    plt.xlabel('Time (s)')
+    plt.savefig('temp_pred.png')

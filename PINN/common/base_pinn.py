@@ -2,36 +2,84 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 
-import pandas as pd
-from copy import deepcopy
-# Axes3D import has side effects, it enables using projection='3d' in add_subplot
-import matplotlib.pyplot as plt
-# from matplotlib import cm
-import time
-import random
-
-from abc import ABC, abstractmethod
+from PINN.common.torch_layers import BaseDNN
 
 
-class BasePINN(ABC):
-    def __init__(self,
-                 input_dim,
-                 output_dim,
-                 net_arch,
-                 physics_law,
-                 physics_loss,
-                 physics_loss_weight,
-                 physics_kwargs,
-                 ):
-        pass
 
-    @abstractmethod
-    def _build_network(self):
-        '''define self.net'''
+
+def cooling_law(time, Tenv, T0, R):
+    T = Tenv + (T0 - Tenv) * torch.exp(-R * time)
+    return T
+
+
+class BasePINN(object):
+    def __init__(
+        self,
+        physics_model,
+        hidden_layers=[15, 15],
+        lr=1e-3,
+        physics_loss_weight=10,
+    ) -> None:
+        super().__init__()
+        self.physics_model = physics_model
+        for key, value in self.physics_model.__dict__.items():
+            setattr(self, key, value)
+        
+        # Physics loss
+        self.physics_loss = self.physics_model.physics_loss
+        self.physics_loss_weight = physics_loss_weight
+        
+        # Common configs
+        self.lr = lr
+        self.hidden_layers = hidden_layers
+        self.mse_loss = nn.MSELoss()
+        self.activation_fn = F.softplus
+        
+        self.collection = []
+
+    def _pinn_init(self):
+        # init pinn net and optimiser
+        self.net = BaseDNN(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn)
+        self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
+        
+
+    def update(self):
+        ''' Implement the network parameter update here '''
         raise NotImplementedError()
     
-    
-    def train(self, ):
-        pass
+    def train(self, epochs, eval_x):
+        self._pinn_init()
         
+        losses = []
+        for ep in range(epochs):
+            self.update()
+            
+            ## 3. Loss calculation
+            if ep % int(epochs / 100) == 0:
+                loss = self.mse_loss(self.y, self.net(self.X))
+                losses.append(loss.item())
+                print(f"Epoch {ep}/{epochs}, loss: {losses[-1]:.2f}")
+                
+            if ep > epochs - 1000:
+                y_pred = self.evaluate(eval_x)
+                self.collection.append(y_pred)
+        return losses
+    
+
+    def predict(self, X):
+        self.net.eval()
+        out = self.net(X)
+        return out.detach().cpu().numpy()
+    
+    def evaluate(self, eval_x):
+        y = self.net(eval_x).detach().flatten()
+        return y
+    
+    def summary(self):
+        y_pred_mat = torch.stack(self.collection, dim=0)
+        y_pred_upper = torch.quantile(y_pred_mat, 0.975, dim=0)
+        y_pred_lower = torch.quantile(y_pred_mat, 0.025, dim=0)
+        y_pred_mean = torch.mean(y_pred_mat, dim=0)
+        return y_pred_upper, y_pred_lower, y_pred_mean
