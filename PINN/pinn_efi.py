@@ -42,8 +42,6 @@ class PINN_EFI(BasePINN):
         self.lambda_y = lambda_y
         self.lambda_theta = lambda_theta
 
-        
-        
     
     def _pinn_init(self):
         # init EFI net and optimiser
