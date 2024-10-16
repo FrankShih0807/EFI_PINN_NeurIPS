@@ -8,12 +8,6 @@ from PINN.common.torch_layers import BaseDNN
 
 
 
-
-def cooling_law(time, Tenv, T0, R):
-    T = Tenv + (T0 - Tenv) * torch.exp(-R * time)
-    return T
-
-
 class BasePINN(object):
     def __init__(
         self,
