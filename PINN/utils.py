@@ -5,6 +5,7 @@ from ruamel.yaml import YAML
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from PINN.common.base_pinn import BasePINN
+from PINN.pinn import PINN
 # from EscapeEnv import DQN, LKTD_SARSA, SGHMC_SARSA, LKTDDA_SARSA, BootDQN, KOVA, BayesianDQN, QRDQN, LKTD_DQN, A2C, LT_A2C, LT_PPO, PPO, LT_A2C_v2, LT_PPO_v2
 yaml = YAML()
 yaml.preserve_quotes = True

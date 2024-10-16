@@ -52,11 +52,10 @@ class FitzHugh_Nagumo(PhysicsModel):
         print(ys)
         d = jacobian(model.forward, ts)
         print(d.shape)
-        raise
-        dT = grad(ys, ts)[0]
-        pde = self.R*(self.Tenv - temps) - dT
+        # dT = grad(ys, ts)[0]
+        # pde = self.R*(self.Tenv - temps) - dT
         
-        return torch.mean(pde**2)
+        # return torch.mean(pde**2)
     
     
     def plot(self):
