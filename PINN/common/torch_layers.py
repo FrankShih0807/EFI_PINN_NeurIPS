@@ -187,28 +187,41 @@ class EFI_Net(nn.Module):
         return torch.where(theta.abs() > a * xi, torch.zeros_like(theta.abs()), theta.abs()).sum()
 
 if __name__ == '__main__':
-    x = torch.randn(100, 10)  # 100 samples, 10 features each
-    y = torch.randn(100, 1)   # 100 target values
+    # x = torch.randn(100, 10)  # 100 samples, 10 features each
+    # y = torch.randn(100, 1)   # 100 target values
 
-    # Initialize the Bayesian neural network
-    model = BayesianNN(input_dim=10, output_dim=1, hidden_layers=[20, 20])
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    criterion = nn.MSELoss()
-    kl_loss = bnn.BKLLoss(reduction='mean', last_layer_only=False)  
-    kl_weight = 1e-2
-    # Training loop
-    for epoch in range(1000):
-        optimizer.zero_grad()
+    # # Initialize the Bayesian neural network
+    # model = BayesianNN(input_dim=10, output_dim=1, hidden_layers=[20, 20])
+    # optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    # criterion = nn.MSELoss()
+    # kl_loss = bnn.BKLLoss(reduction='mean', last_layer_only=False)  
+    # kl_weight = 1e-2
+    # # Training loop
+    # for epoch in range(1000):
+    #     optimizer.zero_grad()
         
-        # Forward pass
-        output = model(x)
+    #     # Forward pass
+    #     output = model(x)
         
-        # Compute loss (prediction error + KL divergence)
-        loss = criterion(output, y) + kl_weight * kl_loss(model)
+    #     # Compute loss (prediction error + KL divergence)
+    #     loss = criterion(output, y) + kl_weight * kl_loss(model)
         
-        # Backward pass and optimization
-        loss.backward()
-        optimizer.step()
+    #     # Backward pass and optimization
+    #     loss.backward()
+    #     optimizer.step()
 
-        if epoch % 100 == 0:
-            print(f"Epoch {epoch}: Loss = {loss.item()}")
+    #     if epoch % 100 == 0:
+    #         print(f"Epoch {epoch}: Loss = {loss.item()}")
+    
+    
+    
+    net = nn.Sequential(
+        nn.Linear(1, 10),
+        # nn.ReLU(),
+        nn.Linear(10, 10),
+        # nn.ReLU(),
+        nn.Linear(10, 1)
+    )
+    
+    for key, value in net.named_parameters():
+        print(key, value.shape)

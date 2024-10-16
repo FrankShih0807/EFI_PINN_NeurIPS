@@ -21,16 +21,18 @@ if __name__ == '__main__':
     
     
     net = nn.Sequential(
-        nn.Linear(1, 15),
+        nn.Linear(2, 15),
         nn.Softplus(),
         nn.Linear(15, 15),
         nn.Softplus(),
-        nn.Linear(15, 2)
+        nn.Linear(15, 3)
     )
     
     N = 5
-    x = torch.randn(N, 1).requires_grad_(True)
+    x = torch.randn(N, 2).requires_grad_(True)
     y = net(x)
     
     d = jacobian(net, x)
+    
+    print(d.shape)
     print(d[range(x.size(0)), :, range(x.size(0)), :].shape)

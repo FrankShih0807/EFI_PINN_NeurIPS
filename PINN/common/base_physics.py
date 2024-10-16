@@ -1,11 +1,3 @@
-import functools
-import matplotlib.pyplot as plt
-import numpy as np
-import torch
-import seaborn as sns
-
-from PINN.common.grad_tool import grad
-
 
 
 class PhysicsModel(object):
