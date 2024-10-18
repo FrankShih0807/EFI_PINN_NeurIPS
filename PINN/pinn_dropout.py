@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torchbnn as bnn
 
 from PINN.common.base_pinn import BasePINN
 from PINN.common.torch_layers import DropoutDNN
