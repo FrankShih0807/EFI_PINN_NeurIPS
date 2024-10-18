@@ -17,14 +17,15 @@ class Cooling(PhysicsModel):
                  T0=100, 
                  R=0.005, 
                  t_end=300, 
-                 t_extend=1500
+                 t_extend=1500,
+                 noise_sd=1.0
                  ):
-        super().__init__(Tenv=Tenv, T0=T0, R=R, t_end=t_end, t_extend=t_extend)
+        super().__init__(Tenv=Tenv, T0=T0, R=R, t_end=t_end, t_extend=t_extend, noise_sd=noise_sd)
 
         
-    def _data_generation(self, n_samples=200, noise_sd=1.0):
+    def _data_generation(self, n_samples=200):
         t = torch.linspace(0, self.t_end, n_samples).reshape(n_samples, -1)
-        T = self.physics_law(t) +  noise_sd * torch.randn(n_samples).reshape(n_samples, -1)
+        T = self.physics_law(t) +  self.noise_sd * torch.randn(n_samples).reshape(n_samples, -1)
         
         return t, T
     

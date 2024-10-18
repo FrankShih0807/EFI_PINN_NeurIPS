@@ -27,18 +27,20 @@ class FitzHugh_Nagumo(PhysicsModel):
         super().__init__(a=a, b=b, c=c, V0=V0, R0=R0, t_end=t_end, t_extend=t_extend)
 
         
-    def _data_generation(self, n_samples=200, noise_sd=0.05):
-        t_span = (0, 5)
-        t_eval = np.linspace(*t_span, n_samples)
-        sol = solve_ivp(self.fitzhugh_nagumo, t_span, [self.V0, self.R0], t_eval=t_eval)
+    def _data_generation(self, n_samples=20, noise_sd=0.05):
+        t_eval = np.linspace(0, self.t_end, n_samples)
+        V, R = self.physics_law(t_eval, self.V0, self.R0)
         
-        X = torch.tensor(sol.t).reshape(-1,1)
-        y = torch.stack([torch.tensor(sol.y[0]), torch.tensor(sol.y[1])], dim=1)
+        X = torch.tensor(t_eval).reshape(-1,1)
+        y = torch.stack([V, R], dim=1)
         y += noise_sd * torch.randn_like(y)
         return X, y
     
-    def physics_law(self,x):
-        pass
+    def physics_law(self, ts, V_init, R_init)->torch.Tensor:
+        sol = solve_ivp(self.fitzhugh_nagumo, (ts[0], ts[-1]), [V_init, R_init], t_eval=ts)
+        V = torch.tensor(sol.y[0])
+        R = torch.tensor(sol.y[1])
+        return V, R
     
     def fitzhugh_nagumo(self, t, y):
         V, R = y
@@ -48,44 +50,53 @@ class FitzHugh_Nagumo(PhysicsModel):
     
     def physics_loss(self, model: torch.nn.Module):
         ts = torch.linspace(0, self.t_extend, steps=self.t_extend,).view(-1,1).requires_grad_(True)
-        ys = model(ts)
-        print(ys)
-        d = jacobian(model.forward, ts)
-        print(d.shape)
-        # dT = grad(ys, ts)[0]
-        # pde = self.R*(self.Tenv - temps) - dT
         
-        # return torch.mean(pde**2)
+        Vs = model(ts)[...,0]
+        Rs = model(ts)[...,1]
+        
+        dV = grad(Vs, ts)[0]
+        dR = grad(Rs, ts)[0]
+        
+        ode1 = self.c * (Vs - Vs**3 / 3 + Rs) - dV
+        ode2 = -(Vs - self.a + self.b * Rs) / self.c - dR
+        
+        return torch.mean(ode1**2 + ode2**2)
+
     
     
-    def plot(self):
-        pass
-    
+    def plot(self, ts=None, V_init=None, R_init=None):
+        if V_init is None:
+            V_init = self.V0
+        if R_init is None:
+            R_init = self.R0
+        if ts is None:
+            ts = torch.linspace(0, self.t_extend, steps=1000)
+        V, R = self.physics_law(ts, V_init, R_init)
+        
+        sns.set_theme()
+        # Plot the results
+        fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(8, 6))
+        
+        ax1.plot(ts, V.flatten().numpy(), 'b', label='V (Voltage Variable)')
+        ax1.set_ylabel('V(t)')
+        ax1.set_ylim(-2, 4)
+        ax1.legend()
+        
+        ax2.plot(ts, R.flatten().numpy(), 'r', label='R (Recovery Variable)')
+        ax2.set_xlabel('t')
+        ax2.set_ylabel('R(t)')
+        ax2.set_ylim(-1, 2)
+        ax2.legend()
+        
+        plt.tight_layout()
+        plt.show()
 
 
 if __name__ == "__main__":
     
-    # physics = Poisson1D()
-    # print(physics.model_params)
-    
-    # t, T = physics.X, physics.y
-    
-    # times = torch.linspace(0, 1000, 1000)
-    # temps = physics.physics_law(times)
-    
-    # # for key, value in physics.__dict__.items():
-    # #     print('{}: {}'.format(key, value))
-    
-    
-    # plt.plot(times, temps, label='Equation')
-    # plt.plot(t, T, 'x', label='Training data')
-    # plt.legend()
-    # plt.ylabel('Temperature (C)')
-    # plt.xlabel('Time (s)')
-    # plt.show()
-    
     
     model = FitzHugh_Nagumo()
+    # print(model.X, model.y)
     
     net = nn.Sequential(
         nn.Linear(1, 15),
@@ -94,7 +105,16 @@ if __name__ == "__main__":
         nn.Softplus(),
         nn.Linear(15, 2)
     )
-    model.physics_loss(net)
+    optimizer = torch.optim.Adam(net.parameters(), lr=1e-3)
+    optimizer.zero_grad()
+    loss = model.physics_loss(net)
+    loss.backward()
+    
+    for p in net.parameters():
+        print(p.grad)
+    
+    # print(model.physics_loss(net))
+    
         
     
     # plt.plot(model.X, model.y, 'x')
@@ -114,7 +134,7 @@ if __name__ == "__main__":
     # # Initial conditions
     # y0 = [-1.0, 1.0]
 
-    # # Time span
+    # Time span
     # t_span = (0, 20)
     # t_eval = np.linspace(*t_span, 1000)
 

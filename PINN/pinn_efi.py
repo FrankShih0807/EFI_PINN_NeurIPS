@@ -19,7 +19,7 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 sns.set_theme()
 # torch.manual_seed(42)
-torch.manual_seed(1234)
+# torch.manual_seed(1234)
 
 np.random.seed(10)
 
@@ -41,6 +41,8 @@ class PINN_EFI(BasePINN):
         self.sgld_lr = sgld_lr
         self.lambda_y = lambda_y
         self.lambda_theta = lambda_theta
+        
+        self.noise_sd = physics_model.noise_sd
 
     
     def _pinn_init(self):
@@ -58,7 +60,7 @@ class PINN_EFI(BasePINN):
         self.net.eval()
         theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
         y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
-        Z_loss = self.lambda_y * y_loss + self.lambda_theta * theta_loss + torch.mean(self.Z**2)/2
+        Z_loss = self.lambda_y * y_loss + self.lambda_theta * theta_loss + torch.mean(self.Z**2)/2/self.noise_sd**2
         
 
         self.sampler.zero_grad()

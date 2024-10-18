@@ -15,24 +15,61 @@ def grad(outputs, inputs):
         outputs, inputs, grad_outputs=torch.ones_like(outputs), create_graph=True
     )
 
+def multi_output_grad(outputs, inputs):
+    """Computes the partial derivative of 
+    an output with respect to an input.
+    Args:
+        outputs: (N, D) tensor
+        inputs: (N, D) tensor
+    """
+    for i in range(outputs.shape[1]):
+        grads = grad(outputs[:, i].reshape(-1, 1), inputs)[0]
+        if i == 0:
+            all_grads = grads
+        else:
+            all_grads = torch.cat([all_grads, grads], dim=1)
+    return all_grads
 
 
 if __name__ == '__main__':
     
-    
+    torch.random.manual_seed(42)
     net = nn.Sequential(
-        nn.Linear(2, 15),
+        nn.Linear(1, 15),
         nn.Softplus(),
         nn.Linear(15, 15),
         nn.Softplus(),
         nn.Linear(15, 3)
     )
     
-    N = 5
-    x = torch.randn(N, 2).requires_grad_(True)
-    y = net(x)
+    def f(x):
+        return torch.cat([x, x**2, x**3], dim=1)
     
-    d = jacobian(net, x)
+    def f2(x):
+        y = x[:,0] + x[:,1]
+        y = y.reshape(-1,1) 
+        return torch.cat([y, y**2, y**3], dim=1)
     
-    print(d.shape)
-    print(d[range(x.size(0)), :, range(x.size(0)), :].shape)
+    x = torch.arange(1, 6).reshape(-1,1).float().requires_grad_()
+    
+
+    
+    y1 = f(x)[...,0].reshape(-1,1)
+    y2 = f(x)[...,1].reshape(-1,1)
+    y3 = f(x)[...,2].reshape(-1,1) 
+    
+    dy1 = grad(y1, x)[0]
+    dy2 = grad(y2, x)[0]
+    dy3 = grad(y3, x)[0]
+    
+    
+    print(dy1)
+    print(dy2)
+    print(dy3)
+    
+    
+    x2 = torch.arange(1, 7).reshape(-1,2).float().requires_grad_()
+    print(x2.shape)
+    y = f2(x2)
+    dy = multi_output_grad(y, x2)
+    print(dy)
