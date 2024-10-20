@@ -51,7 +51,7 @@ class PINN_EFI(BasePINN):
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         
         # init latent noise and sampler
-        self.Z = torch.randn(self.n_samples, 1).requires_grad_()
+        self.Z = torch.randn_like(self.y).requires_grad_()
         self.sampler = SGLD([self.Z], self.sgld_lr)
         
 
@@ -74,7 +74,7 @@ class PINN_EFI(BasePINN):
         y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
         prior_loss = - self.net.gmm_prior_loss() / self.n_samples
         
-        w_loss = self.lambda_y * (y_loss + prior_loss + self.physics_loss_weight * self.physics_loss(self.net)) + self.lambda_theta * theta_loss 
+        w_loss = self.lambda_y * (y_loss + prior_loss) + self.physics_loss_weight * self.physics_loss(self.net) + self.lambda_theta * theta_loss 
 
         self.optimiser.zero_grad()
         w_loss.backward()
@@ -93,7 +93,7 @@ if __name__ == '__main__':
     times = torch.linspace(0, t_extend, t_extend)
     temps = physics_model.physics_law(times)
 
-    pinn_efi = PINN_EFI(physics_model=physics_model, physics_loss_weight=10, lr=1e-5, sgld_lr=1e-4)
+    pinn_efi = PINN_EFI(physics_model=physics_model, physics_loss_weight=20, lr=1e-5, sgld_lr=1e-4, lambda_y=1, lambda_theta=1)
 
     losses = pinn_efi.train(epochs=10000, eval_x=times.view(-1,1))
 
@@ -101,7 +101,9 @@ if __name__ == '__main__':
 
     # preds = pinn_efi.predict(times.reshape(-1,1))
     preds_upper, preds_lower, preds_mean = pinn_efi.summary()
-    
+    preds_upper = preds_upper.flatten()
+    preds_lower = preds_lower.flatten()
+    preds_mean = preds_mean.flatten()
     # print(preds.shape)
 
     plt.plot(times, temps, alpha=0.8, color='b', label='Equation')

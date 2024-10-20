@@ -50,7 +50,9 @@ if __name__ == '__main__':
 
     # preds = pinn_efi.predict(times.reshape(-1,1))
     preds_upper, preds_lower, preds_mean = pinn.summary()
-    
+    preds_upper = preds_upper.flatten()
+    preds_lower = preds_lower.flatten()
+    preds_mean = preds_mean.flatten()
     # print(preds.shape)
 
     plt.plot(times, temps, alpha=0.8, color='b', label='Equation')

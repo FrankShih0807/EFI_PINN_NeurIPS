@@ -53,13 +53,15 @@ if __name__ == '__main__':
 
     pinn = PINN_BNN(physics_model=physics_model, physics_loss_weight=10, lr=1e-3)
 
-    losses = pinn.train(epochs=20000, eval_x=times.view(-1,1))
+    losses = pinn.train(epochs=30000, eval_x=times.view(-1,1))
 
 
 
     # preds = pinn_efi.predict(times.reshape(-1,1))
     preds_upper, preds_lower, preds_mean = pinn.summary()
-    
+    preds_upper = preds_upper.flatten()
+    preds_lower = preds_lower.flatten()
+    preds_mean = preds_mean.flatten()
     # print(preds.shape)
 
     plt.plot(times, temps, alpha=0.8, color='b', label='Equation')

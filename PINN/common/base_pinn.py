@@ -68,7 +68,7 @@ class BasePINN(object):
         return out.detach().cpu().numpy()
     
     def evaluate(self, eval_x):
-        y = self.net(eval_x).detach().flatten()
+        y = self.net(eval_x).detach()
         return y
     
     def summary(self):
