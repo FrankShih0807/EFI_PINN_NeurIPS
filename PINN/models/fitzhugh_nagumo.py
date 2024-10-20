@@ -22,7 +22,7 @@ class FitzHugh_Nagumo(PhysicsModel):
                  V0 = -1.0,
                  R0 = 1.0,
                  t_end=5,
-                 t_extend=20,
+                 t_extend=10,
                  noise_sd=0.1
                  ):
         super().__init__(a=a, b=b, c=c, V0=V0, R0=R0, t_end=t_end, t_extend=t_extend, noise_sd=noise_sd)
@@ -50,12 +50,12 @@ class FitzHugh_Nagumo(PhysicsModel):
         return [dVdt, dRdt]
     
     def physics_loss(self, model: torch.nn.Module):
-        ts = torch.linspace(0, self.t_extend, steps=self.t_extend,).view(-1,1).requires_grad_(True)
+        ts = torch.linspace(0, self.t_extend, steps=10*self.t_extend,).view(-1,1).requires_grad_(True)
         
         Vs = model(ts)[...,0]
-        Rs = model(ts)[...,1]
-        
         dV = grad(Vs, ts)[0]
+        
+        Rs = model(ts)[...,1]
         dR = grad(Rs, ts)[0]
         
         ode1 = self.c * (Vs - Vs**3 / 3 + Rs) - dV

@@ -16,8 +16,8 @@ class PINN_EFI(BasePINN):
         lr=1e-3,
         physics_loss_weight=10,
         sgld_lr=1e-3,
-        lambda_y=10,
-        lambda_theta=10,
+        lambda_y=1,
+        lambda_theta=1,
     ) -> None:
         super().__init__(physics_model, hidden_layers, lr, physics_loss_weight)
         
