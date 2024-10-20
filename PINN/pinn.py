@@ -1,6 +1,4 @@
 import torch
-import torch.nn as nn
-
 from PINN.common.base_pinn import BasePINN
 from PINN.models.cooling import Cooling
 import seaborn as sns
@@ -31,6 +29,7 @@ class PINN(BasePINN):
 
 if __name__ == '__main__':
     sns.set_theme()
+    torch.manual_seed(1234)
     
     Tenv = 25
     T0 = 100

@@ -1,8 +1,6 @@
 import torch
-import torch.nn as nn
 import torch.optim as optim
 import torchbnn as bnn
-
 from PINN.common.base_pinn import BasePINN
 from PINN.common.torch_layers import BayesianNN
 from PINN.models.cooling import Cooling
@@ -40,6 +38,7 @@ class PINN_BNN(BasePINN):
 
 if __name__ == '__main__':
     sns.set_theme()
+    torch.manual_seed(1234)
     
     Tenv = 25
     T0 = 100
