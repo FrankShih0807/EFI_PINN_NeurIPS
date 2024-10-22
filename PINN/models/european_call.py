@@ -14,18 +14,14 @@ from scipy.integrate import solve_ivp
     
     
         
-class FitzHugh_Nagumo(PhysicsModel):
+class EuropeanCall(PhysicsModel):
     def __init__(self, 
-                 a = 0.2,
-                 b = 0.2,
-                 c = 3.0,
-                 V0 = -1.0,
-                 R0 = 1.0,
-                 t_end=5,
-                 t_extend=10,
+                 r = 0.03,
+                 volatility = 0.4,
+                 strike = 100,
                  noise_sd=0.1
                  ):
-        super().__init__(a=a, b=b, c=c, V0=V0, R0=R0, t_end=t_end, t_extend=t_extend, noise_sd=noise_sd)
+        super().__init__(r=r, volatility=volatility, strike=strike, noise_sd=noise_sd)
 
         
     def _data_generation(self, n_samples=300):
@@ -43,11 +39,6 @@ class FitzHugh_Nagumo(PhysicsModel):
         R = torch.tensor(sol.y[1]).to(torch.float32)
         return V, R
     
-    def fitzhugh_nagumo(self, t, y):
-        V, R = y
-        dVdt = self.c * (V - V**3 / 3 + R)
-        dRdt =  -(V - self.a + self.b * R) / self.c
-        return [dVdt, dRdt]
     
     def physics_loss(self, model: torch.nn.Module):
         ts = torch.linspace(0, self.t_extend, steps=10*self.t_extend,).view(-1,1).requires_grad_(True)
@@ -109,60 +100,3 @@ if __name__ == "__main__":
         nn.Softplus(),
         nn.Linear(15, 2)
     )
-    # optimizer = torch.optim.Adam(net.parameters(), lr=1e-3)
-    # optimizer.zero_grad()
-    # loss = model.physics_loss(net)
-    # loss.backward()
-    
-    # for p in net.parameters():
-        # print(p.grad)
-    
-    # model.plot()
-    
-    # print(model.physics_loss(net))
-    
-        
-    
-    # plt.plot(model.X, model.y, 'x')
-    # plt.show()
-    
-    # def fitzhugh_nagumo(t, y, a, b, c):
-    #     V, R = y
-    #     dVdt = c * (V - V**3 / 3 + R)
-    #     dRdt =  -(V - a + b * R) / c
-    #     return [dVdt, dRdt]
-
-    # # Parameters
-    # a = 0.2
-    # b = 0.2
-    # c = 3.0
-    
-    # # Initial conditions
-    # y0 = [-1.0, 1.0]
-
-    # Time span
-    # t_span = (0, 20)
-    # t_eval = np.linspace(*t_span, 1000)
-
-    # # Solve the system
-    # sol = solve_ivp(fitzhugh_nagumo, t_span, y0, args=(a, b, c), t_eval=t_eval)
-
-    
-    # sns.set_theme()
-    # # Plot the results
-    # fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(8, 6))
-    
-    # ax1.plot(sol.t, sol.y[0], 'b', label='V (Voltage Variable)')
-    # ax1.set_ylabel('v')
-    # ax1.set_ylim(-2, 4)
-    # ax1.legend()
-    
-    # ax2.plot(sol.t, sol.y[1], 'r', label='R (Recovery Variable)')
-    # ax2.set_xlabel('t')
-    # ax2.set_ylabel('w')
-    # ax2.set_ylim(-1, 2)
-    # ax2.legend()
-    
-    # plt.tight_layout()
-    # plt.show()
-    

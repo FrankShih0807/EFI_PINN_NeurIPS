@@ -1,27 +1,11 @@
-import functools
 import matplotlib.pyplot as plt
-import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-# from torch.nn import utils
 import torch.optim as optim
 import seaborn as sns
 from PINN.common import SGLD
 from PINN.common.torch_layers import EFI_Net
-# from PINN.common.grad_tool import grad
 from PINN.common.base_pinn import BasePINN
-
 from PINN.models.cooling import Cooling
-# from collections import deque
-
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-sns.set_theme()
-# torch.manual_seed(42)
-# torch.manual_seed(1234)
-
-np.random.seed(10)
 
 
 class PINN_EFI(BasePINN):
@@ -32,8 +16,8 @@ class PINN_EFI(BasePINN):
         lr=1e-3,
         physics_loss_weight=10,
         sgld_lr=1e-3,
-        lambda_y=10,
-        lambda_theta=10,
+        lambda_y=1,
+        lambda_theta=1,
     ) -> None:
         super().__init__(physics_model, hidden_layers, lr, physics_loss_weight)
         
@@ -51,7 +35,7 @@ class PINN_EFI(BasePINN):
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         
         # init latent noise and sampler
-        self.Z = torch.randn(self.n_samples, 1).requires_grad_()
+        self.Z = torch.randn_like(self.y).requires_grad_()
         self.sampler = SGLD([self.Z], self.sgld_lr)
         
 
@@ -74,7 +58,7 @@ class PINN_EFI(BasePINN):
         y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
         prior_loss = - self.net.gmm_prior_loss() / self.n_samples
         
-        w_loss = self.lambda_y * (y_loss + prior_loss + self.physics_loss_weight * self.physics_loss(self.net)) + self.lambda_theta * theta_loss 
+        w_loss = self.lambda_y * (y_loss + prior_loss) + self.physics_loss_weight * self.physics_loss(self.net) + self.lambda_theta * theta_loss 
 
         self.optimiser.zero_grad()
         w_loss.backward()
@@ -82,7 +66,9 @@ class PINN_EFI(BasePINN):
 
 
 if __name__ == '__main__':
-    
+    sns.set_theme()
+    torch.manual_seed(1234)
+
     Tenv = 25
     T0 = 100
     R = 0.005
@@ -93,7 +79,7 @@ if __name__ == '__main__':
     times = torch.linspace(0, t_extend, t_extend)
     temps = physics_model.physics_law(times)
 
-    pinn_efi = PINN_EFI(physics_model=physics_model, physics_loss_weight=10, lr=1e-5, sgld_lr=1e-4)
+    pinn_efi = PINN_EFI(physics_model=physics_model, physics_loss_weight=50, lr=1e-5, sgld_lr=1e-4, lambda_y=1, lambda_theta=1)
 
     losses = pinn_efi.train(epochs=10000, eval_x=times.view(-1,1))
 
@@ -101,7 +87,9 @@ if __name__ == '__main__':
 
     # preds = pinn_efi.predict(times.reshape(-1,1))
     preds_upper, preds_lower, preds_mean = pinn_efi.summary()
-    
+    preds_upper = preds_upper.flatten()
+    preds_lower = preds_lower.flatten()
+    preds_mean = preds_mean.flatten()
     # print(preds.shape)
 
     plt.plot(times, temps, alpha=0.8, color='b', label='Equation')
