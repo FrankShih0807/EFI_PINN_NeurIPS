@@ -36,23 +36,21 @@ if __name__ == '__main__':
     R = 0.005
     t_end = 300
     t_extend = 1500
-    physics_model = Cooling()
+    physics_model = Cooling(Tenv=Tenv, T0=T0, R=R, t_end=t_end, t_extend=t_extend)
     
     times = torch.linspace(0, t_extend, t_extend)
     temps = physics_model.physics_law(times)
 
     pinn = PINN(physics_model=physics_model, physics_loss_weight=10, lr=1e-3)
 
-    losses = pinn.train(epochs=10000, eval_x=times.view(-1,1))
+    losses = pinn.train(epochs=10000)
 
 
-
-    # preds = pinn_efi.predict(times.reshape(-1,1))
     preds_upper, preds_lower, preds_mean = pinn.summary()
     preds_upper = preds_upper.flatten()
     preds_lower = preds_lower.flatten()
     preds_mean = preds_mean.flatten()
-    # print(preds.shape)
+
 
     plt.plot(times, temps, alpha=0.8, color='b', label='Equation')
     # plt.plot(t, T, 'o')

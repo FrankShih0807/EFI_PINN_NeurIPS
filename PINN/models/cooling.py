@@ -29,6 +29,10 @@ class Cooling(PhysicsModel):
         
         return t, T
     
+    def _eval_data_generation(self):
+        t = torch.linspace(0, self.t_extend, self.t_extend).reshape(self.t_extend, -1)
+        return t
+    
     def physics_law(self, time):
         T = self.Tenv + (self.T0 - self.Tenv) * torch.exp(-self.R * time)
         return T
