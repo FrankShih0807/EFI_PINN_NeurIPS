@@ -10,7 +10,7 @@ import seaborn as sns
 if __name__ == '__main__':
     
     physics_model = FitzHugh_Nagumo()
-    model = PINN(physics_model=physics_model, physics_loss_weight=1, lr=1e-3, hidden_layers=[50, 50, 50, 50])
+    model = PINN(physics_model=physics_model, physics_loss_weight=0, lr=1e-3, hidden_layers=[15, 15, 15])
     
     # for key, value in model.__dict__.items():
     #     print('{}: {}'.format(key, value))
