@@ -43,7 +43,7 @@ class BasePINN(object):
         ''' Implement the network parameter update here '''
         raise NotImplementedError()
     
-    def train(self, epochs, eval_x):
+    def train(self, epochs):
         self._pinn_init()
         
         losses = []
@@ -57,7 +57,7 @@ class BasePINN(object):
                 print(f"Epoch {ep}/{epochs}, loss: {losses[-1]:.2f}")
                 
             if ep > epochs - 1000:
-                y_pred = self.evaluate(eval_x)
+                y_pred = self.evaluate()
                 self.collection.append(y_pred)
         return losses
     
@@ -67,8 +67,8 @@ class BasePINN(object):
         out = self.net(X)
         return out.detach().cpu().numpy()
     
-    def evaluate(self, eval_x):
-        y = self.net(eval_x).detach()
+    def evaluate(self):
+        y = self.net(self.eval_X).detach()
         return y
     
     def summary(self):

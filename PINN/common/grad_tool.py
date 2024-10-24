@@ -11,9 +11,7 @@ def grad(outputs, inputs):
         outputs: (N, 1) tensor
         inputs: (N, D) tensor
     """
-    return torch.autograd.grad(
-        outputs, inputs, grad_outputs=torch.ones_like(outputs), create_graph=True
-    )
+    return torch.autograd.grad(outputs, inputs, grad_outputs=torch.ones_like(outputs), create_graph=True)
 
 def multi_output_grad(outputs, inputs):
     """Computes the partial derivative of 
@@ -42,34 +40,21 @@ if __name__ == '__main__':
         nn.Linear(15, 3)
     )
     
-    def f(x):
-        return torch.cat([x, x**2, x**3], dim=1)
+    def n2one(x):
+        y = x[:, 0] ** 2 + x[:, 1] ** 3
+        y = y.reshape(-1, 1)
+        return y
     
-    def f2(x):
-        y = x[:,0] + x[:,1]
-        y = y.reshape(-1,1) 
-        return torch.cat([y, y**2, y**3], dim=1)
+    x = torch.arange(1, 7).reshape(-1, 2).float().requires_grad_(True)
     
-    x = torch.arange(1, 6).reshape(-1,1).float().requires_grad_()
+    y = n2one(x)
+    print(x)
+    print(y)
     
-
+    dy_dx = grad(y, x)
+    dy_dx1 = dy_dx[0]
+    print(dy_dx)
     
-    y1 = f(x)[...,0].reshape(-1,1)
-    y2 = f(x)[...,1].reshape(-1,1)
-    y3 = f(x)[...,2].reshape(-1,1) 
-    
-    dy1 = grad(y1, x)[0]
-    dy2 = grad(y2, x)[0]
-    dy3 = grad(y3, x)[0]
-    
-    
-    print(dy1)
-    print(dy2)
-    print(dy3)
-    
-    
-    x2 = torch.arange(1, 7).reshape(-1,2).float().requires_grad_()
-    print(x2.shape)
-    y = f2(x2)
-    dy = multi_output_grad(y, x2)
-    print(dy)
+    # dy_d2x = grad(dy_dx, x)
+    print(grad(dy_dx[0][:,0], x))
+    print(grad(dy_dx[0][:,1], x))

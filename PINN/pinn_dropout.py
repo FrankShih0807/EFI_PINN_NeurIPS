@@ -52,14 +52,14 @@ if __name__ == '__main__':
     R = 0.005
     t_end = 300
     t_extend = 1500
-    physics_model = Cooling()
+    physics_model = Cooling(Tenv=Tenv, T0=T0, R=R, t_end=t_end, t_extend=t_extend)
     
     times = torch.linspace(0, t_extend, t_extend)
     temps = physics_model.physics_law(times)
 
     pinn = PINN_DROPOUT(physics_model=physics_model, physics_loss_weight=10, lr=1e-3, dropout_rate=1e-3)
 
-    losses = pinn.train(epochs=30000, eval_x=times.view(-1,1))
+    losses = pinn.train(epochs=30000)
 
 
 
