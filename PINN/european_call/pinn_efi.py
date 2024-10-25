@@ -48,6 +48,7 @@ class PINN_EFI(BasePINN):
         self.net.eval()
         theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
         y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
+        # y_loss = self.mse_loss(self.y, self.net(self.X + torch.cat([torch.zeros_like(self.Z), self.Z], dim=1)))
         Z_loss = self.lambda_y * y_loss + self.lambda_theta * theta_loss + torch.mean(self.Z**2)/2/self.noise_sd**2
         
 
@@ -60,6 +61,7 @@ class PINN_EFI(BasePINN):
         self.net.train()
         theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
         y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
+        # y_loss = self.mse_loss(self.y, self.net(self.X + torch.cat([torch.zeros_like(self.Z), self.Z], dim=1)))
         prior_loss = - self.net.gmm_prior_loss() / self.n_samples
         
         w_loss = self.lambda_y * (y_loss + prior_loss) + self.physics_loss_weight * self.physics_loss(self.net) + self.lambda_theta * theta_loss 
@@ -79,12 +81,12 @@ if __name__ == '__main__':
     
 
     pinn_efi = PINN_EFI(physics_model=physics_model, 
-                        physics_loss_weight=1, 
+                        physics_loss_weight=5, 
                         lr=1e-4, 
                         sgld_lr=1e-4, 
                         lambda_y=10, 
                         lambda_theta=1,
-                        hidden_layers=[20, 20]
+                        hidden_layers=[20, 20, 20]
                         )
 
     # print(pinn_efi.eval_X.shape)

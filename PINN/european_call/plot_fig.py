@@ -45,20 +45,21 @@ if __name__ == '__main__':
     S_grid = data['S_grid']
     t_grid = data['t_grid']
 
-    plot_3D()
+    # plot_3D()
     
-    # print(t_grid[:,0])
-    # true_price = model.physics_law(S_grid[:,0], t_grid[:,0])
+    print(t_grid[:,0])
+    true_price = model.physics_law(S_grid[:,0], t_grid[:,0])
     
     
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
     
-    # ax.plot(S_grid[:,0], preds_mean[:,0], label='PINN_EFI')
-    # ax.plot(S_grid[:,0], true_price, label='True Price')
-    # ax.fill_between(S_grid[:,0], preds_upper[:,0], preds_lower[:,0], alpha=0.2, color='g', label='95% CI')
-    # ax.set_xlabel('Stock Price')
-    # ax.set_ylabel('Option Price')
-    # ax.legend()
-    # plt.show()
+    ax.plot(S_grid[:,0], preds_mean[:,0], label='PINN_EFI')
+    ax.plot(S_grid[:,0], true_price, label='True Price')
+    ax.fill_between(S_grid[:,0], preds_upper[:,0], preds_lower[:,0], alpha=0.2, color='g', label='95% CI')
+    ax.set_xlabel('Stock Price')
+    ax.set_ylabel('Option Price')
+    ax.legend()
+    plt.show()
+    
     

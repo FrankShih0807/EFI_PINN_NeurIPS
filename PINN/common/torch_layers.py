@@ -38,6 +38,16 @@ class BaseDNN(nn.Module):
         return x
     
 
+class EncoderDNN(BaseDNN):
+    def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu):
+        if hidden_layers is None:
+            last_hidden = 2 ** int(np.log2(output_dim))
+            # hidden_layers = [last_hidden//4, last_hidden//2 , last_hidden]
+            hidden_layers = [last_hidden//2 , last_hidden]
+        super(EncoderDNN, self).__init__(input_dim, output_dim, hidden_layers, activation_fn)
+
+    
+
 class DropoutDNN(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu, dropout_rate=0.01):
         super(DropoutDNN, self).__init__()
@@ -148,7 +158,8 @@ class EFI_Net(nn.Module):
 
         self.gmm = GaussianMixtureModel(prior_sd, sparse_sd)
         
-        self.encoder = BaseDNN(input_dim=self.encoder_input_dim, output_dim=self.n_parameters, activation_fn=activation_fn)
+        # self.encoder = BaseDNN(input_dim=self.encoder_input_dim, output_dim=self.n_parameters, activation_fn=activation_fn)
+        self.encoder = EncoderDNN(input_dim=self.encoder_input_dim, output_dim=self.n_parameters, activation_fn=activation_fn)
         for p in self.parameters():
             p.data = torch.randn_like(p.data) * 0.001
 
@@ -216,7 +227,7 @@ class EFI_Net(nn.Module):
         return log_prior
     
     def sparsity_loss(self, theta):
-        xi = 0.1
+        xi = 0.01
         a = 1
         return torch.where(theta.abs() > a * xi, torch.zeros_like(theta.abs()), theta.abs()).sum()
 
@@ -249,13 +260,10 @@ if __name__ == '__main__':
     
     
     
-    net = nn.Sequential(
-        nn.Linear(1, 10),
-        # nn.ReLU(),
-        nn.Linear(10, 10),
-        # nn.ReLU(),
-        nn.Linear(10, 1)
-    )
+    net = EncoderDNN(5, 500)
+    param_size = 0
+    for p in net.parameters():
+        param_size += p.numel()
+        print(p.shape)
     
-    for key, value in net.named_parameters():
-        print(key, value.shape)
+    print(param_size)
