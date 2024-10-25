@@ -106,7 +106,7 @@ class EFI_Net(nn.Module):
                  hidden_layers=[15, 15], 
                  activation_fn=F.softplus, 
                  prior_sd=0.1, 
-                 sparse_sd=0.01 , 
+                 sparse_sd=0.01, 
                  sparsity=0.5):
         super(EFI_Net, self).__init__()
         

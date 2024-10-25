@@ -80,10 +80,10 @@ if __name__ == '__main__':
 
     pinn_efi = PINN_EFI(physics_model=physics_model, 
                         physics_loss_weight=1, 
-                        lr=1e-5, 
+                        lr=1e-4, 
                         sgld_lr=1e-4, 
                         lambda_y=10, 
-                        lambda_theta=10,
+                        lambda_theta=1,
                         hidden_layers=[20, 20]
                         )
 

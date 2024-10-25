@@ -25,12 +25,12 @@ class EuropeanCall(PhysicsModel):
 
 
         
-    def _data_generation(self, n_samples=500):
+    def _data_generation(self, n_samples=200):
         ivp_x, ivp_y = self.get_ivp_data(n_samples)
         bvp_x1, bvp_y1, bvp_x2, bvp_y2 = self.get_bvp_data(n_samples)
         X = torch.cat([ivp_x, bvp_x1, bvp_x2], dim=0)
         y = torch.cat([ivp_y, bvp_y1, bvp_y2], dim=0)
-        y += self.noise_sd * torch.randn_like(y)
+        # y += self.noise_sd * torch.randn_like(y)
         
         self.physics_X = self.get_diff_data(4 * n_samples).requires_grad_(True)
         return X, y
@@ -74,6 +74,8 @@ class EuropeanCall(PhysicsModel):
         
     
     def physics_law(self, s, t2m)->torch.Tensor:
+        s = torch.as_tensor(s)
+        t2m = torch.as_tensor(t2m)
         d1 = (torch.log(s/self.K) + (self.r + self.sigma**2/2) * (t2m)) / (self.sigma * torch.sqrt(t2m))
         d2 = d1 - self.sigma * torch.sqrt(t2m)
         Nd1 = self.norm_dist.cdf(d1)
@@ -129,12 +131,11 @@ if __name__ == "__main__":
     call = EuropeanCall()
     
     call.plot()
-    # print(call.eval_X[...,1].reshape(100,100))
-    # print(call.X.shape, call.y.shape, call.eval_X.shape, call.physics_X.shape)
+
     
-    # bvp_x1,bvp_y1,bvp_x2,bvp_y2 = call.get_bvp_data(500)
-    # ivp_x1,ivp_y1 = call.get_ivp_data(500)
-    # diff_x1,diff_y1 = call.get_diff_data(2000)
+    # bvp_x1,bvp_y1,bvp_x2,bvp_y2 = call.get_bvp_data(200)
+    # ivp_x1,ivp_y1 = call.get_ivp_data(200)
+    # diff_x1 = call.get_diff_data(800)
     # plt.scatter(bvp_x1[:,0],bvp_x1[:,1], label= "BVP 1", color = "red",marker="o")
     # plt.scatter(bvp_x2[:,0],bvp_x2[:,1], label= "BVP 2", color = "green",marker="x")
     # plt.scatter(ivp_x1[:,0],ivp_x1[:,1], label= "IVP", color = "blue")
@@ -146,14 +147,3 @@ if __name__ == "__main__":
     # plt.show()
         
     
-    # net = nn.Sequential(
-    #     nn.Linear(2, 50),
-    #     nn.Tanh(),
-    #     nn.Linear(50, 50),
-    #     nn.Tanh(),
-    #     nn.Linear(50, 1)
-    # )
-    # pde_loss = call.physics_loss(net)
-    # print(pde_loss)
-    
-    # print(call.eval_X.shape)
