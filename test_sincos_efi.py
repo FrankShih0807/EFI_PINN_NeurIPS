@@ -18,7 +18,7 @@ if __name__ == '__main__':
     times = torch.linspace(0, t_extend, t_extend * 10)
     Y1_true, Y2_true = physics_model.physics_law(times)
 
-    model = PINN_EFI(physics_model=physics_model, physics_loss_weight=50, lr=1e-4, sgld_lr=1e-4, lambda_y=10, lambda_theta=10)
+    model = PINN_EFI(physics_model=physics_model, physics_loss_weight=50, lr=1e-4, sgld_lr=1e-4, lambda_y=10, lambda_theta=1)
 
     losses = model.train(epochs=10000)
 
@@ -35,10 +35,6 @@ if __name__ == '__main__':
     Y2_lower = preds_lower[:,1]
     Y2_mean = preds_mean[:,1]
 
-    preds_upper = preds_upper.flatten()
-    preds_lower = preds_lower.flatten()
-    preds_mean = preds_mean.flatten()
-
 
     sns.set_theme()
 
@@ -49,7 +45,7 @@ if __name__ == '__main__':
     ax1.fill_between(times, Y1_upper, Y1_lower, alpha=0.2, color='g', label='95% CI')
     ax1.scatter(model.X, model.y[:,0], color='r', label='Data', marker='x')
     ax1.set_ylabel('Y1(t)')
-    ax1.set_ylim(-2, 2)
+    ax1.set_ylim(-5, 5)
     ax1.legend()
     
     ax2.plot(times, Y2_true.flatten().numpy(), 'b', label='True Y2')
@@ -58,7 +54,7 @@ if __name__ == '__main__':
     ax2.scatter(model.X, model.y[:,1], color='r', label='Data', marker='x')
     ax2.set_xlabel('t')
     ax2.set_ylabel('Y2(t)')
-    ax2.set_ylim(-2, 2)
+    ax2.set_ylim(-5, 5)
     ax2.legend()
     
     plt.tight_layout()
