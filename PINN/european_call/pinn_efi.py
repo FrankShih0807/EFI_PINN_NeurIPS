@@ -1,11 +1,15 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 import seaborn as sns
 from PINN.common import SGLD
 from PINN.common.torch_layers import EFI_Net
 from PINN.common.base_pinn import BasePINN
 from PINN.models.european_call import EuropeanCall
+
 
 
 class PINN_EFI(BasePINN):
@@ -27,7 +31,7 @@ class PINN_EFI(BasePINN):
         self.lambda_theta = lambda_theta
         
         self.noise_sd = physics_model.noise_sd
-
+        self.activation_fn = nn.Softplus(beta=5)
     
     def _pinn_init(self):
         # init EFI net and optimiser
@@ -64,9 +68,6 @@ class PINN_EFI(BasePINN):
         w_loss.backward()
         self.optimiser.step()
     
-    def evaluate(self):
-        y = self.net(self.physics_X).detach()
-        return y
 
 
 if __name__ == '__main__':
@@ -77,18 +78,48 @@ if __name__ == '__main__':
     physics_model = EuropeanCall()
     
 
-    pinn_efi = PINN_EFI(physics_model=physics_model, physics_loss_weight=50, lr=1e-5, sgld_lr=1e-4, lambda_y=1, lambda_theta=10)
+    pinn_efi = PINN_EFI(physics_model=physics_model, 
+                        physics_loss_weight=1, 
+                        lr=1e-5, 
+                        sgld_lr=1e-4, 
+                        lambda_y=10, 
+                        lambda_theta=10,
+                        hidden_layers=[20, 20]
+                        )
 
-    losses = pinn_efi.train(epochs=10000)
-
+    # print(pinn_efi.eval_X.shape)
+    
+    losses = pinn_efi.train(epochs=20000)
 
 
     # preds = pinn_efi.predict(times.reshape(-1,1))
-    preds_upper, preds_lower, preds_mean = pinn_efi.summary()
-    preds_upper = preds_upper.flatten()
-    preds_lower = preds_lower.flatten()
-    preds_mean = preds_mean.flatten()
-    # print(preds.shape)
+    grids = 100
     
+    preds_upper, preds_lower, preds_mean = pinn_efi.summary()
+    preds_upper = preds_upper.flatten().reshape(grids,grids).numpy()
+    preds_lower = preds_lower.flatten().reshape(grids,grids).numpy()
+    preds_mean = preds_mean.flatten().reshape(grids,grids).numpy()
+    
+    S_grid = physics_model.eval_X[:,1].reshape(grids,grids).numpy()
+    t_grid = 1-physics_model.eval_X[:,0].reshape(grids,grids).numpy()
+    
+    np.savez('PINN/european_call/output.npz', preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean, S_grid=S_grid, t_grid=t_grid)
+    
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d') 
+    im = ax.plot_surface(S_grid,
+                         t_grid, 
+                         preds_mean, 
+                         cmap='plasma')
+    
+    
+    
+    fig.colorbar(im, shrink=0.5, aspect=5, pad=0.07)
+    ax.set_xlabel('Stock Price')
+    ax.set_ylabel('Time to Maturity')
+    ax.set_zlabel('Option Price')
+    ax.view_init(elev=30, azim=225)
+    plt.savefig('PINN/european_call/european_call_efi.png')
+    plt.show()
     
 

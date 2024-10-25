@@ -1,4 +1,3 @@
-import functools
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -6,21 +5,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributions as dist
 from torch.autograd.functional import jacobian
-import seaborn as sns
 
 from PINN.common.grad_tool import grad
 from PINN.common.base_physics import PhysicsModel
-from scipy.integrate import solve_ivp
-from mpl_toolkits.mplot3d import Axes3D
 
-    
     
         
 class EuropeanCall(PhysicsModel):
     def __init__(self, 
                  S_range = [0, 160],
                  t_range = [0, 1],
-                 sigma = 0.4,
+                 sigma = 0.5,
                  r = 0.05,
                  K = 80,
                  noise_sd=1
@@ -39,6 +34,15 @@ class EuropeanCall(PhysicsModel):
         
         self.physics_X = self.get_diff_data(4 * n_samples).requires_grad_(True)
         return X, y
+    
+    def _eval_data_generation(self):
+        eval_t = torch.linspace(self.t_range[0], self.t_range[1], 100)
+        # eval_t = torch.linspace(self.t_range[1], self.t_range[0], 20)
+        eval_S = torch.linspace(self.S_range[0], self.S_range[1], 100)
+        S, T = torch.meshgrid(eval_S, eval_t)
+        eval_X = torch.cat([T.reshape(-1, 1), S.reshape(-1, 1)], dim=1)
+        # eval_X = torch.cartesian_prod(eval_t, eval_S)
+        return eval_X
     
     def get_diff_data(self, n_samples):
         ts = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
@@ -107,6 +111,8 @@ class EuropeanCall(PhysicsModel):
         
         ax = fig.add_subplot(111, projection='3d')
         
+        # print(S.shape, T.shape, C.shape)   
+        # raise
         im = ax.plot_surface(S.numpy(), T.numpy(), C.numpy(), cmap='plasma')
         # ax.contourf(S.numpy(), T.numpy(), C.numpy(), zdir='z', offset=-20, cmap='plasma')
         
@@ -122,8 +128,9 @@ if __name__ == "__main__":
     
     call = EuropeanCall()
     
-    # call.plot()
-    # print(call.X.shape, call.y.shape)
+    call.plot()
+    # print(call.eval_X[...,1].reshape(100,100))
+    # print(call.X.shape, call.y.shape, call.eval_X.shape, call.physics_X.shape)
     
     # bvp_x1,bvp_y1,bvp_x2,bvp_y2 = call.get_bvp_data(500)
     # ivp_x1,ivp_y1 = call.get_ivp_data(500)
@@ -139,12 +146,14 @@ if __name__ == "__main__":
     # plt.show()
         
     
-    net = nn.Sequential(
-        nn.Linear(2, 50),
-        nn.Tanh(),
-        nn.Linear(50, 50),
-        nn.Tanh(),
-        nn.Linear(50, 1)
-    )
-    pde_loss = call.physics_loss(net)
-    print(pde_loss)
+    # net = nn.Sequential(
+    #     nn.Linear(2, 50),
+    #     nn.Tanh(),
+    #     nn.Linear(50, 50),
+    #     nn.Tanh(),
+    #     nn.Linear(50, 1)
+    # )
+    # pde_loss = call.physics_loss(net)
+    # print(pde_loss)
+    
+    # print(call.eval_X.shape)
