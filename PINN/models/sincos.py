@@ -13,8 +13,8 @@ from PINN.common.base_physics import PhysicsModel
         
 class SinCos(PhysicsModel):
     def __init__(self, 
-                 t_end=300, 
-                 t_extend=1500,
+                 t_end=20, 
+                 t_extend=25,
                  noise_sd=1.0
                  ):
         super().__init__(t_end=t_end, t_extend=t_extend, noise_sd=noise_sd)
@@ -34,8 +34,8 @@ class SinCos(PhysicsModel):
         return t
     
     def physics_law(self, time):
-        Y1 = np.cos(time)
-        Y2 = np.sin(time)
+        Y1 = 3 * np.cos(time)
+        Y2 = 3 * np.sin(time)
         return Y1, Y2
     
     def physics_loss(self, model: torch.nn.Module):
