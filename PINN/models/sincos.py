@@ -24,13 +24,13 @@ class SinCos(PhysicsModel):
         t = torch.linspace(0, self.t_end, n_samples).reshape(n_samples, -1)
         Y1, Y2 = self.physics_law(t)
         
-        y = torch.stack([Y1, Y2], dim=1)
+        y = torch.cat([Y1, Y2], dim=1)
         y += self.noise_sd * torch.randn_like(y)
         
         return t, y
     
     def _eval_data_generation(self):
-        t = torch.linspace(0, self.t_extend, self.t_extend).reshape(self.t_extend, -1)
+        t = torch.linspace(0, self.t_extend, self.t_extend * 10).reshape(self.t_extend * 10, -1)
         return t
     
     def physics_law(self, time):
@@ -38,5 +38,5 @@ class SinCos(PhysicsModel):
         Y2 = np.sin(time)
         return Y1, Y2
     
-    def physics_loss(self):
+    def physics_loss(self, model: torch.nn.Module):
         return torch.zeros(1)
