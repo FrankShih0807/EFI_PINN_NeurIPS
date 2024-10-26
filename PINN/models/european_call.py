@@ -4,7 +4,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributions as dist
-from torch.autograd.functional import jacobian
 
 from PINN.common.grad_tool import grad
 from PINN.common.base_physics import PhysicsModel

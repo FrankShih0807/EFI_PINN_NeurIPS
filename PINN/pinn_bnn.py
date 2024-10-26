@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import torch.optim as optim
 import torchbnn as bnn
 from PINN.common.base_pinn import BasePINN
@@ -12,12 +13,14 @@ class PINN_BNN(BasePINN):
         self,
         physics_model,
         hidden_layers=[15, 15],
+        activation_fn=nn.Softplus(beta=10),
         lr=1e-3,
-        physics_loss_weight=10,
+        physics_loss_weight=1,
+        kl_weight=1e-1,
     ) -> None:
-        super().__init__(physics_model, hidden_layers, lr, physics_loss_weight)
+        super().__init__(physics_model, hidden_layers, activation_fn, lr, physics_loss_weight)
         self.kl_loss = bnn.BKLLoss(reduction='mean', last_layer_only=False)
-        self.kl_weight = 1e-1
+        self.kl_weight = kl_weight
         
 
     def _pinn_init(self):
@@ -50,7 +53,7 @@ if __name__ == '__main__':
     times = torch.linspace(0, t_extend, t_extend)
     temps = physics_model.physics_law(times)
 
-    pinn = PINN_BNN(physics_model=physics_model, physics_loss_weight=10, lr=1e-3)
+    pinn = PINN_BNN(physics_model=physics_model, physics_loss_weight=10, lr=1e-2)
 
     losses = pinn.train(epochs=30000)
 

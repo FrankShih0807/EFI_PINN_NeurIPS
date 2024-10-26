@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import torch.optim as optim
 from PINN.common.base_pinn import BasePINN
 from PINN.common.torch_layers import DropoutDNN
@@ -12,11 +13,12 @@ class PINN_DROPOUT(BasePINN):
         self,
         physics_model,
         hidden_layers=[15, 15],
+        activation_fn=nn.Softplus(beta=10),
         lr=1e-3,
         physics_loss_weight=10,
         dropout_rate=0.01,
     ) -> None:
-        super().__init__(physics_model, hidden_layers, lr, physics_loss_weight)
+        super().__init__(physics_model, hidden_layers, activation_fn, lr, physics_loss_weight)
 
         # Dropout config
         self.dropout_rate = dropout_rate

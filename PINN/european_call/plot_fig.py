@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     # plot_3D()
     
-    print(t_grid[:,0])
+    # print(t_grid[:,0])
     true_price = model.physics_law(S_grid[:,0], t_grid[:,0])
     
     

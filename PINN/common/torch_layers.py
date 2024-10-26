@@ -117,7 +117,7 @@ class EFI_Net(nn.Module):
                  activation_fn=F.softplus, 
                  prior_sd=0.1, 
                  sparse_sd=0.01, 
-                 sparsity=0.5):
+                 sparsity=1.0):
         super(EFI_Net, self).__init__()
         
         # EFI Net Info

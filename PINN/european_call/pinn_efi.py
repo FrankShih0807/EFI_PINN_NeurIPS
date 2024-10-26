@@ -17,13 +17,14 @@ class PINN_EFI(BasePINN):
         self,
         physics_model,
         hidden_layers=[15, 15],
+        activation_fn=nn.Softplus(beta=10),
         lr=1e-3,
         physics_loss_weight=10,
         sgld_lr=1e-3,
         lambda_y=1,
         lambda_theta=1,
     ) -> None:
-        super().__init__(physics_model, hidden_layers, lr, physics_loss_weight)
+        super().__init__(physics_model, hidden_layers, activation_fn, lr, physics_loss_weight)
         
         # EFI configs
         self.sgld_lr = sgld_lr
@@ -31,7 +32,7 @@ class PINN_EFI(BasePINN):
         self.lambda_theta = lambda_theta
         
         self.noise_sd = physics_model.noise_sd
-        self.activation_fn = nn.Softplus(beta=5)
+
     
     def _pinn_init(self):
         # init EFI net and optimiser

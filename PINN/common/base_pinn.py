@@ -13,8 +13,9 @@ class BasePINN(object):
         self,
         physics_model,
         hidden_layers=[15, 15],
+        activation_fn=nn.Softplus(beta=10),
         lr=1e-3,
-        physics_loss_weight=10,
+        physics_loss_weight=1,
     ) -> None:
         super().__init__()
         self.physics_model = physics_model
@@ -28,8 +29,8 @@ class BasePINN(object):
         # Common configs
         self.lr = lr
         self.hidden_layers = hidden_layers
+        self.activation_fn = activation_fn
         self.mse_loss = nn.MSELoss()
-        self.activation_fn = F.softplus
         
         self.collection = []
 

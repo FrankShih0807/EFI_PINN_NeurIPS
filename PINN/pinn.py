@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from PINN.common.base_pinn import BasePINN
 from PINN.models.cooling import Cooling
 import seaborn as sns
@@ -9,10 +10,11 @@ class PINN(BasePINN):
         self,
         physics_model,
         hidden_layers=[15, 15],
+        activation_fn=nn.Softplus(beta=10),
         lr=1e-3,
-        physics_loss_weight=10,
+        physics_loss_weight=1,
     ) -> None:
-        super().__init__(physics_model, hidden_layers, lr, physics_loss_weight)
+        super().__init__(physics_model, hidden_layers, activation_fn, lr, physics_loss_weight)
         
 
     def update(self):
@@ -41,7 +43,7 @@ if __name__ == '__main__':
     times = torch.linspace(0, t_extend, t_extend)
     temps = physics_model.physics_law(times)
 
-    pinn = PINN(physics_model=physics_model, physics_loss_weight=10, lr=1e-3)
+    pinn = PINN(physics_model=physics_model, physics_loss_weight=50, lr=1e-3)
 
     losses = pinn.train(epochs=10000)
 
