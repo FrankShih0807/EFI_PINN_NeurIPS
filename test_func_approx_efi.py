@@ -1,4 +1,7 @@
 from PINN.pinn_efi import PINN_EFI
+from PINN.pinn_dropout import PINN_DROPOUT
+from PINN.pinn import PINN
+
 import torch
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -18,7 +21,9 @@ if __name__ == '__main__':
     times = torch.linspace(0, t_extend, t_extend * 10)
     Y1_true, Y2_true = physics_model.physics_law(times)
 
-    model = PINN_EFI(physics_model=physics_model, physics_loss_weight=50, lr=1e-4, sgld_lr=1e-4, lambda_y=1, lambda_theta=1)
+    # model = PINN_EFI(physics_model=physics_model, physics_loss_weight=50, lr=1e-4, sgld_lr=1e-4, lambda_y=1, lambda_theta=1)
+    # model = PINN_DROPOUT(physics_model=physics_model, physics_loss_weight=50, lr=1e-4)
+    model = PINN(physics_model=physics_model, physics_loss_weight=50, lr=1e-4)
 
     losses = model.train(epochs=20000)
 
