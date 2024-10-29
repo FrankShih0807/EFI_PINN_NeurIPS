@@ -1,0 +1,39 @@
+cooling:
+  epochs: 20_000
+  pinn:
+    hidden_layers:
+    - 100
+    - 100
+    - 100
+    lr: 1.0e-3
+    physics_loss_weight: 50.0
+    dropout_rate: 0.2
+  model:
+    Tenv: 25
+    T0: 100
+    R: 0.005
+    t_end: 300
+    t_extend: 1500
+    noise_sd: 1.0
+
+
+european_call:
+  epochs: 10_000
+  pinn:
+    hidden_layers:
+    - 20
+    - 20
+    - 20
+    lr: 1.0e-3
+    physics_loss_weight: 5.0
+  model:
+    S_range:
+    - 0
+    - 160
+    t_range:
+    - 0
+    - 1
+    sigma: 0.5
+    r: 0.05
+    K: 80
+    noise_sd: 1.0

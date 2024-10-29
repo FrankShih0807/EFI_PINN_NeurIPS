@@ -39,39 +39,3 @@ class PINN_BNN(BasePINN):
         return loss
 
 
-if __name__ == '__main__':
-    sns.set_theme()
-    torch.manual_seed(1234)
-    
-    Tenv = 25
-    T0 = 100
-    R = 0.005
-    t_end = 300
-    t_extend = 1500
-    physics_model = Cooling(Tenv=Tenv, T0=T0, R=R, t_end=t_end, t_extend=t_extend)
-    
-    times = torch.linspace(0, t_extend, t_extend)
-    temps = physics_model.physics_law(times)
-
-    pinn = PINN_BNN(physics_model=physics_model, physics_loss_weight=10, lr=1e-2)
-
-    losses = pinn.train(epochs=30000)
-
-
-
-    # preds = pinn_efi.predict(times.reshape(-1,1))
-    preds_upper, preds_lower, preds_mean = pinn.summary()
-    preds_upper = preds_upper.flatten()
-    preds_lower = preds_lower.flatten()
-    preds_mean = preds_mean.flatten()
-    # print(preds.shape)
-
-    plt.plot(times, temps, alpha=0.8, color='b', label='Equation')
-    # plt.plot(t, T, 'o')
-    plt.plot(times, preds_mean, alpha=0.8, color='g', label='PINN-BNN')
-    plt.vlines(t_end, Tenv, T0, color='r', linestyles='dashed', label='no data beyond this point')
-    plt.fill_between(times, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
-    plt.legend()
-    plt.ylabel('Temperature (C)')
-    plt.xlabel('Time (s)')
-    plt.savefig('temp_pred_bnn.png')

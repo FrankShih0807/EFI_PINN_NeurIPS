@@ -5,14 +5,24 @@ from ruamel.yaml import YAML
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from PINN.common.base_pinn import BasePINN
-from PINN.pinn import PINN
-# from EscapeEnv import DQN, LKTD_SARSA, SGHMC_SARSA, LKTDDA_SARSA, BootDQN, KOVA, BayesianDQN, QRDQN, LKTD_DQN, A2C, LT_A2C, LT_PPO, PPO, LT_A2C_v2, LT_PPO_v2
+from PINN.common.base_physics import PhysicsModel
+from PINN import PINN, PINN_DROPOUT, PINN_EFI, PINN_BNN
+from PINN.models import Cooling, EuropeanCall
+
 yaml = YAML()
 yaml.preserve_quotes = True
 
 
 ALGOS: Dict[str, Type[BasePINN]] = {
-    "pinn": PINN 
+    "pinn": PINN,
+    "pinn_dropout": PINN_DROPOUT,
+    "pinn_efi": PINN_EFI,
+    "pinn_bnn": PINN_BNN,
+}
+
+MODELS: Dict[str, Type[PhysicsModel]] = {
+    "cooling": Cooling,
+    "european_call": EuropeanCall,
 }
 
 def create_log_folder(path):
@@ -29,6 +39,7 @@ def save_yaml(config, file_path):
 def create_parser():
     parser = argparse.ArgumentParser(description='Initial Argument Parser')
     parser.add_argument('--algo', help="PINN algorithms", type=str, default="pinn", required=False, choices=list(ALGOS.keys()))
+    parser.add_argument('--model', help="Physics model", type=str, default="cooling", required=False, choices=list(MODELS.keys()))
     parser.add_argument('--task_id', type=int, default=-1)
 
     parser.add_argument('--exp_name', type=str, default=None)
@@ -46,7 +57,10 @@ def create_parser():
 def create_output_dir(inital_args):
     default_output_path = os.path.join(Path(__file__).parent.parent, 'output')
     if inital_args['exp_name'] is None:
-        inital_args['exp_name'] = '{}-test'.format(inital_args['algo'])
+        # inital_args['exp_name'] = '{}-test'.format(inital_args['algo'])
+        model = inital_args['model']
+        algo = inital_args['algo']
+        inital_args['exp_name'] = f'{model}/{algo}'
     path = os.path.join(default_output_path, inital_args['exp_name'])
     os.makedirs(path, exist_ok=True)
     
