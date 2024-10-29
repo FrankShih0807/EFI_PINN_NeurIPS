@@ -16,14 +16,14 @@ cooling:
 
 
 european_call:
-  epochs: 10_000
+  epochs: 20_000
   pinn:
     hidden_layers:
     - 20
     - 20
     - 20
     lr: 1.0e-3
-    physics_loss_weight: 5.0
+    physics_loss_weight: 10.0
   model:
     S_range:
     - 0

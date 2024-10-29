@@ -2,10 +2,11 @@ cooling:
   epochs: 10_000
   pinn:
     hidden_layers:
-    - 15
-    - 15
+    - 50
+    - 50
     lr: 1.0e-3
     physics_loss_weight: 50.0
+    kl_weight: 1.0
   model:
     Tenv: 25
     T0: 100

@@ -1,12 +1,9 @@
-import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchbnn as bnn
 from PINN.common.base_pinn import BasePINN
 from PINN.common.torch_layers import BayesianNN
-from PINN.models.cooling import Cooling
-import seaborn as sns
-import matplotlib.pyplot as plt
+
 
 class PINN_BNN(BasePINN):
     def __init__(
@@ -17,8 +14,9 @@ class PINN_BNN(BasePINN):
         lr=1e-3,
         physics_loss_weight=1,
         kl_weight=1e-1,
+        save_path=None,
     ) -> None:
-        super().__init__(physics_model, hidden_layers, activation_fn, lr, physics_loss_weight)
+        super().__init__(physics_model, hidden_layers, activation_fn, lr, physics_loss_weight, save_path)
         self.kl_loss = bnn.BKLLoss(reduction='mean', last_layer_only=False)
         self.kl_weight = kl_weight
         
