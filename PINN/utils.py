@@ -61,6 +61,10 @@ def create_output_dir(inital_args):
         model = inital_args['model']
         algo = inital_args['algo']
         inital_args['exp_name'] = f'{model}/{algo}'
+    else:
+        model = inital_args['model']
+        algo = inital_args['algo']
+        inital_args['exp_name'] = f'{model}/{inital_args["exp_name"]}'
     path = os.path.join(default_output_path, inital_args['exp_name'])
     os.makedirs(path, exist_ok=True)
     
