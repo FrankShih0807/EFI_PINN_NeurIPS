@@ -16,7 +16,6 @@ class PhysicsModel(object):
         self.input_dim = self.X.shape[1]
         self.output_dim = self.y.shape[1]
         self.n_samples = self.X.shape[0]
-
     
     def _data_generation(self):
         ''' Implement the data generation here and return X, y '''
@@ -33,3 +32,10 @@ class PhysicsModel(object):
     def physics_loss(self):
         ''' Implement the physics loss here '''
         raise NotImplementedError()
+    
+    def plot_true_solution(self, save_path=None):
+        ''' Plot the true solution here '''
+        pass
+    def save_evaluation(self, model, save_path=None):
+        ''' Plot the predicted solution here '''
+        pass

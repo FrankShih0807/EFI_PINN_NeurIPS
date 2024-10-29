@@ -28,16 +28,20 @@ def plot_3D():
     ax.set_xlabel('Stock Price')
     ax.set_ylabel('Time to Maturity')
     ax.set_zlabel('Option Price')
-    ax.view_init(elev=30, azim=225)
-    plt.savefig('PINN/european_call/european_call_efi.png')
-    plt.show()
+    ax.view_init(elev=15, azim=-125)
+    # ax.set_title(f'European Call Option Price')
+    plt.savefig(f'PINN/european_call/european_call_{algo}.png')
+    # plt.show()
     
 if __name__ == '__main__':
     
     model = EuropeanCall()
     
-    
-    data = np.load('PINN/european_call/output.npz')
+    # algo = 'efi'
+    algo = 'pinn'
+
+
+    data = np.load(f'PINN/european_call/{algo}_output.npz')
 
     preds_upper = data['preds_upper']
     preds_lower = data['preds_lower']
@@ -45,7 +49,7 @@ if __name__ == '__main__':
     S_grid = data['S_grid']
     t_grid = data['t_grid']
 
-    # plot_3D()
+    plot_3D()
     
     # print(t_grid[:,0])
     true_price = model.physics_law(S_grid[:,0], t_grid[:,0])
@@ -54,12 +58,12 @@ if __name__ == '__main__':
     fig = plt.figure()
     ax = fig.add_subplot(111)
     
-    ax.plot(S_grid[:,0], preds_mean[:,0], label='PINN_EFI')
+    ax.plot(S_grid[:,0], preds_mean[:,0], label=f'{algo}')
     ax.plot(S_grid[:,0], true_price, label='True Price')
     ax.fill_between(S_grid[:,0], preds_upper[:,0], preds_lower[:,0], alpha=0.2, color='g', label='95% CI')
     ax.set_xlabel('Stock Price')
     ax.set_ylabel('Option Price')
     ax.legend()
-    plt.show()
+    plt.savefig(f'PINN/european_call/european_call_{algo}_slice.png')
     
     

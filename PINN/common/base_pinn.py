@@ -16,6 +16,7 @@ class BasePINN(object):
         activation_fn=nn.Softplus(beta=10),
         lr=1e-3,
         physics_loss_weight=1,
+        save_path=None,
     ) -> None:
         super().__init__()
         self.physics_model = physics_model
@@ -33,11 +34,16 @@ class BasePINN(object):
         self.mse_loss = nn.MSELoss()
         
         self.collection = []
+        self.save_path = save_path
+        self.physics_model.plot_true_solution(save_path)
 
     def _pinn_init(self):
         # init pinn net and optimiser
         self.net = BaseDNN(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn)
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
+    
+    # def save_hyperparameters(self):
+        
         
 
     def update(self):
@@ -60,6 +66,8 @@ class BasePINN(object):
             if ep > epochs - 1000:
                 y_pred = self.evaluate()
                 self.collection.append(y_pred)
+        
+        self.physics_model.save_evaluation(self, self.save_path)
         return losses
     
 

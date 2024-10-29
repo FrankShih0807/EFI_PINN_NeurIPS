@@ -1,15 +1,11 @@
-import functools
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import seaborn as sns
-
 from PINN.common.grad_tool import grad
 from PINN.common.base_physics import PhysicsModel
 
-
-    
-    
         
 class Cooling(PhysicsModel):
     def __init__(self, 
@@ -44,6 +40,42 @@ class Cooling(PhysicsModel):
         pde = self.R*(self.Tenv - temps) - dT
         
         return torch.mean(pde**2)
+    
+    def plot_true_solution(self, save_path=None):
+        times = torch.linspace(0, self.t_extend, self.t_extend)
+        temps = self.physics_law(times)
+        
+        sns.set_theme()
+        plt.plot(times, temps, label='Equation')
+        plt.plot(self.X, self.y, 'x', label='Training data')
+        plt.legend()
+        plt.ylabel('Temperature (C)')
+        plt.xlabel('Time (s)')
+        plt.savefig(os.path.join(save_path, 'true_solution.png'))
+        plt.close()
+        
+    def save_evaluation(self, model, save_path=None):
+        preds_upper, preds_lower, preds_mean = model.summary()
+        preds_upper = preds_upper.flatten()
+        preds_lower = preds_lower.flatten()
+        preds_mean = preds_mean.flatten()     
+
+        times = torch.linspace(0, self.t_extend, self.t_extend)
+        temps = self.physics_law(times)
+        
+        np.savez(os.path.join(save_path, 'evaluation_data.npz') , preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean)
+        
+        sns.set_theme()
+        plt.plot(times, temps, alpha=0.8, color='b', label='Equation')
+        plt.plot(times, preds_mean, alpha=0.8, color='g', label='PINN')
+        # plt.plot(self.X, self.y, 'x', label='Training data')
+        plt.vlines(self.t_end, self.Tenv, self.T0, color='r', linestyles='dashed', label='no data beyond this point')
+        plt.fill_between(times, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
+        plt.legend()
+        plt.ylabel('Temperature (C)')
+        plt.xlabel('Time (s)')
+        plt.savefig(os.path.join(save_path, 'pred_solution.png'))
+        plt.close()
     
 
 
