@@ -34,12 +34,12 @@ class FuncApprox(PhysicsModel):
         return t
     
     def physics_law(self, time):
-        # Y1 = 3 * np.cos(time)
-        # Y2 = 3 * np.sin(time)
+        Y1 = 3 * torch.cos(time)
+        Y2 = 3 * torch.sin(time)
 
-        Y1 = time ** 2
-        Y2 = time ** 0.5
+        # Y1 = time ** 2
+        # Y2 = time ** 0.5
         return Y1, Y2
     
     def physics_loss(self, model: torch.nn.Module):
-        return torch.zeros(1)
+        return 0
