@@ -15,8 +15,8 @@ if __name__ == '__main__':
     
     # torch.manual_seed(1234)
 
-    t_end = 20
-    t_extend = 25
+    t_end = 10
+    t_extend = 10
     noise_sd = 0.1
     physics_model = FuncApprox(t_end=t_end, t_extend=t_extend, noise_sd=noise_sd)
     
@@ -24,8 +24,14 @@ if __name__ == '__main__':
     Y1_true, Y2_true = physics_model.physics_law(times)
 
     # model = PINN_EFI(physics_model=physics_model, physics_loss_weight=50, lr=1e-4, sgld_lr=1e-4, lambda_y=1, lambda_theta=1)
-    # model = PINN(physics_model=physics_model, physics_loss_weight=50, lr=1e-4, hidden_layers=[50, 50])
-    model = FUNC_APPROX_EFI(physics_model=physics_model, physics_loss_weight=50, lr=1e-4, sgld_lr=1e-4, lambda_y=1, lambda_theta=1)
+    # model = PINN(physics_model=physics_model, physics_loss_weight=50, lr=1e-3, hidden_layers=[20, 20])
+    model = FUNC_APPROX_EFI(physics_model=physics_model, 
+                            physics_loss_weight=50, 
+                            lr=1e-4, 
+                            hidden_layers=[20, 20],
+                            sgld_lr=1e-4, 
+                            lambda_y=1, 
+                            lambda_theta=10)
 
     losses = model.train(epochs=10000)
 

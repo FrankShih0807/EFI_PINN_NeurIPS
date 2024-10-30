@@ -39,7 +39,7 @@ class FUNC_APPROX_EFI(BasePINN):
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         
         # init latent noise and sampler
-        self.Z = torch.randn_like(self.y).requires_grad_()
+        self.Z = (self.noise_sd * torch.randn_like(self.y)).requires_grad_()
         self.sampler = SGLD([self.Z], self.sgld_lr)
         
         # init encoder optimiser
@@ -47,7 +47,7 @@ class FUNC_APPROX_EFI(BasePINN):
 
     def train_base_dnn(self, epochs=10000):
         base_net = BaseDNN(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn)
-        optimiser = optim.Adam(base_net.parameters(), lr=self.lr)
+        optimiser = optim.Adam(base_net.parameters(), lr=1e-3)
         base_net.train()
         for epoch in range(epochs):
             optimiser.zero_grad()
@@ -57,7 +57,7 @@ class FUNC_APPROX_EFI(BasePINN):
             optimiser.step()
         return base_net
 
-    def optimize_encoder(self, param_vector, steps=10):
+    def optimize_encoder(self, param_vector, steps=1000):
         self.net.eval()
         for _ in range(steps):
             self.encoder_optimiser.zero_grad()
