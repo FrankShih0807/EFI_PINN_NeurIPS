@@ -37,7 +37,7 @@ class PINN_EFI(BasePINN):
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         
         # init latent noise and sampler
-        self.Z = torch.randn_like(self.y).requires_grad_()
+        self.Z = (self.noise_sd * torch.randn_like(self.y)).requires_grad_()
         self.sampler = SGLD([self.Z], self.sgld_lr)
         
 

@@ -19,7 +19,7 @@ class Cooling(PhysicsModel):
         super().__init__(Tenv=Tenv, T0=T0, R=R, t_end=t_end, t_extend=t_extend, noise_sd=noise_sd)
 
         
-    def _data_generation(self, n_samples=50):
+    def _data_generation(self, n_samples=200):
         t = torch.linspace(0, self.t_end, n_samples).reshape(n_samples, -1)
         T = self.physics_law(t) +  self.noise_sd * torch.randn(n_samples).reshape(n_samples, -1)
         
@@ -63,11 +63,14 @@ class Cooling(PhysicsModel):
         times = torch.linspace(0, self.t_extend, self.t_extend)
         temps = self.physics_law(times)
         
+        # preds = model.net(torch.tensor(times).view(-1,1)).detach().flatten().numpy()
+        
         np.savez(os.path.join(save_path, 'evaluation_data.npz') , preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean)
         
         sns.set_theme()
         plt.plot(times, temps, alpha=0.8, color='b', label='Equation')
         plt.plot(times, preds_mean, alpha=0.8, color='g', label='PINN')
+        # plt.plot(times, preds, alpha=0.8, color='g', label='PINN')
         # plt.plot(self.X, self.y, 'x', label='Training data')
         plt.vlines(self.t_end, self.Tenv, self.T0, color='r', linestyles='dashed', label='no data beyond this point')
         plt.fill_between(times, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
