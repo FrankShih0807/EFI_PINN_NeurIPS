@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 import seaborn as sns
 from torch.nn.utils import parameters_to_vector
 from PINN.common import SGLD
@@ -43,13 +44,13 @@ class FUNC_APPROX_EFI(BasePINN):
         self.sampler = SGLD([self.Z], self.sgld_lr)
         
         # init encoder optimiser
-        self.encoder_optimiser = optim.Adam(self.net.encoder.parameters(), lr=self.lr)
+        # self.encoder_optimiser = optim.Adam(self.net.encoder.parameters(), lr=self.lr)
 
     def train_base_dnn(self, epochs=10000):
         base_net = BaseDNN(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn)
         optimiser = optim.Adam(base_net.parameters(), lr=1e-3)
         base_net.train()
-        for epoch in range(epochs):
+        for ep in range(epochs):
             optimiser.zero_grad()
             output = base_net(self.X)
             loss = self.mse_loss(output, self.y)
@@ -57,14 +58,18 @@ class FUNC_APPROX_EFI(BasePINN):
             optimiser.step()
         return base_net
 
-    def optimize_encoder(self, param_vector, steps=1000):
-        self.net.eval()
+    def optimize_encoder(self, param_vector, steps=2000):
+        
         for _ in range(steps):
-            self.encoder_optimiser.zero_grad()
-            encoder_output = self.net.encoder(torch.cat([self.X, self.y, self.Z], dim=1)).mean(dim=0)
-            loss = self.mse_loss(encoder_output, param_vector)
+            self.net.train()
+            batch_size = self.X.shape[0]
+            encoder_output = self.net.encoder(torch.cat([self.X, self.y, self.Z], dim=1))
+            loss = F.mse_loss(encoder_output, param_vector.repeat(batch_size, 1), reduction='sum')
+            # loss = self.mse_loss(encoder_output, param_vector)
+
+            self.optimiser.zero_grad()
             loss.backward()
-            self.encoder_optimiser.step()
+            self.optimiser.step()
 
     def update(self):
         ## 1. Latent variable sampling (Sample Z)
