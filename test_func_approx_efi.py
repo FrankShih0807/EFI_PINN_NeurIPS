@@ -1,13 +1,13 @@
 from PINN.pinn_efi import PINN_EFI
 from PINN.pinn_dropout import PINN_DROPOUT
 from PINN.pinn import PINN
-from PINN.func_approx_efi import FUNC_APPROX_EFI
+from PINN.nonlinear_efi import NONLINEAR_EFI
 
 import torch
 from torch.nn.utils import parameters_to_vector
 import matplotlib.pyplot as plt
 import seaborn as sns
-from PINN.models.function_approximation import FuncApprox
+from PINN.models.nonlinear import Nonlinear
 
 
 
@@ -16,23 +16,23 @@ if __name__ == '__main__':
     # torch.manual_seed(1234)
 
     t_start = 0
-    t_end = 6
-    t_extend = 6
+    t_end = 10
+    t_extend = 10
     noise_sd = 0.1
-    physics_model = FuncApprox(t_start=t_start, t_end=t_end, t_extend=t_extend, noise_sd=noise_sd)
+    physics_model = Nonlinear(t_start=t_start, t_end=t_end, t_extend=t_extend, noise_sd=noise_sd)
     
     times = torch.linspace(t_start, t_extend, (t_extend - t_start) * 10)
     Y1_true, Y2_true = physics_model.physics_law(times)
 
     # model = PINN_EFI(physics_model=physics_model, physics_loss_weight=50, lr=1e-4, sgld_lr=1e-4, lambda_y=50, lambda_theta=0.1)
     # model = PINN(physics_model=physics_model, physics_loss_weight=50, lr=1e-3, hidden_layers=[20, 20])
-    model = FUNC_APPROX_EFI(physics_model=physics_model, 
+    model = NONLINEAR_EFI(physics_model=physics_model, 
                             physics_loss_weight=50, 
                             lr=1e-4, 
                             hidden_layers=[15, 15],
                             sgld_lr=1e-4, 
                             lambda_y=50, 
-                            lambda_theta=0.1)
+                            lambda_theta=1)
 
     losses = model.train(epochs=10000)
 

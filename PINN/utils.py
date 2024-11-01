@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
-from PINN import PINN, PINN_DROPOUT, PINN_EFI, PINN_BNN
-from PINN.models import Cooling, EuropeanCall
+from PINN import PINN, PINN_DROPOUT, PINN_EFI, PINN_BNN, NONLINEAR_EFI
+from PINN.models import Cooling, EuropeanCall, Nonlinear
 
 yaml = YAML()
 yaml.preserve_quotes = True
@@ -18,11 +18,13 @@ ALGOS: Dict[str, Type[BasePINN]] = {
     "pinn_dropout": PINN_DROPOUT,
     "pinn_efi": PINN_EFI,
     "pinn_bnn": PINN_BNN,
+    "nonlinear_efi": NONLINEAR_EFI,
 }
 
 MODELS: Dict[str, Type[PhysicsModel]] = {
     "cooling": Cooling,
     "european_call": EuropeanCall,
+    "nonlinear": Nonlinear,
 }
 
 def create_log_folder(path):
