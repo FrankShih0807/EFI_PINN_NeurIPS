@@ -1,8 +1,6 @@
-import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import seaborn as sns
 from PINN.common import SGLD
 from PINN.common.torch_layers import EFI_Net
 from PINN.common.base_pinn import BasePINN
