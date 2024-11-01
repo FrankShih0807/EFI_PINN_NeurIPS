@@ -11,19 +11,17 @@ from PINN.common.base_physics import PhysicsModel
 
     
         
-class EuropeanCall(PhysicsModel):
+class EuropeanCallDiscovery(PhysicsModel):
     def __init__(self, 
                  S_range = [0, 160],
                  t_range = [0, 1],
                  sigma = 0.5,
                  r = 0.05,
                  K = 80,
-                 noise_sd=1
+                 noise_sd=1,
                  ):
         self.norm_dist = dist.Normal(0, 1)
         super().__init__(S_range=S_range, t_range=t_range, sigma=sigma, r=r, K=K, noise_sd=noise_sd)
-
-
         
     def _data_generation(self, n_samples=200):
         ivp_x, ivp_y = self.get_ivp_data(n_samples)
@@ -71,7 +69,7 @@ class EuropeanCall(PhysicsModel):
         X2 = torch.cat([t2, S2], dim=1)
         # y2 =  (self.S_range[1] - self.K * torch.exp(-self.r * (self.t_range[1] - t2)))
         y2 = self.physics_law(S2, self.t_range[1] - t2)
-        y2 += self.noise_sd * torch.randn_like(y2)
+        # y2 += self.noise_sd * torch.randn_like(y2)
         
         # return X1, y1, X2, y2
         return X2, y2
@@ -88,7 +86,7 @@ class EuropeanCall(PhysicsModel):
         return V
     
     
-    def physics_loss(self, model: torch.nn.Module):
+    def physics_loss(self, model: torch.nn.Module, r_discovery):
         ''' Compute the Black-Scholes loss
         Args:
             model (torch.nn.Module): torch network model
@@ -101,7 +99,7 @@ class EuropeanCall(PhysicsModel):
         grads2nd = grad(dVdS, self.physics_X)[0]
         d2VdS2 = grads2nd[:, 1].view(-1, 1)
         S1 = self.physics_X[:, 1].view(-1, 1)
-        bs_pde = dVdt + 0.5 * self.sigma**2 * S1**2 * d2VdS2 + self.r * S1 * dVdS - self.r * y_pred
+        bs_pde = dVdt + 0.5 * self.sigma**2 * S1**2 * d2VdS2 + r_discovery * S1 * dVdS - r_discovery * y_pred
         
         return bs_pde.pow(2).mean() 
 
@@ -158,6 +156,8 @@ class EuropeanCall(PhysicsModel):
         plt.close()
         
     def save_evaluation(self, model, save_path=None):
+        r_estimation = model.net.variable_tensor[0].detach().cpu().numpy()
+        print(f"Estimated r: {r_estimation}")
         preds_upper, preds_lower, preds_mean = model.summary()
         preds_upper = preds_upper.flatten().reshape(self.grids,self.grids).numpy()
         preds_lower = preds_lower.flatten().reshape(self.grids,self.grids).numpy()
@@ -166,7 +166,7 @@ class EuropeanCall(PhysicsModel):
         S_grid = self.eval_X[:,1].reshape(self.grids,self.grids).numpy()
         t_grid = 1-self.eval_X[:,0].reshape(self.grids,self.grids).numpy()
         
-        np.savez(os.path.join(save_path, 'evaluation_data.npz'), preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean, S_grid=S_grid, t_grid=t_grid)
+        np.savez(os.path.join(save_path, 'evaluation_data.npz'), preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean, S_grid=S_grid, t_grid=t_grid, r_estimation=r_estimation)
         
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d') 
@@ -199,7 +199,7 @@ class EuropeanCall(PhysicsModel):
             
 if __name__ == "__main__":
     
-    call = EuropeanCall(K=40)
+    call = EuropeanCallDiscovery(K=40)
     
     # call.plot()
 
