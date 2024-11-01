@@ -211,7 +211,7 @@ class EFI_Net(nn.Module):
         xyz = torch.cat([X, y, Z], dim=1)
         batch_theta = self.encoder(xyz)
         theta_bar = batch_theta.mean(dim=0)
-        theta_loss = F.mse_loss(batch_theta, theta_bar.repeat(batch_size, 1), reduction='sum')
+        theta_loss = F.mse_loss(batch_theta, theta_bar.repeat(batch_size, 1), reduction='mean')
         theta_loss += self.sparsity_loss(theta_bar)
         
         self.weight_tensors, self.bias_tensors = self.split_encoder_output(theta_bar)

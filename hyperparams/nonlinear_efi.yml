@@ -7,8 +7,8 @@ nonlinear:
     lr: 1.0e-4
     physics_loss_weight: 50.0
     sgld_lr: 1e-4
-    lambda_y: 50.0
-    lambda_theta: 0.2
+    lambda_y: 10.0
+    lambda_theta: 0.1
   model:
     noise_sd: 0.1
     t_start: 0
