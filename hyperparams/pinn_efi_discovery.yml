@@ -53,7 +53,7 @@ european_call_discovery:
     physics_loss_weight: 10.0
     sgld_lr: 1e-4
     lambda_y: 10.0
-    lambda_theta: 0.1
+    lambda_theta: 100.0
   model:
     S_range:
     - 0
