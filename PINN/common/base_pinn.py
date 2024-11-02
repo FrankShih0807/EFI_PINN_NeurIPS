@@ -58,10 +58,10 @@ class BasePINN(object):
             self.update()
             
             ## 3. Loss calculation
-            if ep % int(epochs / 10) == 0:
+            if (ep+1) % int(epochs / 10) == 0:
                 loss = self.mse_loss(self.y, self.net(self.X))
                 losses.append(loss.item())
-                print(f"Epoch {ep}/{epochs}, loss: {losses[-1]:.2f}")
+                print(f"Epoch {ep+1}/{epochs}, loss: {losses[-1]:.2f}")
                 
             if ep > epochs - 1000:
                 y_pred = self.evaluate()

@@ -92,27 +92,46 @@ def update_hyperparams(original_params, new_params):
             else:
                 raise KeyError(f"Hyperparameter '{key}' not found.")
             
+# class StoreDict(argparse.Action):
+#     """
+#     Custom argparse action for storing dict.
+#     In: args1:0.0 args2:"dict(a=1)"
+#     Out: {'args1': 0.0, arg2: dict(a=1)}
+#     """
+
+#     def __init__(self, option_strings, dest, nargs=None, **kwargs):
+#         self._nargs = nargs
+#         super().__init__(option_strings, dest, nargs=nargs, **kwargs)
+
+#     def __call__(self, parser, namespace, values, option_string=None):
+#         arg_dict = {}
+#         for arguments in values:
+#             key = arguments.split(":")[0]
+#             value = ":".join(arguments.split(":")[1:])
+#             # Evaluate the string as python code
+#             arg_dict[key] = eval(value)
+#         setattr(namespace, self.dest, arg_dict)    
+        
 class StoreDict(argparse.Action):
-    """
-    Custom argparse action for storing dict.
-    In: args1:0.0 args2:"dict(a=1)"
-    Out: {'args1': 0.0, arg2: dict(a=1)}
-    """
-
-    def __init__(self, option_strings, dest, nargs=None, **kwargs):
-        self._nargs = nargs
-        super().__init__(option_strings, dest, nargs=nargs, **kwargs)
-
     def __call__(self, parser, namespace, values, option_string=None):
-        arg_dict = {}
-        for arguments in values:
-            key = arguments.split(":")[0]
-            value = ":".join(arguments.split(":")[1:])
-            # Evaluate the string as python code
-            arg_dict[key] = eval(value)
-        setattr(namespace, self.dest, arg_dict)    
-        
-        
+        result = {}
+        for item in values:
+            key, value = item.split(":")
+            # Check if the value contains commas, indicating a list
+            if "," in value:
+                split_values = value.split(",")
+                print(split_values)
+                result[key] = []
+                for v in split_values:
+                    if '.' in v:
+                        result[key].append(float(v))
+                    else:
+                        result[key].append(int(v))
+            else:
+                # Handle single values
+                result[key] = float(value) if '.' in value else int(value)
+        setattr(namespace, self.dest, result)
+     
 def find_key_in_dict(d, key_to_find, new_value):
     """
     Check if key_to_find is in the dictionary d. This function
