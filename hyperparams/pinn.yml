@@ -1,4 +1,5 @@
 cooling:
+  seed: -1 # -1 means random seed
   epochs: 10_000
   pinn:
     hidden_layers:
@@ -16,6 +17,7 @@ cooling:
 
 
 european_call:
+  seed: -1 # -1 means random seed
   epochs: 20_000
   pinn:
     hidden_layers:

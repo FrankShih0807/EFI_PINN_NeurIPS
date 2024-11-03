@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import torch
 import argparse
 from ruamel.yaml import YAML
 from pathlib import Path
@@ -92,25 +93,6 @@ def update_hyperparams(original_params, new_params):
             else:
                 raise KeyError(f"Hyperparameter '{key}' not found.")
             
-# class StoreDict(argparse.Action):
-#     """
-#     Custom argparse action for storing dict.
-#     In: args1:0.0 args2:"dict(a=1)"
-#     Out: {'args1': 0.0, arg2: dict(a=1)}
-#     """
-
-#     def __init__(self, option_strings, dest, nargs=None, **kwargs):
-#         self._nargs = nargs
-#         super().__init__(option_strings, dest, nargs=nargs, **kwargs)
-
-#     def __call__(self, parser, namespace, values, option_string=None):
-#         arg_dict = {}
-#         for arguments in values:
-#             key = arguments.split(":")[0]
-#             value = ":".join(arguments.split(":")[1:])
-#             # Evaluate the string as python code
-#             arg_dict[key] = eval(value)
-#         setattr(namespace, self.dest, arg_dict)    
         
 class StoreDict(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
@@ -149,6 +131,14 @@ def find_key_in_dict(d, key_to_find, new_value):
             if find_key_in_dict(value, key_to_find, new_value):
                 return True
     return False
+
+def set_random_seed(seed: int):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 

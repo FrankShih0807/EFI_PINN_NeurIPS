@@ -27,12 +27,12 @@ class EuropeanCall(PhysicsModel):
         
     def _data_generation(self, n_samples=200):
         ivp_x, ivp_y = self.get_ivp_data(n_samples)
-        # bvp_x1, bvp_y1, bvp_x2, bvp_y2 = self.get_bvp_data(n_samples)
-        # X = torch.cat([ivp_x, bvp_x1, bvp_x2], dim=0)
-        # y = torch.cat([ivp_y, bvp_y1, bvp_y2], dim=0)        
-        bvp_x2, bvp_y2 = self.get_bvp_data(n_samples)
-        X = torch.cat([ivp_x, bvp_x2], dim=0)
-        y = torch.cat([ivp_y, bvp_y2], dim=0)
+        bvp_x1, bvp_y1, bvp_x2, bvp_y2 = self.get_bvp_data(n_samples)
+        X = torch.cat([ivp_x, bvp_x1, bvp_x2], dim=0)
+        y = torch.cat([ivp_y, bvp_y1, bvp_y2], dim=0)        
+        # bvp_x2, bvp_y2 = self.get_bvp_data(n_samples)
+        # X = torch.cat([ivp_x, bvp_x2], dim=0)
+        # y = torch.cat([ivp_y, bvp_y2], dim=0)
 
         
         self.physics_X = self.get_diff_data(4 * n_samples).requires_grad_(True)
@@ -60,10 +60,10 @@ class EuropeanCall(PhysicsModel):
     
     def get_bvp_data(self, n_samples):
         # Boundary condition at S = 0
-        # t1 = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
-        # S1 = torch.ones(n_samples, 1) * self.S_range[0]
-        # X1 = torch.cat([t1, S1], dim=1)
-        # y1 = torch.zeros(n_samples, 1)
+        t1 = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
+        S1 = torch.ones(n_samples, 1) * self.S_range[0]
+        X1 = torch.cat([t1, S1], dim=1)
+        y1 = torch.zeros(n_samples, 1)
         
         # Boundary condition at S = S_max/2
         t2 = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
@@ -73,8 +73,8 @@ class EuropeanCall(PhysicsModel):
         y2 = self.physics_law(S2, self.t_range[1] - t2)
         y2 += self.noise_sd * torch.randn_like(y2)
         
-        # return X1, y1, X2, y2
-        return X2, y2
+        return X1, y1, X2, y2
+        # return X2, y2
         
     
     def physics_law(self, s, t2m)->torch.Tensor:
@@ -204,10 +204,10 @@ if __name__ == "__main__":
     # call.plot()
 
     
-    bvp_x2,bvp_y2 = call.get_bvp_data(200)
+    bvp_x1, bvp_y1, bvp_x2,bvp_y2 = call.get_bvp_data(200)
     ivp_x1,ivp_y1 = call.get_ivp_data(200)
     diff_x1 = call.get_diff_data(800)
-    # plt.scatter(bvp_x1[:,0],bvp_x1[:,1], label= "BVP 1", color = "red",marker="o")
+    plt.scatter(bvp_x1[:,0],bvp_x1[:,1], label= "BVP 1", color = "red",marker="o")
     plt.scatter(bvp_x2[:,0],bvp_x2[:,1], label= "BVP 2", color = "green",marker="x")
     plt.scatter(ivp_x1[:,0],ivp_x1[:,1], label= "IVP", color = "blue")
     plt.scatter(diff_x1[:,0],diff_x1[:,1], label= "PDE sample", color = "grey", alpha = 0.3)

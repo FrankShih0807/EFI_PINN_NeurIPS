@@ -114,7 +114,7 @@ class EFI_Net(nn.Module):
                  input_dim=1, 
                  output_dim=1, 
                  hidden_layers=[15, 15], 
-                 activation_fn=F.softplus, 
+                 activation_fn=nn.Softplus(beta=10), 
                  prior_sd=0.1, 
                  sparse_sd=0.01, 
                  sparsity=1.0):
@@ -348,6 +348,33 @@ class EFI_Discovery_Net(nn.Module):
         xi = 0.01
         a = 1
         return torch.where(theta.abs() > a * xi, torch.zeros_like(theta.abs()), theta.abs()).sum()
+
+class EFI_Encoder(nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu):
+        super(EFI_Encoder, self).__init__()
+        # Define the initial layers
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        if hidden_layers is None:
+            self.hidden_layers = [self.output_dim]
+        else:
+            self.hidden_layers = hidden_layers
+        self.activation_fn = activation_fn
+        
+        self.layers = nn.ModuleList()
+        self.layers.append(nn.Linear(input_dim, self.hidden_layers[0]))
+        # Add hidden layers
+        for i in range(1, len(self.hidden_layers)):
+            self.layers.append(nn.Linear(self.hidden_layers[i-1], self.hidden_layers[i]))
+        # Add the output layer
+        self.layers.append(nn.Linear(self.hidden_layers[-1], output_dim))
+
+    def forward(self, x):
+        for layer in self.layers[:-1]:
+            x = layer(x)
+            x = self.activation_fn(x)
+        x = self.layers[-1](x)
+        return x    
     
 if __name__ == '__main__':
 
