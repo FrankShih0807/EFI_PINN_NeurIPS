@@ -1,0 +1,27 @@
+cooling:
+  Tenv: 25
+  T0: 100
+  R: 0.005
+  t_end: 300
+  t_extend: 1500
+  noise_sd: 1.0
+
+
+european_call:
+  S_range:
+  - 0.0
+  - 160.0
+  t_range:
+  - 0.0
+  - 1.0
+  sigma: 0.5
+  r: 0.05
+  K: 80
+  noise_sd: 1.0
+
+nonlinear:
+  noise_sd: 0.1
+  t_start: 0.0
+  t_end: 10.0
+  t_extend: 10.0
+

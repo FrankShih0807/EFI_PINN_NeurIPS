@@ -10,9 +10,12 @@ def train():
     
     yaml_dir = os.path.join(Path(__file__).parent.parent, 'hyperparams')
     algo_yaml_path = os.path.join(yaml_dir, args['algo']+'.yml')
+    model_yaml_path = os.path.join(yaml_dir, 'models.yml')
 
     # Load hyperparameters from YAML
     hyperparams = load_yaml(algo_yaml_path)[args['model']]
+    model_settings = load_yaml(model_yaml_path)[args['model']]
+
     # Update hyperparameters with command-line arguments
     update_hyperparams(hyperparams, args['hyperparams'])
     # Set random seed
@@ -21,11 +24,13 @@ def train():
         hyperparams['seed'] = seed
     # Save the updated hyperparameters to a new YAML file
     new_yaml_file_path = os.path.join(output_dir, 'hyperparameters.yml')
+    new_model_yaml_file_path = os.path.join(output_dir, 'model_settings.yml')
     save_yaml(hyperparams, new_yaml_file_path)
+    save_yaml(model_settings, new_model_yaml_file_path)
     
     
     set_random_seed(hyperparams['seed'])
-    physics_model = MODELS[args['model']](**hyperparams['model'])
+    physics_model = MODELS[args['model']](**model_settings)
     pinn_class = ALGOS[args['algo']]
     
     

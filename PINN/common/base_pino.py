@@ -10,7 +10,7 @@ from PINN.common.torch_layers import BaseDNN
 
 
 
-class BasePINN(object):
+class BasePINO(object):
     def __init__(
         self,
         physics_model,

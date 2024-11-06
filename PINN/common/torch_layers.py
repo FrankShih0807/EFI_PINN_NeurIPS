@@ -189,9 +189,8 @@ class EFI_Net(nn.Module):
     
     def forward(self, x):
         for i in range(self.n_layers-1):
-            x = self.activation_fn(x @ self.weight_tensors[i].T + self.bias_tensors[i])
-        x = x @ self.weight_tensors[-1].T + self.bias_tensors[-1]
-        
+            x = self.activation_fn(F.linear(x, self.weight_tensors[i], self.bias_tensors[i]))
+        x = F.linear(x, self.weight_tensors[-1], self.bias_tensors[-1])
         return x
 
     
@@ -376,16 +375,191 @@ class EFI_Encoder(nn.Module):
         x = self.layers[-1](x)
         return x    
     
+
+
+# class MLP(nn.Module):
+#     def __init__(self, layers, activation=F.relu):
+#         super(MLP, self).__init__()
+#         self.layers = nn.ModuleList()
+#         self.activation = activation
+
+#         # Initialize layers with Xavier initialization
+#         for i in range(len(layers) - 1):
+#             layer = nn.Linear(layers[i], layers[i + 1])
+#             nn.init.xavier_normal_(layer.weight)  # Xavier (Glorot) initialization
+#             nn.init.zeros_(layer.bias)
+#             self.layers.append(layer)
+
+#     def forward(self, x):
+#         # Pass input through all layers except the last one with activation
+#         for layer in self.layers[:-1]:
+#             x = self.activation(layer(x))
+#         # Last layer without activation
+#         x = self.layers[-1](x)
+#         return x
+    
+# class DeepONet(nn.Module):
+#     def __init__(self, branch_layers, trunk_layers):
+#         super(DeepONet, self).__init__()
+#         self.branch = MLP(branch_layers)
+#         self.trunk = MLP(trunk_layers)
+    
+#     def forward(self, u_samples, y_points):
+#         # Forward pass through branch and trunk networks
+#         branch_out = self.branch(u_samples)  # Shape: [batch_size, output_dim]
+#         trunk_out = self.trunk(y_points)     # Shape: [batch_size, output_dim]
+        
+#         # Element-wise multiplication of branch and trunk outputs and sum across the feature dimension
+#         outputs = torch.sum(branch_out * trunk_out, dim=-1)
+#         return outputs
+    
+    
+class MLP(nn.Module):
+    def __init__(self,in_features : int, out_features: int, hidden_features: int,num_hidden_layers: int) -> None:
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        
+        self.linear_in = nn.Linear(in_features,hidden_features)
+        self.linear_out = nn.Linear(hidden_features,out_features)
+        
+        self.activation = torch.tanh
+        self.layers = nn.ModuleList([self.linear_in] + [nn.Linear(hidden_features, hidden_features) for _ in range(num_hidden_layers)  ])
+        
+         
+    def forward(self,x):
+        for layer in self.layers:
+            x = self.activation(layer(x))
+    
+        return self.linear_out(x)
+
+
+class DeepONet(nn.Module):
+    def __init__(self,out_features,branch,trunk) -> None:
+        super().__init__()
+        if branch.out_features != trunk.out_features:
+            raise ValueError('Branch and trunk networks must have the same output dimension')
+        latent_features = branch.out_features
+        self.branch = branch
+        self.trunk = trunk
+        self.fc = nn.Linear(latent_features,out_features,bias = False)
+        
+
+    def forward(self,y,u):
+        return self.fc(self.trunk(y)*self.branch(u))
+# class NetworkA(nn.Module):
+#     def __init__(self, input_dim, hidden_dims, output_dim):
+#         super(NetworkA, self).__init__()
+#         self.layers = nn.ModuleList()
+#         dims = [input_dim] + hidden_dims + [output_dim]
+        
+#         # Store the structure for assigning weights later
+#         self.shapes = []
+        
+#         for i in range(len(dims) - 1):
+#             layer = nn.Linear(dims[i], dims[i + 1], bias=False)
+#             self.layers.append(layer)
+#             self.shapes.append((dims[i], dims[i + 1]))  # Store layer shapes for reshaping weights
+
+#     def forward(self, x, weights):
+#         # Set weights dynamically
+#         index = 0
+#         for layer, shape in zip(self.layers, self.shapes):
+#             # Extract the weight slice for the current layer and reshape
+#             layer_weight = weights[index:index + shape[0] * shape[1]].view(shape)
+#             layer.weight = nn.Parameter(layer_weight)  # Dynamically assign weights
+#             x = F.relu(layer(x))  # Apply layer with ReLU activation
+#             index += shape[0] * shape[1]
+#         return x
+
+# # Define Network B to approximate weights of Network A
+# class NetworkB(nn.Module):
+#     def __init__(self, input_dim, num_weights):
+#         super(NetworkB, self).__init__()
+#         self.fc1 = nn.Linear(input_dim, 128)
+#         self.fc2 = nn.Linear(128, 256)
+#         self.fc3 = nn.Linear(256, num_weights)  # Output size matches total parameters of Network A
+
+#     def forward(self, x):
+#         x = F.relu(self.fc1(x))
+#         x = F.relu(self.fc2(x))
+#         weights = self.fc3(x)  # Output shape: [batch_size, num_weights]
+#         return weights
+    
 if __name__ == '__main__':
 
+    # branch1 = MLP(100,100,75,2)
+    # branch2 = BaseDNN(100,100,[75,75,75],F.tanh)
+    # print('parameters1:', sum(p.numel() for p in branch1.parameters()))
+    # print('parameters2:', sum(p.numel() for p in branch2.parameters()))
     
+    # for name, p in branch1.named_parameters():
+    #     print(name, p.shape)
+        
+    # for name, p in branch2.named_parameters():
+    #     print(name, p.shape)
     
-    net = EFI_Discovery_Net(input_dim=2, output_dim=1, variable_dim=1, hidden_layers=[15, 15])
-    X = torch.randn(10, 2)
-    y = torch.randn(10, 1)
-    Z = torch.randn(10, 1)
+
+    # branch = BaseDNN(input_dim=100, output_dim=75, hidden_layers=[75,75,75,75,75], activation_fn=F.tanh)
+    # trunk = BaseDNN(input_dim=1, output_dim=75, hidden_layers=[75,75,75,75,75], activation_fn=F.tanh)
     
-    net.theta_encode(X, y, Z)
+    branch = MLP(100,75,75,4)
+    trunk = MLP(1,75,75,4)
     
-    print(net(X).shape)
+    Onet = DeepONet(1, branch, trunk)
+    # Onet = DeepONet(1, branch = MLP(100,75,75,4), trunk = MLP(1,75,75,4))
     
+    print('parameters:', sum(p.numel() for p in Onet.parameters()))
+    
+    ys = torch.randn(500, 100,1)
+    us = torch.randn(500, 1, 100)
+    Guys = torch.randn(500, 100, 1)
+    
+    outputs = Onet(ys, us)
+    print(branch(us).shape)
+    print(trunk(ys).shape)
+    print(outputs.shape)
+        
+    # mlp = MLP(layers=[64, 128, 64, 10], activation=F.relu)
+    # m=10
+    # branch_layers = [m, 50, 50]
+    # trunk_layers =  [2, 50, 50]
+    
+    # deeponet = DeepONet(branch_layers, trunk_layers)
+
+    # # Run a forward pass with some sample data
+    # u_samples = torch.randn(100, m)
+    # y_points = torch.randn(100, 2)
+    
+    # outputs = deeponet(u_samples, y_points)
+    # print(outputs.shape)    
+    
+    # params_count = sum(p.numel() for p in deeponet.parameters())
+    # print(f"Total number of parameters: {params_count}")
+    # for name, p in deeponet.named_parameters():
+    #     print(name, p.shape)
+    
+
+    # # Example Usage
+    # input_dim_A = 10  # Input dimension for Network A
+    # hidden_dims_A = [20, 30]  # Hidden dimensions for Network A
+    # output_dim_A = 5  # Output dimension for Network A
+
+    # # Calculate total number of weights needed for Network A
+    # dummy_A = NetworkA(input_dim_A, hidden_dims_A, output_dim_A)
+    # num_weights_A = sum(p.numel() for p in dummy_A.parameters())
+
+    # # Instantiate Network A and Network B
+    # network_a = NetworkA(input_dim_A, hidden_dims_A, output_dim_A)
+    # network_b = NetworkB(input_dim=15, num_weights=num_weights_A)  # Input to B can be any context vector
+
+    # # Forward pass example
+    # context_vector = torch.randn(1, 15)  # Example input for Network B
+    # weights_for_A = network_b(context_vector).squeeze()  # Output weights for Network A
+    # input_to_A = torch.randn(1, input_dim_A)  # Example input for Network A
+
+    # # Forward pass through Network A using the weights from Network B
+    # output_from_A = network_a(input_to_A, weights_for_A)
+
+    # # Compute gradients with respect to parameters of Network B
+    # output_from_A.backward(torch.ones_like(output_from_A))

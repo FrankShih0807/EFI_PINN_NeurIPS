@@ -50,6 +50,13 @@ def create_parser():
     parser.add_argument('--exp_name', type=str, default=None)
     
     parser.add_argument(
+        "--seed",
+        type=int,
+        default=-1,  # Default is random seed
+        help="Random seed for reproducibility (default: random seed)"
+    )
+    
+    parser.add_argument(
         "-params",
         "--hyperparams",
         type=str,

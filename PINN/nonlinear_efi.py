@@ -96,6 +96,7 @@ class NONLINEAR_EFI(BasePINN):
 
     def train(self, epochs=10000):
         self._pinn_init()
+        self.collection = []
         
         # Train BaseDNN
         base_net = self.train_base_dnn()
