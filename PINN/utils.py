@@ -10,6 +10,7 @@ from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
 from PINN import PINN, PINN_DROPOUT, PINN_EFI, PINN_BNN, NONLINEAR_EFI, PINN_EFI_Discovery
 from PINN.models import Cooling, EuropeanCall, Nonlinear, EuropeanCallDiscovery
+from torch.utils.data import DataLoader,Dataset
 
 yaml = YAML()
 yaml.preserve_quotes = True
@@ -160,6 +161,18 @@ def set_random_seed(seed: int):
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+    
+class Onet_dataset(Dataset):
+    def __init__(self,y,u,Guy):
+        self.y = y
+        self.u = u
+        self.Guy = Guy
+        
+    def __len__(self):
+        return len(self.y)
+
+    def __getitem__(self,idx):
+        return self.y[idx],self.u[idx],self.Guy[idx]
 
 
 

@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import time
 
 from collections import deque
 
@@ -66,14 +67,18 @@ class BasePINN(object):
         self.collection = []
         
         losses = []
+        
+        tic = time.time()
         for ep in range(epochs):
             self.update()
             
             ## 3. Loss calculation
             if (ep+1) % eval_freq == 0:
+                toc = time.time()
                 loss = self.mse_loss(self.y, self.net(self.X))
                 losses.append(loss.item())
-                print(f"Epoch {ep+1}/{epochs}, loss: {losses[-1]:.2f}")
+                print(f"Epoch {ep+1}/{epochs}, loss: {losses[-1]:.2f}, time: {toc-tic:.2f}s")
+                tic = time.time()
                 
             if ep > epochs - 1000:
                 y_pred = self.evaluate().detach().cpu()

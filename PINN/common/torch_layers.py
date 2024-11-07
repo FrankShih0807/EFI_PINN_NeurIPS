@@ -124,8 +124,8 @@ class EFI_Net(nn.Module):
                  hidden_layers=[15, 15], 
                  activation_fn=nn.Softplus(beta=10), 
                  prior_sd=0.1, 
-                 sparse_sd=0.01, 
-                 sparsity=1.0,
+                #  sparse_sd=0.01, 
+                #  sparsity=1.0,
                  device='cpu'
                  ):
         super(EFI_Net, self).__init__()
@@ -139,9 +139,9 @@ class EFI_Net(nn.Module):
         
         # Encoder Net Info
         self.encoder_input_dim = self.input_dim + 2 * self.output_dim
-        self.sparsity = sparsity
+        # self.sparsity = sparsity
         self.prior_sd = prior_sd
-        self.sparse_sd = sparse_sd
+        # self.sparse_sd = sparse_sd
         
         sample_net = nn.ModuleList()
         sample_net.append(nn.Linear(input_dim, hidden_layers[0]))
@@ -166,7 +166,7 @@ class EFI_Net(nn.Module):
         
 
         # self.gmm = GaussianMixtureModel(prior_sd, sparse_sd)
-        self.gmm = dist.Normal(0, prior_sd)
+        self.prior_dist = dist.Normal(0, prior_sd)
         
         
         # self.encoder = BaseDNN(input_dim=self.encoder_input_dim, output_dim=self.n_parameters, activation_fn=activation_fn)
@@ -232,13 +232,13 @@ class EFI_Net(nn.Module):
         
         return theta_loss
         
-    def gmm_prior_loss(self, sparsity=None):
-        if sparsity is None:
-            sparsity = self.sparsity
+    def gmm_prior_loss(self):
+        # if sparsity is None:
+        #     sparsity = self.sparsity
         log_prior = 0
         for p in self.parameters():
             # log_prior += self.gmm.log_prob(p.flatten(), sparsity).sum()
-            log_prior += self.gmm.log_prob(p).sum()
+            log_prior += self.prior_dist.log_prob(p).sum()
         return log_prior
     
     def sparsity_loss(self, theta):
