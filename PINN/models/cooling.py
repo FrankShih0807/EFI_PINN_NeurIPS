@@ -23,6 +23,7 @@ class Cooling(PhysicsModel):
         t = torch.linspace(0, self.t_end, n_samples).reshape(n_samples, -1)
         T = self.physics_law(t) +  self.noise_sd * torch.randn(n_samples).reshape(n_samples, -1)
         
+        self.physics_X = torch.linspace(0, self.t_extend, steps=self.t_extend,).view(-1,1).requires_grad_(True)
         return t, T
     
     def _eval_data_generation(self):
@@ -33,10 +34,10 @@ class Cooling(PhysicsModel):
         T = self.Tenv + (self.T0 - self.Tenv) * torch.exp(-self.R * time)
         return T
     
-    def physics_loss(self, model: torch.nn.Module):
-        ts = torch.linspace(0, self.t_extend, steps=self.t_extend,).view(-1,1).requires_grad_(True)
-        temps = model(ts)
-        dT = grad(temps, ts)[0]
+    def physics_loss(self, model: torch.nn.Module, physics_X):
+        # ts = torch.linspace(0, self.t_extend, steps=self.t_extend,).view(-1,1).requires_grad_(True)
+        temps = model(physics_X)
+        dT = grad(temps, physics_X)[0]
         pde = self.R*(self.Tenv - temps) - dT
         
         return torch.mean(pde**2)
@@ -63,7 +64,6 @@ class Cooling(PhysicsModel):
         times = torch.linspace(0, self.t_extend, self.t_extend)
         temps = self.physics_law(times)
         
-        # preds = model.net(torch.tensor(times).view(-1,1)).detach().flatten().numpy()
         
         np.savez(os.path.join(save_path, 'evaluation_data.npz') , preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean)
         

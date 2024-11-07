@@ -88,19 +88,19 @@ class EuropeanCall(PhysicsModel):
         return V
     
     
-    def physics_loss(self, model: torch.nn.Module):
+    def physics_loss(self, model: torch.nn.Module, physics_X):
         ''' Compute the Black-Scholes loss
         Args:
             model (torch.nn.Module): torch network model
         '''
         # self.physics_X = self.get_diff_data(800).requires_grad_(True)
-        y_pred = model(self.physics_X)
-        grads = grad(y_pred, self.physics_X)[0]
+        y_pred = model(physics_X)
+        grads = grad(y_pred, physics_X)[0]
         dVdt = grads[:, 0].view(-1, 1)
         dVdS = grads[:, 1].view(-1, 1)
-        grads2nd = grad(dVdS, self.physics_X)[0]
+        grads2nd = grad(dVdS, physics_X)[0]
         d2VdS2 = grads2nd[:, 1].view(-1, 1)
-        S1 = self.physics_X[:, 1].view(-1, 1)
+        S1 = physics_X[:, 1].view(-1, 1)
         bs_pde = dVdt + 0.5 * self.sigma**2 * S1**2 * d2VdS2 + self.r * S1 * dVdS - self.r * y_pred
         
         return bs_pde.pow(2).mean() 

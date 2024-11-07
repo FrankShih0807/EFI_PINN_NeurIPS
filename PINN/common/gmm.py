@@ -28,4 +28,15 @@ class GaussianMixtureModel:
         # Log-sum-exp trick for numerical stability: log(sum(exp(log_probs)))
         log_sum_exp = torch.logsumexp(log_weighted_probs, dim=1)
         return log_sum_exp
+
+
+if __name__ == '__main__':
+    device = 'mps'
     
+    mu = 0
+    sigma = 1
+    normal_dist = torch.distributions.Normal(mu, sigma)
+    log_prob = torch.distributions.Normal(mu, sigma).log_prob
+    
+    x = torch.randn(3,4).to(device)
+    print(log_prob(x))

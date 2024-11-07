@@ -1,4 +1,5 @@
 import os 
+import torch
 from pathlib import Path
 import random
 from PINN.utils import ALGOS, MODELS, load_yaml, save_yaml, create_output_dir, update_hyperparams, create_parser, set_random_seed
@@ -19,9 +20,25 @@ def train():
     # Update hyperparameters with command-line arguments
     update_hyperparams(hyperparams, args['hyperparams'])
     # Set random seed
-    if hyperparams['seed'] == -1:
+    if args['seed'] is None:
         seed = random.randint(0, 10000)
-        hyperparams['seed'] = seed
+    else:
+        seed = args['seed']
+    hyperparams['seed'] = seed
+    # Set device
+    if args['device'] == 'auto':
+        if torch.cuda.is_available():
+            device = 'cuda'
+        elif torch.backends.mps.is_available():
+            device = 'mps'
+        else:
+            device = 'cpu'
+    else:
+        device = args['device']
+    print(f"Device: {device}")
+    
+    print(hyperparams)
+    
     # Save the updated hyperparameters to a new YAML file
     new_yaml_file_path = os.path.join(output_dir, 'hyperparameters.yml')
     new_model_yaml_file_path = os.path.join(output_dir, 'model_settings.yml')
@@ -36,7 +53,8 @@ def train():
     
     pinn = pinn_class(physics_model = physics_model,
                       **hyperparams['pinn'],
-                      save_path=output_dir
+                      save_path=output_dir,
+                      device=device
                       )
     pinn.train(epochs=hyperparams['epochs'])
 

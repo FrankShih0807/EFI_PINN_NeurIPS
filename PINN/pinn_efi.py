@@ -18,8 +18,9 @@ class PINN_EFI(BasePINN):
         lambda_y=1,
         lambda_theta=1,
         save_path=None,
+        device='cpu'
     ) -> None:
-        super().__init__(physics_model, hidden_layers, activation_fn, lr, physics_loss_weight, save_path)
+        super().__init__(physics_model, hidden_layers, activation_fn, lr, physics_loss_weight, save_path, device)
         
         # EFI configs
         self.sgld_lr = sgld_lr
@@ -31,11 +32,11 @@ class PINN_EFI(BasePINN):
     
     def _pinn_init(self):
         # init EFI net and optimiser
-        self.net = EFI_Net(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn)
+        self.net = EFI_Net(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn, device=self.device)
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         
         # init latent noise and sampler
-        self.Z = (self.noise_sd * torch.randn_like(self.y)).requires_grad_()
+        self.Z = (self.noise_sd * torch.randn_like(self.y)).requires_grad_().to(self.device)
         self.sampler = SGLD([self.Z], self.sgld_lr)
         
 
@@ -58,7 +59,7 @@ class PINN_EFI(BasePINN):
         y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
         prior_loss = - self.net.gmm_prior_loss() / self.n_samples
         
-        w_loss = self.lambda_y * (y_loss + prior_loss) + self.physics_loss_weight * self.physics_loss(self.net) + self.lambda_theta * theta_loss 
+        w_loss = self.lambda_y * (y_loss + prior_loss) + self.physics_loss_weight * self.physics_loss(self.net, self.physics_X) + self.lambda_theta * theta_loss 
 
         self.optimiser.zero_grad()
         w_loss.backward()

@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import torch
+import torch.nn as nn
 import argparse
 from ruamel.yaml import YAML
 from pathlib import Path
@@ -30,6 +31,14 @@ MODELS: Dict[str, Type[PhysicsModel]] = {
     "european_call_discovery": EuropeanCallDiscovery,
 }
 
+ACTIVATIONS: Dict[str, Callable] = {
+    "relu": nn.ReLU,
+    "tanh": nn.Tanh,
+    "sigmoid": nn.Sigmoid,
+    "leaky_relu": nn.LeakyReLU,
+    "softplus": nn.Softplus,
+}
+
 def create_log_folder(path):
     os.makedirs(path, exist_ok=True)
 
@@ -52,9 +61,10 @@ def create_parser():
     parser.add_argument(
         "--seed",
         type=int,
-        default=-1,  # Default is random seed
+        default=None,  # Default is random seed
         help="Random seed for reproducibility (default: random seed)"
     )
+    parser.add_argument('--device', type=str, default='auto', help='Device to run the code')
     
     parser.add_argument(
         "-params",
@@ -104,8 +114,10 @@ def update_hyperparams(original_params, new_params):
 class StoreDict(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         result = {}
+        print(values)
         for item in values:
             key, value = item.split(":")
+            print(key, value)   
             # Check if the value contains commas, indicating a list
             if "," in value:
                 split_values = value.split(",")
@@ -116,9 +128,11 @@ class StoreDict(argparse.Action):
                         result[key].append(float(v))
                     else:
                         result[key].append(int(v))
+            elif 'activation' in key:
+                result[key] = value
             else:
                 # Handle single values
-                result[key] = float(value) if '.' in value else int(value)
+                result[key] = eval(value)
         setattr(namespace, self.dest, result)
      
 def find_key_in_dict(d, key_to_find, new_value):

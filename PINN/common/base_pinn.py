@@ -19,6 +19,7 @@ class BasePINN(object):
         lr=1e-3,
         physics_loss_weight=1,
         save_path=None,
+        device='cpu'
     ) -> None:
         super().__init__()
         self.physics_model = physics_model
@@ -36,11 +37,22 @@ class BasePINN(object):
         self.mse_loss = nn.MSELoss()
         
         self.save_path = save_path
+        self.device = device
         self.physics_model.plot_true_solution(save_path)
+
+        # To device
+        self.X = self.X.to(self.device)
+        self.y = self.y.to(self.device)
+        self.eval_X = self.eval_X.to(self.device)
+        self.physics_X = self.physics_X.to(self.device)
+        
+        # self._pinn_init()
+        # self.net.to(self.device)
 
     def _pinn_init(self):
         # init pinn net and optimiser
         self.net = BaseDNN(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn)
+        self.net.to(self.device)
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
     
         
@@ -64,7 +76,7 @@ class BasePINN(object):
                 print(f"Epoch {ep+1}/{epochs}, loss: {losses[-1]:.2f}")
                 
             if ep > epochs - 1000:
-                y_pred = self.evaluate()
+                y_pred = self.evaluate().detach().cpu()
                 self.collection.append(y_pred)
         
         self.physics_model.save_evaluation(self, self.save_path)

@@ -6,8 +6,16 @@ import numpy as np
 import torch.distributions as dist
 from collections import defaultdict
 from PINN.common.gmm import GaussianMixtureModel
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 
+ACTIVATIONS: Dict[str, Callable] = {
+    "relu": nn.ReLU,
+    "tanh": nn.Tanh,
+    "sigmoid": nn.Sigmoid,
+    "leaky_relu": nn.LeakyReLU,
+    "softplus": nn.Softplus,
+}
 
     
 class BaseDNN(nn.Module):
@@ -117,16 +125,17 @@ class EFI_Net(nn.Module):
                  activation_fn=nn.Softplus(beta=10), 
                  prior_sd=0.1, 
                  sparse_sd=0.01, 
-                 sparsity=1.0):
+                 sparsity=1.0,
+                 device='cpu'
+                 ):
         super(EFI_Net, self).__init__()
         
+        self.device = device
         # EFI Net Info
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.hidden_layers = hidden_layers
         self.activation_fn = activation_fn
-        
-        
         
         # Encoder Net Info
         self.encoder_input_dim = self.input_dim + 2 * self.output_dim
@@ -156,12 +165,15 @@ class EFI_Net(nn.Module):
                 self.nn_numel['bias'].append(value.numel())
         
 
-        self.gmm = GaussianMixtureModel(prior_sd, sparse_sd)
+        # self.gmm = GaussianMixtureModel(prior_sd, sparse_sd)
+        self.gmm = dist.Normal(0, prior_sd)
+        
         
         # self.encoder = BaseDNN(input_dim=self.encoder_input_dim, output_dim=self.n_parameters, activation_fn=activation_fn)
-        self.encoder = EncoderDNN(input_dim=self.encoder_input_dim, output_dim=self.n_parameters, activation_fn=activation_fn)
+        self.encoder = EncoderDNN(input_dim=self.encoder_input_dim, output_dim=self.n_parameters, activation_fn=activation_fn).to(self.device)
         for p in self.parameters():
             p.data = torch.randn_like(p.data) * 0.001
+            p.data = p.data.to(self.device)
 
 
     def split_encoder_output(self, theta):
@@ -177,17 +189,20 @@ class EFI_Net(nn.Module):
         theta_weight_split = torch.split(theta_weight, self.nn_numel['weight'], dim=-1)
         theta_bias_split = torch.split(theta_bias, self.nn_numel['bias'], dim=-1)
         
-        weight_tensors = []
-        bias_tensors = []
-        for i, shape in enumerate(self.nn_shape['weight']):
-            weight_tensors.append(theta_weight_split[i].view(*shape))
-        for i, shape in enumerate(self.nn_shape['bias']):
-            bias_tensors.append(theta_bias_split[i].view(*shape))
+        # weight_tensors = []
+        # bias_tensors = []
+        # for i, shape in enumerate(self.nn_shape['weight']):
+        #     weight_tensors.append(theta_weight_split[i].view(*shape))
+        # for i, shape in enumerate(self.nn_shape['bias']):
+        #     bias_tensors.append(theta_bias_split[i].view(*shape))
+        weight_tensors = [theta_weight_split[i].view(*shape).to(self.device) for i, shape in enumerate(self.nn_shape['weight'])]
+        bias_tensors = [theta_bias_split[i].view(*shape).to(self.device) for i, shape in enumerate(self.nn_shape['bias'])]
         
         return weight_tensors, bias_tensors
             
     
     def forward(self, x):
+        x = x.to(self.device)
         for i in range(self.n_layers-1):
             x = self.activation_fn(F.linear(x, self.weight_tensors[i], self.bias_tensors[i]))
         x = F.linear(x, self.weight_tensors[-1], self.bias_tensors[-1])
@@ -204,8 +219,10 @@ class EFI_Net(nn.Module):
         Returns:
             tensor: flattend theta
         '''
+        X, y, Z = X.to(self.device), y.to(self.device), Z.to(self.device)
+        
         batch_size = X.shape[0]
-        xyz = torch.cat([X, y, Z], dim=1)
+        xyz = torch.cat([X, y, Z], dim=1).to(self.device)
         batch_theta = self.encoder(xyz)
         theta_bar = batch_theta.mean(dim=0)
         theta_loss = F.mse_loss(batch_theta, theta_bar.repeat(batch_size, 1), reduction='mean')
@@ -220,13 +237,14 @@ class EFI_Net(nn.Module):
             sparsity = self.sparsity
         log_prior = 0
         for p in self.parameters():
-            log_prior += self.gmm.log_prob(p.flatten(), sparsity).sum()
+            # log_prior += self.gmm.log_prob(p.flatten(), sparsity).sum()
+            log_prior += self.gmm.log_prob(p).sum()
         return log_prior
     
     def sparsity_loss(self, theta):
         xi = 0.01
         a = 1
-        return torch.where(theta.abs() > a * xi, torch.zeros_like(theta.abs()), theta.abs()).sum()
+        return torch.where(theta.abs() > a * xi, torch.zeros_like(theta.abs()).to(self.device), theta.abs()).sum()
     
 class EFI_Discovery_Net(nn.Module):
     def __init__(self, 
