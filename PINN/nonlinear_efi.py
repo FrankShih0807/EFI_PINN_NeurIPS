@@ -17,6 +17,7 @@ class NONLINEAR_EFI(BasePINN):
         physics_model,
         hidden_layers=[15, 15],
         activation_fn=nn.Softplus(beta=10),
+        # activation_fn=nn.Tanh(),
         lr=1e-3,
         physics_loss_weight=10,
         sgld_lr=1e-3,
@@ -28,6 +29,8 @@ class NONLINEAR_EFI(BasePINN):
         
         # EFI configs
         self.sgld_lr = sgld_lr
+        self.initial_lambda_y = lambda_y
+        self.initial_lambda_theta = lambda_theta
         self.lambda_y = lambda_y
         self.lambda_theta = lambda_theta
         
@@ -36,7 +39,8 @@ class NONLINEAR_EFI(BasePINN):
     
     def _pinn_init(self):
         # init EFI net and optimiser
-        self.net = EFI_Net(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn)
+        # self.net = EFI_Net(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn)
+        self.net = EFI_Net(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn, prior_sd=0.5)
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         
         # init latent noise and sampler
@@ -58,7 +62,7 @@ class NONLINEAR_EFI(BasePINN):
             optimiser.step()
         return base_net
 
-    def optimize_encoder(self, param_vector, steps=2000):
+    def optimize_encoder(self, param_vector, steps=5000):
         
         for _ in range(steps):
             self.net.train()
@@ -71,7 +75,17 @@ class NONLINEAR_EFI(BasePINN):
             loss.backward()
             self.optimiser.step()
 
-    def update(self):
+    def scheduler(self, epoch, total_epochs):
+        # Decay lambda_y and lambda_theta using a power function
+        if epoch > 5000:
+            decay_factor = 10 ** (epoch / total_epochs)
+            self.lambda_y = self.initial_lambda_y * decay_factor
+            # self.lambda_theta = self.initial_lambda_theta * decay_factor
+
+    def update(self, epoch, total_epochs):
+        # Adjust lambda_y and lambda_theta
+        self.scheduler(epoch, total_epochs)
+
         ## 1. Latent variable sampling (Sample Z)
         self.net.eval()
         theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
@@ -109,7 +123,7 @@ class NONLINEAR_EFI(BasePINN):
         
         losses = []
         for ep in range(epochs):
-            self.update()
+            self.update(ep, epochs)
             
             ## 3. Loss calculation
             if ep % int(epochs / 10) == 0:

@@ -10,9 +10,9 @@ from PINN.common.base_physics import PhysicsModel
 
 class Nonlinear(PhysicsModel):
 # class FuncApprox(PhysicsModel):
-    def __init__(self, t_start=0, t_end=20, t_extend=25, noise_sd=1.0):
+    def __init__(self, t_start=0, t_end=20, noise_sd=1.0):
         super().__init__(
-            t_start=t_start, t_end=t_end, t_extend=t_extend, noise_sd=noise_sd
+            t_start=t_start, t_end=t_end, noise_sd=noise_sd
         )
 
     def _data_generation(self, n_samples=200):
@@ -29,8 +29,8 @@ class Nonlinear(PhysicsModel):
 
     def _eval_data_generation(self):
         t = torch.linspace(
-            self.t_start, self.t_extend, round((self.t_extend - self.t_start) * 10)
-        ).reshape(round((self.t_extend - self.t_start) * 10), -1)
+            self.t_start, self.t_end, round((self.t_end - self.t_start) * 10)
+        ).reshape(round((self.t_end - self.t_start) * 10), -1)
         return t
 
     def physics_law(self, time):
@@ -41,6 +41,8 @@ class Nonlinear(PhysicsModel):
         # return Y1, Y2
 
         Y = 3 * torch.sin(time)
+        # Y = time
+        # Y = 3 * torch.sin(0.6 * time) ** 3
         return Y
 
     def physics_loss(self, model: torch.nn.Module):
@@ -90,7 +92,7 @@ class Nonlinear(PhysicsModel):
         preds_lower = preds_lower.flatten()
         preds_mean = preds_mean.flatten()
 
-        times = torch.linspace(self.t_start, self.t_extend, (self.t_extend - self.t_start) * 10)
+        times = torch.linspace(self.t_start, self.t_end, round((self.t_end - self.t_start) * 10))
         Y_true = self.physics_law(times)
 
         np.savez(os.path.join(save_path, "evaluation_data.npz"),
