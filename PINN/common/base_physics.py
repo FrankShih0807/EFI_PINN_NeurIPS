@@ -10,7 +10,7 @@ class PhysicsModel(object):
             print('{}: {}'.format(key, value))
             self.model_params[key] = value
             
-        self.X, self.y = self._data_generation()
+        self.X, self.y = self._data_generation(self.n_samples)
         self.eval_X = self._eval_data_generation()
         
         self.input_dim = self.X.shape[1]

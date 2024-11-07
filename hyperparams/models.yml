@@ -5,6 +5,7 @@ cooling:
   t_end: 300
   t_extend: 1500
   noise_sd: 1.0
+  n_samples: 200
 
 
 european_call:
@@ -18,6 +19,7 @@ european_call:
   r: 0.05
   K: 80
   noise_sd: 1.0
+  n_samples: 200
 
 nonlinear:
   noise_sd: 0.1

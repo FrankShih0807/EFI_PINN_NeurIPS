@@ -14,9 +14,10 @@ class Cooling(PhysicsModel):
                  R=0.005, 
                  t_end=300, 
                  t_extend=1500,
-                 noise_sd=1.0
+                 noise_sd=1.0,
+                 n_samples=200
                  ):
-        super().__init__(Tenv=Tenv, T0=T0, R=R, t_end=t_end, t_extend=t_extend, noise_sd=noise_sd)
+        super().__init__(Tenv=Tenv, T0=T0, R=R, t_end=t_end, t_extend=t_extend, noise_sd=noise_sd, n_samples=n_samples)
 
         
     def _data_generation(self, n_samples=200):

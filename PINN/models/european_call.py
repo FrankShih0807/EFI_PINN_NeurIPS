@@ -18,14 +18,15 @@ class EuropeanCall(PhysicsModel):
                  sigma = 0.5,
                  r = 0.05,
                  K = 80,
-                 noise_sd=1
+                 noise_sd=1,
+                 n_samples=200
                  ):
         self.norm_dist = dist.Normal(0, 1)
-        super().__init__(S_range=S_range, t_range=t_range, sigma=sigma, r=r, K=K, noise_sd=noise_sd)
+        super().__init__(S_range=S_range, t_range=t_range, sigma=sigma, r=r, K=K, noise_sd=noise_sd, n_samples=n_samples)
 
 
         
-    def _data_generation(self, n_samples=200):
+    def _data_generation(self, n_samples):
         ivp_x, ivp_y = self.get_ivp_data(n_samples)
         bvp_x1, bvp_y1, bvp_x2, bvp_y2 = self.get_bvp_data(n_samples)
         X = torch.cat([ivp_x, bvp_x1, bvp_x2], dim=0)
