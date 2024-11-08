@@ -16,6 +16,9 @@ class Nonlinear(PhysicsModel):
         )
 
     def _data_generation(self, n_samples=200):
+        self.physics_X = torch.linspace(
+            self.t_start, self.t_end, round((self.t_end - self.t_start) * 10)
+        ).view(-1,1).requires_grad_(True)
         t = torch.linspace(self.t_start, self.t_end, n_samples).reshape(n_samples, -1)
 
         # Y1, Y2 = self.physics_law(t)
@@ -40,9 +43,9 @@ class Nonlinear(PhysicsModel):
         # # Y2 = (-0.01*time**7-time**4-2*time**2-4*time+1)
         # return Y1, Y2
 
-        Y = 3 * torch.sin(time)
+        # Y = 3 * torch.sin(time)
         # Y = time
-        # Y = 3 * torch.sin(0.6 * time) ** 3
+        Y = 3 * torch.sin(0.6 * time) ** 3
         return Y
 
     def physics_loss(self, model: torch.nn.Module):

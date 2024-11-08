@@ -24,8 +24,9 @@ class NONLINEAR_EFI(BasePINN):
         lambda_y=1,
         lambda_theta=1,
         save_path=None,
+        device='cpu', 
     ) -> None:
-        super().__init__(physics_model, hidden_layers, activation_fn, lr, physics_loss_weight, save_path)
+        super().__init__(physics_model, hidden_layers, activation_fn, lr, physics_loss_weight, save_path, device)
         
         # EFI configs
         self.sgld_lr = sgld_lr
