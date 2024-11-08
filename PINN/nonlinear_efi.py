@@ -160,7 +160,7 @@ class NONLINEAR_EFI(BasePINN):
                 print(f"Epoch {ep}/{epochs}, loss: {losses[-1]:.2f}")
 
             if ep > epochs - 1000:
-                y_pred = self.evaluate()
+                y_pred = self.evaluate().detach().cpu()
                 self.collection.append(y_pred)
 
         self.physics_model.save_evaluation(self, self.save_path)
