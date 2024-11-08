@@ -10,12 +10,15 @@ from PINN.common.base_physics import PhysicsModel
 
 class Nonlinear(PhysicsModel):
 # class FuncApprox(PhysicsModel):
-    def __init__(self, t_start=0, t_end=20, t_extend=25, noise_sd=1.0):
+    def __init__(self, t_start=0, t_end=20, noise_sd=1.0):
         super().__init__(
-            t_start=t_start, t_end=t_end, t_extend=t_extend, noise_sd=noise_sd
+            t_start=t_start, t_end=t_end, noise_sd=noise_sd
         )
 
     def _data_generation(self, n_samples=200):
+        self.physics_X = torch.linspace(
+            self.t_start, self.t_end, round((self.t_end - self.t_start) * 10)
+        ).view(-1,1).requires_grad_(True)
         t = torch.linspace(self.t_start, self.t_end, n_samples).reshape(n_samples, -1)
 
         # Y1, Y2 = self.physics_law(t)
@@ -29,8 +32,8 @@ class Nonlinear(PhysicsModel):
 
     def _eval_data_generation(self):
         t = torch.linspace(
-            self.t_start, self.t_extend, round((self.t_extend - self.t_start) * 10)
-        ).reshape(round((self.t_extend - self.t_start) * 10), -1)
+            self.t_start, self.t_end, round((self.t_end - self.t_start) * 10)
+        ).reshape(round((self.t_end - self.t_start) * 10), -1)
         return t
 
     def physics_law(self, time):
@@ -40,7 +43,9 @@ class Nonlinear(PhysicsModel):
         # # Y2 = (-0.01*time**7-time**4-2*time**2-4*time+1)
         # return Y1, Y2
 
-        Y = 3 * torch.sin(time)
+        # Y = 3 * torch.sin(time)
+        # Y = time
+        Y = 3 * torch.sin(0.6 * time) ** 3
         return Y
 
     def physics_loss(self, model: torch.nn.Module):
@@ -90,7 +95,7 @@ class Nonlinear(PhysicsModel):
         preds_lower = preds_lower.flatten()
         preds_mean = preds_mean.flatten()
 
-        times = torch.linspace(self.t_start, self.t_extend, (self.t_extend - self.t_start) * 10)
+        times = torch.linspace(self.t_start, self.t_end, round((self.t_end - self.t_start) * 10))
         Y_true = self.physics_law(times)
 
         np.savez(os.path.join(save_path, "evaluation_data.npz"),
@@ -101,7 +106,7 @@ class Nonlinear(PhysicsModel):
         plt.plot(times, Y_true, alpha=0.8, color='b', label='Equation')
         plt.plot(times, preds_mean, alpha=0.8, color='g', label='PINN')
         plt.fill_between(times, preds_upper, preds_lower, color='g', alpha=0.2)
-        plt.scatter(model.X, model.y, color='r', label='Data', marker='x')
+        plt.scatter(model.X.detach().cpu(), model.y.detach().cpu(), color='r', label='Data', marker='x')
         plt.legend()
         plt.ylabel('Y(t)')
 

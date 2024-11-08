@@ -21,9 +21,9 @@ european_call:
   noise_sd: 1.0
   n_samples: 200
 
+
 nonlinear:
   noise_sd: 0.1
   t_start: 0.0
   t_end: 10.0
-  t_extend: 10.0
 
