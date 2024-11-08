@@ -106,7 +106,7 @@ class Nonlinear(PhysicsModel):
         plt.plot(times, Y_true, alpha=0.8, color='b', label='Equation')
         plt.plot(times, preds_mean, alpha=0.8, color='g', label='PINN')
         plt.fill_between(times, preds_upper, preds_lower, color='g', alpha=0.2)
-        plt.scatter(model.X, model.y, color='r', label='Data', marker='x')
+        plt.scatter(model.X.detach().cpu(), model.y.detach().cpu(), color='r', label='Data', marker='x')
         plt.legend()
         plt.ylabel('Y(t)')
 
