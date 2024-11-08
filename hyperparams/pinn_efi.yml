@@ -22,13 +22,13 @@ european_call:
     - 20
     - 20
     - 20
-    activation_fn: softplus
+    activation_fn: softplus(beta=5)
     lr: 1.0e-4
     physics_loss_weight: 10.0
     sgld_lr: 1e-4
     lambda_y: 10.0
     lambda_theta: 0.1
     encoder_kwargs:
-      encoder_activation: softplus
+      encoder_activation: softplus(beta=5)
       prior_sd: 0.5
       sparse_threshold: 0.01

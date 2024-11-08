@@ -6,6 +6,7 @@ import numpy as np
 import torch.distributions as dist
 from collections import defaultdict
 from PINN.common.gmm import GaussianMixtureModel
+from PINN.common.utils import get_activation_fn
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 
@@ -17,18 +18,20 @@ ACTIVATIONS: Dict[str, Callable] = {
     "softplus": nn.Softplus(),
 }
 
+
+        
     
 class BaseDNN(nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu):
+    def __init__(self, input_dim, output_dim, hidden_layers, activation_fn):
         super(BaseDNN, self).__init__()
         # Define the initial layers
         self.input_dim = input_dim
         self.output_dim = output_dim
-        if hidden_layers is None:
-            self.hidden_layers = [self.output_dim]
-        else:
-            self.hidden_layers = hidden_layers
-        self.activation_fn = activation_fn
+        # if hidden_layers is None:
+        #     self.hidden_layers = [self.output_dim]
+        # else:
+        self.hidden_layers = hidden_layers
+        self.activation_fn = get_activation_fn(activation_fn)
         
         self.layers = nn.ModuleList()
         self.layers.append(nn.Linear(input_dim, self.hidden_layers[0]))
@@ -122,10 +125,10 @@ class EFI_Net(nn.Module):
                  input_dim=1, 
                  output_dim=1, 
                  hidden_layers=[15, 15], 
-                 activation_fn='softplus', 
+                 activation_fn='relu', 
                  sparse_threshold=0.01,
                  encoder_hidden_layers=None,
-                 encoder_activation='softplus',
+                 encoder_activation='relu',
                  prior_sd=0.1, 
                 #  sparse_sd=0.01, 
                 #  sparsity=1.0,
@@ -133,17 +136,21 @@ class EFI_Net(nn.Module):
                  ):
         super(EFI_Net, self).__init__()
         
+        print(activation_fn)
+        print(type(activation_fn))
+        print(type(str(activation_fn)))
+        
         self.device = device
         # EFI Net Info
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.hidden_layers = hidden_layers
-        self.activation_fn = ACTIVATIONS[activation_fn]
+        self.activation_fn = get_activation_fn(activation_fn)
         self.sparse_threshold = sparse_threshold
 
         # Encoder Net Info
         self.encoder_input_dim = self.input_dim + 2 * self.output_dim
-        self.encoder_activation = ACTIVATIONS[encoder_activation]
+        self.encoder_activation = get_activation_fn(encoder_activation)
         # self.sparsity = sparsity
         self.prior_sd = prior_sd
         # self.sparse_sd = sparse_sd
