@@ -10,11 +10,11 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 
 ACTIVATIONS: Dict[str, Callable] = {
-    "relu": nn.ReLU,
-    "tanh": nn.Tanh,
-    "sigmoid": nn.Sigmoid,
-    "leaky_relu": nn.LeakyReLU,
-    "softplus": nn.Softplus,
+    "relu": nn.ReLU(),
+    "tanh": nn.Tanh(),
+    "sigmoid": nn.Sigmoid(),
+    "leaky_relu": nn.LeakyReLU(),
+    "softplus": nn.Softplus(),
 }
 
     
@@ -122,7 +122,10 @@ class EFI_Net(nn.Module):
                  input_dim=1, 
                  output_dim=1, 
                  hidden_layers=[15, 15], 
-                 activation_fn=nn.Softplus(beta=10), 
+                 activation_fn='softplus', 
+                 sparse_threshold=0.01,
+                 encoder_hidden_layers=None,
+                 encoder_activation='softplus',
                  prior_sd=0.1, 
                 #  sparse_sd=0.01, 
                 #  sparsity=1.0,
@@ -135,10 +138,12 @@ class EFI_Net(nn.Module):
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.hidden_layers = hidden_layers
-        self.activation_fn = activation_fn
-        
+        self.activation_fn = ACTIVATIONS[activation_fn]
+        self.sparse_threshold = sparse_threshold
+
         # Encoder Net Info
         self.encoder_input_dim = self.input_dim + 2 * self.output_dim
+        self.encoder_activation = ACTIVATIONS[encoder_activation]
         # self.sparsity = sparsity
         self.prior_sd = prior_sd
         # self.sparse_sd = sparse_sd
@@ -168,9 +173,8 @@ class EFI_Net(nn.Module):
         # self.gmm = GaussianMixtureModel(prior_sd, sparse_sd)
         self.prior_dist = dist.Normal(0, prior_sd)
         
-        
         # self.encoder = BaseDNN(input_dim=self.encoder_input_dim, output_dim=self.n_parameters, activation_fn=activation_fn)
-        self.encoder = EncoderDNN(input_dim=self.encoder_input_dim, output_dim=self.n_parameters, activation_fn=activation_fn).to(self.device)
+        self.encoder = EncoderDNN(input_dim=self.encoder_input_dim, output_dim=self.n_parameters, activation_fn=self.encoder_activation, hidden_layers=encoder_hidden_layers).to(self.device)
         for p in self.parameters():
             p.data = torch.randn_like(p.data) * 0.001
             p.data = p.data.to(self.device)
@@ -242,9 +246,9 @@ class EFI_Net(nn.Module):
         return log_prior
     
     def sparsity_loss(self, theta):
-        xi = 0.01
-        a = 1
-        return torch.where(theta.abs() > a * xi, torch.zeros_like(theta.abs()).to(self.device), theta.abs()).sum()
+        # xi = 0.01
+        # a = 1
+        return torch.where(theta.abs() > self.sparse_threshold, torch.zeros_like(theta.abs()).to(self.device), theta.abs()).sum()
     
 class EFI_Discovery_Net(nn.Module):
     def __init__(self, 
@@ -392,44 +396,7 @@ class EFI_Encoder(nn.Module):
             x = self.activation_fn(x)
         x = self.layers[-1](x)
         return x    
-    
 
-
-# class MLP(nn.Module):
-#     def __init__(self, layers, activation=F.relu):
-#         super(MLP, self).__init__()
-#         self.layers = nn.ModuleList()
-#         self.activation = activation
-
-#         # Initialize layers with Xavier initialization
-#         for i in range(len(layers) - 1):
-#             layer = nn.Linear(layers[i], layers[i + 1])
-#             nn.init.xavier_normal_(layer.weight)  # Xavier (Glorot) initialization
-#             nn.init.zeros_(layer.bias)
-#             self.layers.append(layer)
-
-#     def forward(self, x):
-#         # Pass input through all layers except the last one with activation
-#         for layer in self.layers[:-1]:
-#             x = self.activation(layer(x))
-#         # Last layer without activation
-#         x = self.layers[-1](x)
-#         return x
-    
-# class DeepONet(nn.Module):
-#     def __init__(self, branch_layers, trunk_layers):
-#         super(DeepONet, self).__init__()
-#         self.branch = MLP(branch_layers)
-#         self.trunk = MLP(trunk_layers)
-    
-#     def forward(self, u_samples, y_points):
-#         # Forward pass through branch and trunk networks
-#         branch_out = self.branch(u_samples)  # Shape: [batch_size, output_dim]
-#         trunk_out = self.trunk(y_points)     # Shape: [batch_size, output_dim]
-        
-#         # Element-wise multiplication of branch and trunk outputs and sum across the feature dimension
-#         outputs = torch.sum(branch_out * trunk_out, dim=-1)
-#         return outputs
     
     
 class MLP(nn.Module):

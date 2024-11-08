@@ -12,6 +12,7 @@ class PINN_EFI(BasePINN):
         physics_model,
         hidden_layers=[15, 15],
         activation_fn=nn.Softplus(beta=10),
+        encoder_kwargs=dict(),
         lr=1e-3,
         physics_loss_weight=10,
         sgld_lr=1e-3,
@@ -23,6 +24,7 @@ class PINN_EFI(BasePINN):
         super().__init__(physics_model, hidden_layers, activation_fn, lr, physics_loss_weight, save_path, device)
         
         # EFI configs
+        self.encoder_kwargs = encoder_kwargs
         self.sgld_lr = sgld_lr
         self.lambda_y = lambda_y
         self.lambda_theta = lambda_theta
@@ -32,7 +34,7 @@ class PINN_EFI(BasePINN):
     
     def _pinn_init(self):
         # init EFI net and optimiser
-        self.net = EFI_Net(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn, device=self.device)
+        self.net = EFI_Net(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn, device=self.device, **self.encoder_kwargs)
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         
         # init latent noise and sampler

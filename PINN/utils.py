@@ -32,13 +32,13 @@ MODELS: Dict[str, Type[PhysicsModel]] = {
     "european_call_discovery": EuropeanCallDiscovery,
 }
 
-ACTIVATIONS: Dict[str, Callable] = {
-    "relu": nn.ReLU,
-    "tanh": nn.Tanh,
-    "sigmoid": nn.Sigmoid,
-    "leaky_relu": nn.LeakyReLU,
-    "softplus": nn.Softplus,
-}
+# ACTIVATIONS: Dict[str, Callable] = {
+#     "relu": nn.ReLU(),
+#     "tanh": nn.Tanh(),
+#     "sigmoid": nn.Sigmoid(),
+#     "leaky_relu": nn.LeakyReLU(),
+#     "softplus": nn.Softplus(beta=10),
+# }
 
 def create_log_folder(path):
     os.makedirs(path, exist_ok=True)
