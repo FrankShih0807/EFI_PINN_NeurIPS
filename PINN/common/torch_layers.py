@@ -125,10 +125,6 @@ class EFI_Net(nn.Module):
                  ):
         super(EFI_Net, self).__init__()
         
-        print(activation_fn)
-        print(type(activation_fn))
-        print(type(str(activation_fn)))
-        
         self.device = device
         # EFI Net Info
         self.input_dim = input_dim

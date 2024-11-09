@@ -29,6 +29,6 @@ european_call:
     lambda_y: 10.0
     lambda_theta: 0.1
     encoder_kwargs:
-      encoder_activation: softplus(beta=5)
+      encoder_activation: relu
       prior_sd: 0.5
       sparse_threshold: 0.01
