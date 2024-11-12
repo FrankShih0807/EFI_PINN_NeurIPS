@@ -25,21 +25,6 @@ class EuropeanCall(PhysicsModel):
         self.norm_dist = dist.Normal(0, 1)
         super().__init__(S_range=S_range, t_range=t_range, sigma=sigma, r=r, K=K, noise_sd=noise_sd, n_samples=n_samples)
 
-
-        
-    def _data_generation(self, n_samples):
-        ivp_x, ivp_y = self.get_ivp_data(n_samples)
-        bvp_x1, bvp_y1, bvp_x2, bvp_y2 = self.get_bvp_data(n_samples)
-        X = torch.cat([ivp_x, bvp_x1, bvp_x2], dim=0)
-        y = torch.cat([ivp_y, bvp_y1, bvp_y2], dim=0)        
-        # bvp_x2, bvp_y2 = self.get_bvp_data(n_samples)
-        # X = torch.cat([ivp_x, bvp_x2], dim=0)
-        # y = torch.cat([ivp_y, bvp_y2], dim=0)
-
-        
-        # self.physics_X = self.get_diff_data(4 * n_samples).requires_grad_(True)
-        return X, y
-    
     def generate_data(self, n_samples, device):
         dataset = PINNDataset(device)
         # get solution data
@@ -48,18 +33,14 @@ class EuropeanCall(PhysicsModel):
         boundary_X, boundary_y = self.get_boundary_data(n_samples)
         # get differential data
         diff_X, diff_y = self.get_diff_data(4*n_samples)
+        # get evaluation data
+        eval_X, eval_y = self.get_eval_data()
+        
         dataset.add_data(price_X, price_y, 'solution', self.noise_sd)
         dataset.add_data(boundary_X, boundary_y, 'solution', 0.0)
         dataset.add_data(diff_X, diff_y, 'differential', 0.0)
-        
+        dataset.add_data(eval_X, eval_y, 'evaluation', 0.0)
         return dataset
-    
-    def _eval_data_generation(self):
-        eval_t = torch.linspace(self.t_range[0], self.t_range[1], 100)
-        eval_S = torch.linspace(self.S_range[0], self.S_range[1], 100)
-        S, T = torch.meshgrid(eval_S, eval_t, indexing='ij')
-        eval_X = torch.cat([T.reshape(-1, 1), S.reshape(-1, 1)], dim=1)
-        return eval_X
     
     def get_diff_data(self, n_samples):
         ts = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
@@ -68,31 +49,14 @@ class EuropeanCall(PhysicsModel):
         y = torch.zeros(n_samples, 1)
         return X, y
     
-    def get_ivp_data(self, n_samples):
-        ts = torch.ones(n_samples, 1) * self.t_range[1]
-        Ss = torch.rand(n_samples, 1) * (self.S_range[1] - self.S_range[0]) + self.S_range[0]
-        X = torch.cat([ts, Ss], dim=1)
-        y = F.relu(Ss - self.K)
-        return X, y
+    def get_eval_data(self):
+        eval_t = torch.linspace(self.t_range[0], self.t_range[1], 100)
+        eval_S = torch.linspace(self.S_range[0], self.S_range[1], 100)
+        S, T = torch.meshgrid(eval_S, eval_t, indexing='ij')
+        eval_X = torch.cat([T.reshape(-1, 1), S.reshape(-1, 1)], dim=1)
+        eval_y = self.physics_law(S, self.t_range[1] - T)
+        return eval_X, eval_y
     
-    def get_bvp_data(self, n_samples):
-        # Boundary condition at S = 0
-        t1 = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
-        S1 = torch.ones(n_samples, 1) * self.S_range[0]
-        X1 = torch.cat([t1, S1], dim=1)
-        y1 = torch.zeros(n_samples, 1)
-        
-        # Boundary condition at S = S_max/2
-        t2 = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
-        S2 = torch.ones(n_samples, 1) * self.S_range[1]/2
-        X2 = torch.cat([t2, S2], dim=1)
-        # y2 =  (self.S_range[1] - self.K * torch.exp(-self.r * (self.t_range[1] - t2)))
-        y2 = self.physics_law(S2, self.t_range[1] - t2)
-        y2 += self.noise_sd * torch.randn_like(y2)
-        
-        return X1, y1, X2, y2
-        # return X2, y2
-        
     def get_price_data(self, n_samples):
         # Option price at S = S_max/2
         ts = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
@@ -101,7 +65,6 @@ class EuropeanCall(PhysicsModel):
         X = torch.cat([ts, Ss], dim=1)
         y = self.physics_law(Ss, self.t_range[1] - ts)
         y += self.noise_sd * torch.randn_like(y)
-        
         return X, y
     
     def get_boundary_data(self, n_samples):
@@ -120,9 +83,6 @@ class EuropeanCall(PhysicsModel):
         boundary_X = torch.cat([X1, X2], dim=0)
         boundary_y = torch.cat([y1, y2], dim=0)
         return boundary_X, boundary_y
-        
-        
-        
     
     def physics_law(self, s, t2m)->torch.Tensor:
         s = torch.as_tensor(s)
@@ -133,24 +93,6 @@ class EuropeanCall(PhysicsModel):
         Nd2 = self.norm_dist.cdf(d2)
         V = s * Nd1 - self.K * torch.exp(-self.r * (t2m)) * Nd2
         return V
-    
-    
-    def physics_loss(self, model: torch.nn.Module, physics_X):
-        ''' Compute the Black-Scholes loss
-        Args:
-            model (torch.nn.Module): torch network model
-        '''
-        # self.physics_X = self.get_diff_data(800).requires_grad_(True)
-        y_pred = model(physics_X)
-        grads = grad(y_pred, physics_X)[0]
-        dVdt = grads[:, 0].view(-1, 1)
-        dVdS = grads[:, 1].view(-1, 1)
-        grads2nd = grad(dVdS, physics_X)[0]
-        d2VdS2 = grads2nd[:, 1].view(-1, 1)
-        S1 = physics_X[:, 1].view(-1, 1)
-        bs_pde = dVdt + 0.5 * self.sigma**2 * S1**2 * d2VdS2 + self.r * S1 * dVdS - self.r * y_pred
-        
-        return bs_pde.pow(2).mean() 
 
     def differential_operator(self, model: torch.nn.Module, physics_X):
         ''' Compute the Black-Scholes loss
@@ -205,8 +147,6 @@ class EuropeanCall(PhysicsModel):
         
         ax = fig.add_subplot(111, projection='3d')
         
-        # print(S.shape, T.shape, C.shape)   
-        # raise
         ax.plot_surface(S.numpy(), T.numpy(), C.numpy(), cmap='plasma')
         # ax.contourf(S.numpy(), T.numpy(), C.numpy(), zdir='z', offset=-20, cmap='plasma')
         
@@ -225,8 +165,8 @@ class EuropeanCall(PhysicsModel):
         preds_lower = preds_lower.flatten().reshape(self.grids,self.grids).numpy()
         preds_mean = preds_mean.flatten().reshape(self.grids,self.grids).numpy()
         
-        S_grid = self.eval_X[:,1].reshape(self.grids,self.grids).numpy()
-        t_grid = 1-self.eval_X[:,0].reshape(self.grids,self.grids).numpy()
+        S_grid = model.eval_X[:,1].reshape(self.grids,self.grids).numpy()
+        t_grid = 1-model.eval_X[:,0].reshape(self.grids,self.grids).numpy()
         
         np.savez(os.path.join(save_path, 'evaluation_data.npz'), preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean, S_grid=S_grid, t_grid=t_grid)
         

@@ -45,9 +45,16 @@ class BasePINN(object):
         self.physics_model.plot_true_solution(save_path)
 
         # To device
-        self.X = self.X.to(self.device)
-        self.y = self.y.to(self.device)
-        self.eval_X = self.eval_X.to(self.device)
+        # self.X = self.X.to(self.device)
+        # self.y = self.y.to(self.device)
+        self.X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'solution'], dim=0).to(self.device)
+        self.y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'solution'], dim=0).to(self.device)
+                           
+        self.eval_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'evaluation'], dim=0).to(self.device)
+        self.eval_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'evaluation'], dim=0).to(self.device)
+        
+        self.input_dim = self.X.shape[1]
+        self.output_dim = self.y.shape[1]
         # self.physics_X = self.physics_X.to(self.device)
         
         # self._pinn_init()

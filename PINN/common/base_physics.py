@@ -10,12 +10,12 @@ class PhysicsModel(object):
             print('{}: {}'.format(key, value))
             self.model_params[key] = value
             
-        self.X, self.y = self._data_generation(self.n_samples)
-        self.eval_X = self._eval_data_generation()
+        # self.X, self.y = self._data_generation(self.n_samples)
+        # self.eval_X = self._eval_data_generation()
         
-        self.input_dim = self.X.shape[1]
-        self.output_dim = self.y.shape[1]
-        self.n_samples = self.X.shape[0]
+        # self.input_dim = self.X.shape[1]
+        # self.output_dim = self.y.shape[1]
+        # self.n_samples = self.X.shape[0]
     
     def _data_generation(self):
         ''' Implement the data generation here and return X, y '''

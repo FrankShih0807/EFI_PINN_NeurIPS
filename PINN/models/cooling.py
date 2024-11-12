@@ -22,20 +22,28 @@ class Cooling(PhysicsModel):
         super().__init__(Tenv=Tenv, T0=T0, R=R, t_end=t_end, t_extend=t_extend, noise_sd=noise_sd, n_samples=n_samples)
 
         
-    def _data_generation(self, n_samples=200):
-        t = torch.linspace(0, self.t_end, n_samples).reshape(n_samples, -1)
-        T = self.physics_law(t) +  self.noise_sd * torch.randn(n_samples).reshape(n_samples, -1)
+    # def _data_generation(self, n_samples=200):
+    #     t = torch.linspace(0, self.t_end, n_samples).reshape(n_samples, -1)
+    #     T = self.physics_law(t) +  self.noise_sd * torch.randn(n_samples).reshape(n_samples, -1)
         
-        self.physics_X = torch.linspace(0, self.t_extend, steps=self.t_extend,).view(-1,1).requires_grad_(True)
-        return t, T
+    #     self.physics_X = torch.linspace(0, self.t_extend, steps=self.t_extend,).view(-1,1).requires_grad_(True)
+    #     return t, T
     
     def generate_data(self, n_samples, device):
         dataset = PINNDataset(device=device)
         X, y = self.get_temp_data(n_samples)
         diff_X, diff_y = self.get_diff_data()
+        eval_X, eval_y = self.get_eval_data()
         dataset.add_data(X, y, category='solution', noise_sd=self.noise_sd)
         dataset.add_data(diff_X, diff_y, category='differential', noise_sd=0)
+        dataset.add_data(eval_X, eval_y, category='evaluation', noise_sd=0)
+        
         return dataset
+    
+    def get_eval_data(self):
+        t = torch.linspace(0, self.t_extend, self.t_extend).reshape(self.t_extend, -1)
+        T = self.physics_law(t)
+        return t, T
     
     def get_temp_data(self, n_samples):
         X = torch.linspace(0, self.t_end, n_samples).reshape(n_samples, -1)
@@ -48,21 +56,21 @@ class Cooling(PhysicsModel):
         y = torch.zeros(self.t_extend, 1)
         return X, y
     
-    def _eval_data_generation(self):
-        t = torch.linspace(0, self.t_extend, self.t_extend).reshape(self.t_extend, -1)
-        return t
+    # def _eval_data_generation(self):
+    #     t = torch.linspace(0, self.t_extend, self.t_extend).reshape(self.t_extend, -1)
+    #     return t
     
     def physics_law(self, time):
         T = self.Tenv + (self.T0 - self.Tenv) * torch.exp(-self.R * time)
         return T
     
-    def physics_loss(self, model: torch.nn.Module, physics_X):
-        # ts = torch.linspace(0, self.t_extend, steps=self.t_extend,).view(-1,1).requires_grad_(True)
-        temps = model(physics_X)
-        dT = grad(temps, physics_X)[0]
-        pde = self.R*(self.Tenv - temps) - dT
+    # def physics_loss(self, model: torch.nn.Module, physics_X):
+    #     # ts = torch.linspace(0, self.t_extend, steps=self.t_extend,).view(-1,1).requires_grad_(True)
+    #     temps = model(physics_X)
+    #     dT = grad(temps, physics_X)[0]
+    #     pde = self.R*(self.Tenv - temps) - dT
         
-        return torch.mean(pde**2)
+    #     return torch.mean(pde**2)
     
     def differential_operator(self, model: torch.nn.Module, physics_X):
         temps = model(physics_X)
@@ -76,7 +84,7 @@ class Cooling(PhysicsModel):
         
         sns.set_theme()
         plt.plot(times, temps, label='Equation')
-        plt.plot(self.X, self.y, 'x', label='Training data')
+        # plt.plot(self.X, self.y, 'x', label='Training data')
         plt.legend()
         plt.ylabel('Temperature (C)')
         plt.xlabel('Time (s)')
