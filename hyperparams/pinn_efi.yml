@@ -4,15 +4,15 @@ cooling:
     hidden_layers:
     - 20
     - 20
-    activation_fn: softplus
+    activation_fn: softplus(beta=10)
     lr: 1.0e-5
     physics_loss_weight: 50.0
     sgld_lr: 1e-4
     lambda_y: 1.0
     lambda_theta: 1.0
     encoder_kwargs:
-      encoder_activation: softplus
-      prior_sd: 0.5
+      encoder_activation: softplus(beta=10)
+      prior_sd: 0.1
       sparse_threshold: 0.01
 
 european_call:

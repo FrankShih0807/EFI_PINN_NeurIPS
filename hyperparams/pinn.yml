@@ -2,8 +2,8 @@ cooling:
   epochs: 10_000
   pinn:
     hidden_layers:
-    - 15
-    - 15
+    - 20
+    - 20
     activation_fn: softplus(beta=5)
     lr: 1.0e-3
     physics_loss_weight: 50.0

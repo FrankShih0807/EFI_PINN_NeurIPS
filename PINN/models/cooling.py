@@ -5,6 +5,8 @@ import torch
 import seaborn as sns
 from PINN.common.grad_tool import grad
 from PINN.common.base_physics import PhysicsModel
+from PINN.common.utils import PINNDataset
+
 
         
 class Cooling(PhysicsModel):
@@ -27,6 +29,25 @@ class Cooling(PhysicsModel):
         self.physics_X = torch.linspace(0, self.t_extend, steps=self.t_extend,).view(-1,1).requires_grad_(True)
         return t, T
     
+    def generate_data(self, n_samples, device):
+        dataset = PINNDataset(device=device)
+        X, y = self.get_temp_data(n_samples)
+        diff_X, diff_y = self.get_diff_data()
+        dataset.add_data(X, y, category='solution', noise_sd=self.noise_sd)
+        dataset.add_data(diff_X, diff_y, category='differential', noise_sd=0)
+        return dataset
+    
+    def get_temp_data(self, n_samples):
+        X = torch.linspace(0, self.t_end, n_samples).reshape(n_samples, -1)
+        y = self.physics_law(X)
+        y += self.noise_sd * torch.randn_like(y)
+        return X, y
+    
+    def get_diff_data(self):
+        X = torch.linspace(0, self.t_extend, steps=self.t_extend,).view(-1,1)
+        y = torch.zeros(self.t_extend, 1)
+        return X, y
+    
     def _eval_data_generation(self):
         t = torch.linspace(0, self.t_extend, self.t_extend).reshape(self.t_extend, -1)
         return t
@@ -42,6 +63,12 @@ class Cooling(PhysicsModel):
         pde = self.R*(self.Tenv - temps) - dT
         
         return torch.mean(pde**2)
+    
+    def differential_operator(self, model: torch.nn.Module, physics_X):
+        temps = model(physics_X)
+        dT = grad(temps, physics_X)[0]
+        pde = self.R*(self.Tenv - temps) - dT
+        return pde
     
     def plot_true_solution(self, save_path=None):
         times = torch.linspace(0, self.t_extend, self.t_extend)

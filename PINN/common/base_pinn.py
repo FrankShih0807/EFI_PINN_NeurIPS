@@ -15,6 +15,7 @@ class BasePINN(object):
     def __init__(
         self,
         physics_model,
+        dataset,
         hidden_layers=[15, 15],
         activation_fn=nn.Softplus(beta=10),
         lr=1e-3,
@@ -24,11 +25,13 @@ class BasePINN(object):
     ) -> None:
         super().__init__()
         self.physics_model = physics_model
+        self.dataset = dataset.copy()
         for key, value in self.physics_model.__dict__.items():
             setattr(self, key, value)
-        
+
         # Physics loss
         self.physics_loss = self.physics_model.physics_loss
+        self.differential_operator = self.physics_model.differential_operator
         self.physics_loss_weight = physics_loss_weight
         
         # Common configs
@@ -45,7 +48,7 @@ class BasePINN(object):
         self.X = self.X.to(self.device)
         self.y = self.y.to(self.device)
         self.eval_X = self.eval_X.to(self.device)
-        self.physics_X = self.physics_X.to(self.device)
+        # self.physics_X = self.physics_X.to(self.device)
         
         # self._pinn_init()
         # self.net.to(self.device)

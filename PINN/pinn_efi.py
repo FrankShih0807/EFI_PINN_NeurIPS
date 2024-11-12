@@ -4,12 +4,14 @@ import torch.optim as optim
 from PINN.common import SGLD
 from PINN.common.torch_layers import EFI_Net
 from PINN.common.base_pinn import BasePINN
+from copy import deepcopy
 
 
 class PINN_EFI(BasePINN):
     def __init__(
         self,
         physics_model,
+        dataset,
         hidden_layers=[15, 15],
         activation_fn=nn.Softplus(beta=10),
         encoder_kwargs=dict(),
@@ -21,7 +23,7 @@ class PINN_EFI(BasePINN):
         save_path=None,
         device='cpu'
     ) -> None:
-        super().__init__(physics_model, hidden_layers, activation_fn, lr, physics_loss_weight, save_path, device)
+        super().__init__(physics_model, dataset, hidden_layers, activation_fn, lr, physics_loss_weight, save_path, device)
         
         # EFI configs
         self.encoder_kwargs = encoder_kwargs
@@ -30,7 +32,8 @@ class PINN_EFI(BasePINN):
         self.lambda_theta = lambda_theta
         
         self.noise_sd = physics_model.noise_sd
-
+        
+        # self._pinn_init()
     
     def _pinn_init(self):
         # init EFI net and optimiser
@@ -38,16 +41,67 @@ class PINN_EFI(BasePINN):
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         
         # init latent noise and sampler
-        self.Z = (self.noise_sd * torch.randn_like(self.y)).requires_grad_().to(self.device)
-        self.sampler = SGLD([self.Z], self.sgld_lr)
+        # self.Z = (self.noise_sd * torch.randn_like(self.y)).requires_grad_().to(self.device)
+        # self.sampler = SGLD([self.Z], self.sgld_lr)
         
+        self.latent_Z = []
+        for d in self.dataset:
+            if d['noise_sd'] > 0:
+                # d['latent_Z'] = (d['noise_sd'] * torch.randn_like(d['y'])).requires_grad_().to(self.device)
+                self.latent_Z.append((d['noise_sd'] * torch.randn_like(d['y'])).requires_grad_().to(self.device))
+            else:
+                self.latent_Z.append(None)
+
+        self.sampler = SGLD([p for p in self.latent_Z if p is not None], self.sgld_lr)
+    
+    def solution_loss(self):
+        loss = 0
+        for i, d in enumerate(self.dataset):
+            if d['category'] == 'solution' and d['noise_sd'] > 0:
+                loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i])
+            elif d['category'] == 'solution':
+                loss += self.mse_loss(d['y'], self.net(d['X']))
+        return loss
+    
+    def theta_loss(self):
+
+        noise_X = torch.cat([d['X'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
+        noise_y = torch.cat([d['y'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
+        noise_Z = torch.cat([ Z for Z in self.latent_Z if Z is not None], dim=0)
+        
+        theta_loss = self.net.theta_encode(noise_X, noise_y, noise_Z)
+        return theta_loss
+    
+    def z_prior_loss(self):
+        loss = 0
+        for i, d in enumerate(self.dataset):
+            if d['noise_sd'] > 0:
+                loss += torch.mean(self.latent_Z[i]**2)/2/d['noise_sd']**2
+        return loss
+    
+    def pde_loss(self):
+        loss = 0
+        for i, d in enumerate(self.dataset):
+            if d['category'] == 'differential':
+                if d['noise_sd'] > 0:
+                    diff_o = self.differential_operator(self.net, d['X']) + self.latent_Z[i]
+                    loss += self.mse_loss(diff_o, d['y'])
+                else:
+                    diff_o = self.differential_operator(self.net, d['X'])
+                    loss += self.mse_loss(diff_o, d['y'])
+        return loss
 
     def update(self):
         ## 1. Latent variable sampling (Sample Z)
         self.net.eval()
-        theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
-        y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
-        Z_loss = self.lambda_y * y_loss + self.lambda_theta * theta_loss + torch.mean(self.Z**2)/2/self.noise_sd**2
+        # theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
+        # y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
+        # Z_loss = self.lambda_y * y_loss + self.lambda_theta * theta_loss + torch.mean(self.Z**2)/2/self.noise_sd**2
+        
+        theta_loss = self.theta_loss()
+        y_loss = self.solution_loss()
+        prior_loss = self.z_prior_loss()
+        Z_loss = self.lambda_y * y_loss + self.lambda_theta * theta_loss + prior_loss + self.physics_loss_weight * self.pde_loss()
         
 
         self.sampler.zero_grad()
@@ -57,11 +111,25 @@ class PINN_EFI(BasePINN):
         ## 2. DNN weights update (Optimize W)
         
         self.net.train()
-        theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
-        y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
+        # theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
+        # y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
+        # prior_loss = - self.net.gmm_prior_loss() / self.n_samples
+        
+        # diff_o = self.differential_operator(self.net, self.physics_X)
+        # pde_loss = self.mse_loss(diff_o, torch.zeros_like(diff_o))
+        # w_loss = self.lambda_y * (y_loss + prior_loss) + self.physics_loss_weight * pde_loss + self.lambda_theta * theta_loss 
+        
+        theta_loss = self.theta_loss()
+        y_loss = self.solution_loss()
         prior_loss = - self.net.gmm_prior_loss() / self.n_samples
         
-        w_loss = self.lambda_y * (y_loss + prior_loss) + self.physics_loss_weight * self.physics_loss(self.net, self.physics_X) + self.lambda_theta * theta_loss 
+        pde_loss = self.pde_loss()
+        w_loss = self.lambda_y * (y_loss + prior_loss) + self.physics_loss_weight * pde_loss + self.lambda_theta * theta_loss
+        
+        
+        
+        
+        
 
         self.optimiser.zero_grad()
         w_loss.backward()

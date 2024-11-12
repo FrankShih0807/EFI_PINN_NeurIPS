@@ -48,10 +48,16 @@ def train():
     
     set_random_seed(hyperparams['seed'])
     physics_model = MODELS[args['model']](**model_settings)
+    dataset = physics_model.generate_data(n_samples=200, device=device)
+    # print(dataset[0]['X'].device)
+    
+    # for d in dataset:
+    #     X, y = d['X'], d['y']
+    #     print(X.shape, y.shape, d['category'], d['noise_sd'])
+
     pinn_class = ALGOS[args['algo']]
-    
-    
     pinn = pinn_class(physics_model = physics_model,
+                      dataset = dataset,
                       **hyperparams['pinn'],
                       save_path=output_dir,
                       device=device

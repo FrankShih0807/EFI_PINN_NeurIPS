@@ -8,6 +8,7 @@ import os
 
 from PINN.common.grad_tool import grad
 from PINN.common.base_physics import PhysicsModel
+from PINN.common.utils import PINNDataset
 
     
         
@@ -36,8 +37,22 @@ class EuropeanCall(PhysicsModel):
         # y = torch.cat([ivp_y, bvp_y2], dim=0)
 
         
-        self.physics_X = self.get_diff_data(4 * n_samples).requires_grad_(True)
+        # self.physics_X = self.get_diff_data(4 * n_samples).requires_grad_(True)
         return X, y
+    
+    def generate_data(self, n_samples, device):
+        dataset = PINNDataset(device)
+        # get solution data
+        price_X, price_y = self.get_price_data(n_samples)
+        # get boundary data
+        boundary_X, boundary_y = self.get_boundary_data(n_samples)
+        # get differential data
+        diff_X, diff_y = self.get_diff_data(4*n_samples)
+        dataset.add_data(price_X, price_y, 'solution', self.noise_sd)
+        dataset.add_data(boundary_X, boundary_y, 'solution', 0.0)
+        dataset.add_data(diff_X, diff_y, 'differential', 0.0)
+        
+        return dataset
     
     def _eval_data_generation(self):
         eval_t = torch.linspace(self.t_range[0], self.t_range[1], 100)
@@ -50,7 +65,8 @@ class EuropeanCall(PhysicsModel):
         ts = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
         Ss = torch.rand(n_samples, 1) * (self.S_range[1] - self.S_range[0]) + self.S_range[0]
         X = torch.cat([ts, Ss], dim=1)
-        return X
+        y = torch.zeros(n_samples, 1)
+        return X, y
     
     def get_ivp_data(self, n_samples):
         ts = torch.ones(n_samples, 1) * self.t_range[1]
@@ -76,6 +92,36 @@ class EuropeanCall(PhysicsModel):
         
         return X1, y1, X2, y2
         # return X2, y2
+        
+    def get_price_data(self, n_samples):
+        # Option price at S = S_max/2
+        ts = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
+        # ts = torch.linspace(self.t_range[0], self.t_range[1], n_samples).reshape(-1, 1)
+        Ss = torch.ones(n_samples, 1) * self.S_range[1]/2
+        X = torch.cat([ts, Ss], dim=1)
+        y = self.physics_law(Ss, self.t_range[1] - ts)
+        y += self.noise_sd * torch.randn_like(y)
+        
+        return X, y
+    
+    def get_boundary_data(self, n_samples):
+        # Boundary condition at S = 0
+        t1 = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
+        S1 = torch.ones(n_samples, 1) * self.S_range[0]
+        X1 = torch.cat([t1, S1], dim=1)
+        y1 = torch.zeros(n_samples, 1)
+        
+        # Boundary condition at time to maturity
+        t2 = torch.ones(n_samples, 1) * self.t_range[1]
+        S2 = torch.rand(n_samples, 1) * (self.S_range[1] - self.S_range[0]) + self.S_range[0]
+        X2 = torch.cat([t2, S2], dim=1)
+        y2 = F.relu(S2 - self.K)
+        
+        boundary_X = torch.cat([X1, X2], dim=0)
+        boundary_y = torch.cat([y1, y2], dim=0)
+        return boundary_X, boundary_y
+        
+        
         
     
     def physics_law(self, s, t2m)->torch.Tensor:
@@ -106,7 +152,22 @@ class EuropeanCall(PhysicsModel):
         
         return bs_pde.pow(2).mean() 
 
-    
+    def differential_operator(self, model: torch.nn.Module, physics_X):
+        ''' Compute the Black-Scholes loss
+        Args:
+            model (torch.nn.Module): torch network model
+        '''
+        # self.physics_X = self.get_diff_data(800).requires_grad_(True)
+        y_pred = model(physics_X)
+        grads = grad(y_pred, physics_X)[0]
+        dVdt = grads[:, 0].view(-1, 1)
+        dVdS = grads[:, 1].view(-1, 1)
+        grads2nd = grad(dVdS, physics_X)[0]
+        d2VdS2 = grads2nd[:, 1].view(-1, 1)
+        S1 = physics_X[:, 1].view(-1, 1)
+        bs_pde = dVdt + 0.5 * self.sigma**2 * S1**2 * d2VdS2 + self.r * S1 * dVdS - self.r * y_pred
+        
+        return bs_pde
     
     def plot(self, s_range=[0, 160], t_range=[0, 1], grid_size=100):
         s = torch.linspace(s_range[0], s_range[1], grid_size)
