@@ -9,17 +9,6 @@ from PINN.common.gmm import GaussianMixtureModel
 from PINN.common.utils import get_activation_fn
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
-
-ACTIVATIONS: Dict[str, Callable] = {
-    "relu": nn.ReLU(),
-    "tanh": nn.Tanh(),
-    "sigmoid": nn.Sigmoid(),
-    "leaky_relu": nn.LeakyReLU(),
-    "softplus": nn.Softplus(),
-}
-
-
-        
     
 class BaseDNN(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_layers, activation_fn):
@@ -135,10 +124,6 @@ class EFI_Net(nn.Module):
                  device='cpu'
                  ):
         super(EFI_Net, self).__init__()
-        
-        print(activation_fn)
-        print(type(activation_fn))
-        print(type(str(activation_fn)))
         
         self.device = device
         # EFI Net Info
