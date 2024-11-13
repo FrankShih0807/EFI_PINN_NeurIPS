@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
 from PINN import PINN, PINN_DROPOUT, PINN_EFI, PINN_BNN, NONLINEAR_EFI, PINN_EFI_Discovery
-from PINN.models import Cooling, EuropeanCall, Nonlinear, EuropeanCallDiscovery
+from PINN.models import Cooling, EuropeanCall, Nonlinear, EuropeanCallDiscovery, Poisson
 from torch.utils.data import DataLoader,Dataset
 
 yaml = YAML()
@@ -30,6 +30,7 @@ MODELS: Dict[str, Type[PhysicsModel]] = {
     "european_call": EuropeanCall,
     "nonlinear": Nonlinear,
     "european_call_discovery": EuropeanCallDiscovery,
+    "poisson": Poisson,
 }
 
 # ACTIVATIONS: Dict[str, Callable] = {
