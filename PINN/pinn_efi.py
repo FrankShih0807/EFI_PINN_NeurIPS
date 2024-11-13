@@ -40,14 +40,9 @@ class PINN_EFI(BasePINN):
         self.net = EFI_Net(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn, device=self.device, **self.encoder_kwargs)
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         
-        # init latent noise and sampler
-        # self.Z = (self.noise_sd * torch.randn_like(self.y)).requires_grad_().to(self.device)
-        # self.sampler = SGLD([self.Z], self.sgld_lr)
-        
         self.latent_Z = []
         for d in self.dataset:
             if d['noise_sd'] > 0:
-                # d['latent_Z'] = (d['noise_sd'] * torch.randn_like(d['y'])).requires_grad_().to(self.device)
                 self.latent_Z.append((d['noise_sd'] * torch.randn_like(d['y'])).requires_grad_().to(self.device))
             else:
                 self.latent_Z.append(None)
@@ -64,7 +59,6 @@ class PINN_EFI(BasePINN):
         return loss
     
     def theta_loss(self):
-
         noise_X = torch.cat([d['X'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
         noise_y = torch.cat([d['y'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
         noise_Z = torch.cat([ Z for Z in self.latent_Z if Z is not None], dim=0)
@@ -100,8 +94,8 @@ class PINN_EFI(BasePINN):
         
         theta_loss = self.theta_loss()
         y_loss = self.solution_loss()
-        prior_loss = self.z_prior_loss()
-        Z_loss = self.lambda_y * y_loss + self.lambda_theta * theta_loss + prior_loss + self.physics_loss_weight * self.pde_loss()
+        z_prior_loss = self.z_prior_loss()
+        Z_loss = self.lambda_y * y_loss + self.lambda_theta * theta_loss + z_prior_loss + self.physics_loss_weight * self.pde_loss()
         
 
         self.sampler.zero_grad()
@@ -121,13 +115,10 @@ class PINN_EFI(BasePINN):
         
         theta_loss = self.theta_loss()
         y_loss = self.solution_loss()
-        prior_loss = - self.net.gmm_prior_loss() / self.n_samples
+        w_prior_loss = - self.net.gmm_prior_loss() / self.n_samples
         
         pde_loss = self.pde_loss()
-        w_loss = self.lambda_y * (y_loss + prior_loss) + self.physics_loss_weight * pde_loss + self.lambda_theta * theta_loss
-        
-        
-        
+        w_loss = self.lambda_y * (y_loss + w_prior_loss) + self.lambda_theta * theta_loss + self.physics_loss_weight * pde_loss
         
         
 

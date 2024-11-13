@@ -1,4 +1,5 @@
 cooling:
+  n_samples: 200
   epochs: 10_000
   pinn:
     hidden_layers:
@@ -10,6 +11,7 @@ cooling:
 
 
 european_call:
+  n_samples: 200
   epochs: 20_000
   pinn:
     hidden_layers:
