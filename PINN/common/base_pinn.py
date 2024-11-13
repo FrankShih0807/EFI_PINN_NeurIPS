@@ -30,7 +30,7 @@ class BasePINN(object):
             setattr(self, key, value)
 
         # Physics loss
-        self.physics_loss = self.physics_model.physics_loss
+        # self.physics_loss = self.physics_model.physics_loss
         self.differential_operator = self.physics_model.differential_operator
         self.physics_loss_weight = physics_loss_weight
         
