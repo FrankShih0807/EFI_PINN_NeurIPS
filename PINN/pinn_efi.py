@@ -33,6 +33,8 @@ class PINN_EFI(BasePINN):
         
         self.noise_sd = physics_model.noise_sd
         
+        self.n_samples = self.X.shape[0]
+        
         # self._pinn_init()
     
     def _pinn_init(self):

@@ -11,19 +11,19 @@ class PhysicsModel(object):
             self.model_params[key] = value
             
     
-    def _data_generation(self):
-        ''' Implement the data generation here and return X, y '''
-        raise NotImplementedError()
+    # def _data_generation(self):
+    #     ''' Implement the data generation here and return X, y '''
+    #     raise NotImplementedError()
     
-    def _eval_data_generation(self):
-        ''' Implement the evaluation data generation here and return X '''
-        raise NotImplementedError
+    # def _eval_data_generation(self):
+    #     ''' Implement the evaluation data generation here and return X '''
+    #     raise NotImplementedError
     
     def physics_law(self):
         ''' Implement the physics law here '''
         raise NotImplementedError()
     
-    def physics_loss(self):
+    def differential_operator(self):
         ''' Implement the physics loss here '''
         raise NotImplementedError()
     

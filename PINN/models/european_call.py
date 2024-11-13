@@ -20,10 +20,9 @@ class EuropeanCall(PhysicsModel):
                  r = 0.05,
                  K = 80,
                  noise_sd=1,
-                 n_samples=200
                  ):
         self.norm_dist = dist.Normal(0, 1)
-        super().__init__(S_range=S_range, t_range=t_range, sigma=sigma, r=r, K=K, noise_sd=noise_sd, n_samples=n_samples)
+        super().__init__(S_range=S_range, t_range=t_range, sigma=sigma, r=r, K=K, noise_sd=noise_sd)
 
     def generate_data(self, n_samples, device):
         dataset = PINNDataset(device)
