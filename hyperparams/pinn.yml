@@ -22,3 +22,14 @@ european_call:
     lr: 1.0e-3
     physics_loss_weight: 10.0
 
+poisson:
+  n_samples: 16
+  epochs: 10_000
+  pinn:
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: tanh
+    lr: 1.0e-3
+    physics_loss_weight: 10.0
+
