@@ -19,7 +19,7 @@ class Poisson(PhysicsModel):
                  ):
         super().__init__(sigma=sigma, lam1=lam1, lam2=lam2, t_start=t_start, t_end=t_end, noise_sd=noise_sd)
 
-    def generate_data(self, n_samples, device): ###################
+    def generate_data(self, n_samples, device):
         dataset = PINNDataset(device=device)
         X, y = self.get_solu_data()
         diff_X, diff_y = self.get_diff_data(n_samples)
@@ -43,7 +43,7 @@ class Poisson(PhysicsModel):
     
     def get_diff_data(self, n_samples):
         X = torch.linspace(self.t_start, self.t_end, steps=n_samples).view(-1,1)
-        y = self.lam1 * (-1.08) * torch.sin(6 * X) * (torch.sin(6 * X) ** 2 - 2 * torch.cos(6 * X) ** 2)
+        y = self.differential_function(X)
         y += self.noise_sd * torch.randn_like(y)
         return X, y
 
@@ -70,16 +70,19 @@ class Poisson(PhysicsModel):
     
     def physics_law(self, X):
         y = self.lam2 * torch.sin(6 * X) ** 3
-        # y = self.lam1 * (-1.08) * np.sin(6 * X) * (np.sin(6 * X) ** 2 - 2 * np.cos(6 * X) ** 2)
+        return y
+    
+    def differential_function(self, X):
+        y = self.lam1 * (-1.08) * torch.sin(6 * X) * (torch.sin(6 * X) ** 2 - 2 * torch.cos(6 * X) ** 2)
         return y
     
     def differential_operator(self, model: torch.nn.Module, physics_X):
         u = model(physics_X)
-        # u_x = torch.autograd.grad(u, x, grad_outputs=torch.ones_like(u), create_graph=True)[0]
-        # u_xx = torch.autograd.grad(u_x, x, grad_outputs=torch.ones_like(u), create_graph=True)[0]
-        u_x = grad(u, physics_X)[0]
-        u_xx = grad(u_x, physics_X)[0]
-        pde = self.lam1 * 0.01 * u_xx - self.physics_law(physics_X)
+        u_x = torch.autograd.grad(u, physics_X, grad_outputs=torch.ones_like(u), create_graph=True)[0]
+        u_xx = torch.autograd.grad(u_x, physics_X, grad_outputs=torch.ones_like(u), create_graph=True)[0]
+        # u_x = grad(u, physics_X)[0]
+        # u_xx = grad(u_x, physics_X)[0]
+        pde = self.lam1 * 0.01 * u_xx
         
         return pde
     

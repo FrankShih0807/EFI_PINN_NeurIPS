@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from PINN.common.base_pinn import BasePINN
+from PINN.models.poisson import Poisson
 
 class PINN(BasePINN):
     def __init__(
@@ -34,15 +35,58 @@ class PINN(BasePINN):
                 loss += self.mse_loss(d['y'], self.net(d['X']))
         return loss
     
+    # def update(self):
+    #     self.optimiser.zero_grad()
+    #     # outputs = self.net(self.X)
+    #     # loss = self.mse_loss(self.y, outputs)
+    #     loss = self.solution_loss() + self.physics_loss_weight * self.pde_loss()
+    #     # loss += self.physics_loss_weight * self.physics_loss(self.net, self.physics_X)
+        
+    #     loss.backward()
+    #     self.optimiser.step()
+        
+    #     return loss
+
     def update(self):
         self.optimiser.zero_grad()
-        # outputs = self.net(self.X)
-        # loss = self.mse_loss(self.y, outputs)
-        loss = self.solution_loss() + self.physics_loss_weight * self.pde_loss()
-        # loss += self.physics_loss_weight * self.physics_loss(self.net, self.physics_X)
-        
+        solution_loss = self.solution_loss()
+        pde_loss = self.pde_loss()
+        loss = solution_loss + self.physics_loss_weight * pde_loss
         loss.backward()
         self.optimiser.step()
         
-        return loss
+        return loss, solution_loss, pde_loss
 
+if __name__ == "__main__":
+    physics_model = Poisson()
+    dataset = physics_model.generate_data(16, device='cpu')
+    model = PINN(physics_model, dataset, device='cpu')
+    model._pinn_init()
+    
+    for epoch in range(10000):
+        loss, solution_loss, pde_loss = model.update()
+        if epoch % 1000 == 0:
+            print(f"Epoch {epoch}, Loss: {loss:.4f}, Solution Loss: {solution_loss:.4f}, PDE Loss: {pde_loss:.4f}")
+
+    X = torch.linspace(physics_model.t_start, physics_model.t_end, steps=100).reshape(100, -1).requires_grad_(True)
+    y = model.net(X).detach().numpy()
+    y_true = physics_model.physics_law(X).detach().numpy()
+    f_true = physics_model.differential_function(X).detach().numpy()
+    f = model.differential_operator(model.net, X).detach().numpy()
+    X = X.detach().numpy()
+
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    fig, ax = plt.subplots(1, 2, figsize=(15, 5))
+    ax[0].plot(X, y, label='Predicted Solution')
+    ax[0].plot(X, y_true, label='True Solution')
+    ax[0].set_title('Solution')
+    ax[0].legend()
+
+    ax[1].plot(X, f, label='Predicted Differential')
+    ax[1].plot(X, f_true, label='True Differential')
+    ax[1].set_title('Differential')
+    ax[1].legend()
+    
+    plt.show()

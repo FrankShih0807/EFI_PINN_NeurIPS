@@ -34,6 +34,7 @@ class BayesianPINN(BasePINN):
     def __init__(
         self,
         physics_model,
+        dataset,
         hidden_layers=[50, 50],
         activation_fn=nn.Tanh(),
         lr=1e-3,
@@ -46,13 +47,23 @@ class BayesianPINN(BasePINN):
         num_samples=5000,
         L=6
     ) -> None:
-        super().__init__(physics_model, hidden_layers, activation_fn, lr, physics_loss_weight, save_path, device)
+        super().__init__(physics_model, dataset, hidden_layers, activation_fn, lr, physics_loss_weight, save_path, device)
         self.sigma = sigma
         self.step_size = step_size
         self.burn = burn
         self.num_samples = num_samples
         self.L = L
         self.tau_list = []
+
+        for d in self.dataset:
+            if d['category'] == 'differential':
+                self.X = d['X']
+                self.y = d['y']
+
+        for d in self.dataset:
+            if d['category'] == 'solution':
+                self.X = torch.cat([self.X, d['X']], dim=0)
+                self.y = torch.cat([self.y, d['y']], dim=0)
 
     def _pinn_init(self):
         self.net = PoissonPINN(self.hidden_layers[0], self.physics_model.lam1, self.physics_model.lam2)
@@ -79,7 +90,7 @@ class BayesianPINN(BasePINN):
         for i in range(self.num_samples - self.burn):
             params = hamiltorch.util.unflatten(self.net, self.params_hmc[i])
             hamiltorch.util.update_model_params_in_place(self.net, params)
-            y_pred = self.net(X)[:-2]
+            y_pred = self.net(X)
             y_pred_list.append(y_pred)
         y_pred = torch.stack(y_pred_list)
         return y_pred
@@ -106,31 +117,42 @@ if __name__ == "__main__":
 
     # Initialize the physics model
     physics_model = Poisson()
+    dataset = physics_model.generate_data(16, device='cpu')
 
     # Initialize the Bayesian PINN model
-    model = BayesianPINN(physics_model, device='cpu')
+    model = BayesianPINN(physics_model, dataset=dataset, device='cpu')
 
     # Perform HMC sampling
     model.sample_posterior()
 
     # Evaluate the model
     y_mean, y_up, y_low = model.evaluate()
+    y_pred_upper, y_pred_lower, y_pred_mean = model.summary()
+    y_pred_upper = y_pred_upper.flatten()
+    y_pred_lower = y_pred_lower.flatten()
+    y_pred_mean = y_pred_mean.flatten()
 
     # True solution
-    X_data = physics_model.X
-    y_data = physics_model.y
+    for d in dataset:
+        if d['category'] == 'differential':
+            X_data = d['X']
+            y_data = d['y']
 
     # evaluate the model
-    X_test = physics_model.eval_X
-    y_test = physics_model.physics_law(X_test[:-2])
+    X_test = model.eval_X.flatten()
+    y_test = physics_model.differential_function(X_test)
 
     # Plot the results
     sns.set_theme()
-    plt.plot(X_test[:-2].detach().cpu().numpy(), y_mean.detach().cpu().numpy(), label = 'mean')
-    plt.plot(X_test[:-2].detach().cpu().numpy(), y_up.detach().cpu().numpy())
-    plt.plot(X_test[:-2].detach().cpu().numpy(), y_low.detach().cpu().numpy())
-    plt.plot(X_test[:-2].detach().cpu().numpy(), y_test.detach().cpu().numpy(), label = 'True')
-    plt.scatter(X_data[:-2].detach().cpu().numpy(), y_data[:-2].detach().cpu().numpy(), label = 'Data')
+
+    plt.plot(X_test.detach().cpu().numpy(), y_mean.detach().cpu().numpy(), label = 'mean')
+    plt.plot(X_test.detach().cpu().numpy(), y_up.detach().cpu().numpy())
+    plt.plot(X_test.detach().cpu().numpy(), y_low.detach().cpu().numpy())
+    # plt.plot(X_test.detach().cpu().numpy(), y_pred_mean.detach().cpu().numpy(), label = 'mean')
+    # plt.fill_between(X_test.detach().cpu().numpy(), y_pred_upper.detach().cpu().numpy(), y_pred_lower.detach().cpu().numpy(), alpha=0.2, color='g', label='95% CI')
+
+    plt.plot(X_test.detach().cpu().numpy(), y_test.detach().cpu().numpy(), label = 'True')
+    plt.scatter(X_data.detach().cpu().numpy(), y_data.detach().cpu().numpy(), label = 'Data')
     plt.legend()
     plt.ylabel('u_xx')
     plt.xlabel('x')
