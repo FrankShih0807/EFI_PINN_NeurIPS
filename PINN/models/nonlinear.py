@@ -43,9 +43,9 @@ class Nonlinear(PhysicsModel):
         # # Y2 = (-0.01*time**7-time**4-2*time**2-4*time+1)
         # return Y1, Y2
 
-        # Y = 3 * torch.sin(time)
+        Y = 3 * torch.sin(time)
         # Y = time
-        Y = 3 * torch.sin(0.6 * time) ** 3
+        # Y = 3 * torch.sin(0.6 * time) ** 3
         return Y
 
     def physics_loss(self, model: torch.nn.Module):
