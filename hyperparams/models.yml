@@ -27,8 +27,8 @@ nonlinear:
 
 poisson:
   sigma: 0.01
-  lam1: 100.0
-  lam2: 100.0
+  lam1: 1.0
+  lam2: 1.0
   t_start: -0.7
   t_end: 0.7
   noise_sd: 0.01

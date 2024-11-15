@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import time
 import torch.nn.functional as F
 import seaborn as sns
 from torch.nn.utils import parameters_to_vector
@@ -15,9 +16,10 @@ class NONLINEAR_EFI(BasePINN):
     def __init__(
         self,
         physics_model,
+        dataset,
         hidden_layers=[15, 15],
         activation_fn=nn.Softplus(beta=10),
-        # activation_fn=nn.Tanh(),
+        encoder_kwargs=dict(),
         lr=1e-3,
         physics_loss_weight=10,
         sgld_lr=1e-3,
@@ -28,6 +30,7 @@ class NONLINEAR_EFI(BasePINN):
     ) -> None:
         super().__init__(
             physics_model,
+            dataset,
             hidden_layers,
             activation_fn,
             lr,
@@ -37,6 +40,7 @@ class NONLINEAR_EFI(BasePINN):
         )
 
         # EFI configs
+        self.encoder_kwargs = encoder_kwargs
         self.sgld_lr = sgld_lr
         self.initial_lambda_y = lambda_y
         self.initial_lambda_theta = lambda_theta
@@ -44,6 +48,8 @@ class NONLINEAR_EFI(BasePINN):
         self.lambda_theta = lambda_theta
 
         self.noise_sd = physics_model.noise_sd
+
+        self.n_samples = self.X.shape[0]
 
     def _pinn_init(self):
         # init EFI net and optimiser
@@ -53,13 +59,56 @@ class NONLINEAR_EFI(BasePINN):
             hidden_layers=self.hidden_layers,
             activation_fn=self.activation_fn,
             device=self.device,
-            prior_sd=0.5,
+            **self.encoder_kwargs
         )
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
 
         # init latent noise and sampler
-        self.Z = (self.noise_sd * torch.randn_like(self.y)).requires_grad_().to(self.device)
-        self.sampler = SGLD([self.Z], self.sgld_lr)
+        # self.Z = (self.noise_sd * torch.randn_like(self.y)).requires_grad_().to(self.device)
+        self.latent_Z = []
+        for d in self.dataset:
+            if d['noise_sd'] > 0:
+                self.latent_Z.append((d['noise_sd'] * torch.randn_like(d['y'])).requires_grad_().to(self.device))
+            else:
+                self.latent_Z.append(None)
+        
+        self.sampler = SGLD([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr)
+
+    def solution_loss(self):
+        loss = 0
+        for i, d in enumerate(self.dataset):
+            if d['category'] == 'solution' and d['noise_sd'] > 0:
+                loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i])
+            elif d['category'] == 'solution':
+                loss += self.mse_loss(d['y'], self.net(d['X']))
+        return loss
+    
+    def theta_loss(self):
+        noise_X = torch.cat([d['X'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
+        noise_y = torch.cat([d['y'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
+        noise_Z = torch.cat([ Z for Z in self.latent_Z if Z is not None], dim=0)
+        
+        theta_loss = self.net.theta_encode(noise_X, noise_y, noise_Z)
+        return theta_loss
+    
+    def z_prior_loss(self):
+        loss = 0
+        for i, d in enumerate(self.dataset):
+            if d['noise_sd'] > 0:
+                loss += torch.mean(self.latent_Z[i]**2)/2/d['noise_sd']**2
+        return loss
+    
+    def pde_loss(self):
+        loss = 0
+        for i, d in enumerate(self.dataset):
+            if d['category'] == 'differential':
+                if d['noise_sd'] > 0:
+                    diff_o = self.differential_operator(self.net, d['X']) + self.latent_Z[i]
+                    loss += self.mse_loss(diff_o, d['y'])
+                else:
+                    diff_o = self.differential_operator(self.net, d['X'])
+                    loss += self.mse_loss(diff_o, d['y'])
+        return loss
 
     def train_base_dnn(self, epochs=10000):
         base_net = BaseDNN(
@@ -82,10 +131,13 @@ class NONLINEAR_EFI(BasePINN):
 
         for _ in range(steps):
             self.net.train()
-            batch_size = self.X.shape[0]
-            encoder_output = self.net.encoder(
-                torch.cat([self.X, self.y, self.Z], dim=1)
-            )
+            # batch_size = self.n_samples
+            noise_X = torch.cat([d['X'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
+            noise_y = torch.cat([d['y'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
+            noise_Z = torch.cat([ Z for Z in self.latent_Z if Z is not None], dim=0)
+            batch_size = noise_X.shape[0]
+
+            encoder_output = self.net.encoder(torch.cat([noise_X, noise_y, noise_Z], dim=1))
             loss = F.mse_loss(
                 encoder_output, param_vector.repeat(batch_size, 1), reduction="sum"
             )
@@ -108,12 +160,16 @@ class NONLINEAR_EFI(BasePINN):
 
         ## 1. Latent variable sampling (Sample Z)
         self.net.eval()
-        theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
-        y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
+        # theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
+        theta_loss = self.theta_loss()
+        # y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
+        y_loss = self.solution_loss()
+        z_prior_loss = self.z_prior_loss()
+        pde_loss = self.pde_loss()
         Z_loss = (
             self.lambda_y * y_loss
             + self.lambda_theta * theta_loss
-            + torch.mean(self.Z**2) / 2 / self.noise_sd**2
+            + z_prior_loss + self.physics_loss_weight * pde_loss
         )
 
         self.sampler.zero_grad()
@@ -122,21 +178,25 @@ class NONLINEAR_EFI(BasePINN):
 
         ## 2. DNN weights update (Optimize W)
         self.net.train()
-        theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
-        y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
-        prior_loss = -self.net.gmm_prior_loss() / self.n_samples
+        # theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
+        # y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
+        # prior_loss = -self.net.gmm_prior_loss() / self.n_samples
+        theta_loss = self.theta_loss()
+        y_loss = self.solution_loss()
+        w_prior_loss = -self.net.gmm_prior_loss() / self.n_samples
+        pde_loss = self.pde_loss()
 
         w_loss = (
-            self.lambda_y * (y_loss + prior_loss)
-            + self.physics_loss_weight * self.physics_loss(self.net)
+            self.lambda_y * (y_loss + w_prior_loss)
             + self.lambda_theta * theta_loss
+            + self.physics_loss_weight * pde_loss
         )
 
         self.optimiser.zero_grad()
         w_loss.backward()
         self.optimiser.step()
 
-    def train(self, epochs=10000):
+    def train(self, epochs=10000, eval_freq=1000):
         self._pinn_init()
         self.collection = []
 
@@ -150,15 +210,19 @@ class NONLINEAR_EFI(BasePINN):
         self.optimize_encoder(param_vector)
 
         losses = []
+
+        tic = time.time()
         for ep in range(epochs):
             self.update(ep, epochs)
-
+            
             ## 3. Loss calculation
-            if ep % int(epochs / 10) == 0:
+            if (ep+1) % eval_freq == 0:
+                toc = time.time()
                 loss = self.mse_loss(self.y, self.net(self.X))
                 losses.append(loss.item())
-                print(f"Epoch {ep}/{epochs}, loss: {losses[-1]:.2f}")
-
+                print(f"Epoch {ep+1}/{epochs}, loss: {losses[-1]:.2f}, time: {toc-tic:.2f}s")
+                tic = time.time()
+                
             if ep > epochs - 1000:
                 y_pred = self.evaluate().detach().cpu()
                 self.collection.append(y_pred)
