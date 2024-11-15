@@ -23,7 +23,7 @@ european_call:
     physics_loss_weight: 10.0
 
 poisson:
-  n_samples: 50
+  n_samples: 20
   epochs: 10_000
   pinn:
     hidden_layers:
@@ -31,5 +31,5 @@ poisson:
     - 50
     activation_fn: tanh
     lr: 1.0e-3
-    physics_loss_weight: 10.0
+    physics_loss_weight: 1.0
 

@@ -37,15 +37,17 @@ class PINN(BasePINN):
     
     def update(self):
         self.optimiser.zero_grad()
+        sol_loss = self.solution_loss()
+        pde_loss = self.pde_loss()
         # outputs = self.net(self.X)
         # loss = self.mse_loss(self.y, outputs)
-        loss = self.solution_loss() + self.physics_loss_weight * self.pde_loss()
+        loss = sol_loss + self.physics_loss_weight * pde_loss
         # loss += self.physics_loss_weight * self.physics_loss(self.net, self.physics_X)
         
         loss.backward()
         self.optimiser.step()
         
-        return loss
+        return sol_loss, pde_loss
 
     # def update(self):
     #     self.optimiser.zero_grad()
