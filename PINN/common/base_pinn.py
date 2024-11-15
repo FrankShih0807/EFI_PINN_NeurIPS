@@ -80,7 +80,8 @@ class BasePINN(object):
             ## 3. Loss calculation
             if (ep+1) % eval_freq == 0:
                 toc = time.time()
-                loss = self.mse_loss(self.y, self.net(self.X))
+                # loss = self.mse_loss(self.y, self.net(self.X))
+                loss = self.mse_loss(self.eval_y, self.net(self.eval_X))
                 losses.append(loss.item())
                 print(f"Epoch {ep+1}/{epochs}, loss: {losses[-1]:.2f}, time: {toc-tic:.2f}s")
                 tic = time.time()
