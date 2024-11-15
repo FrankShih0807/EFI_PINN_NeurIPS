@@ -9,7 +9,6 @@ from PINN.common.utils import PINNDataset
 
 class Poisson(PhysicsModel):
     def __init__(self, 
-                 sigma=0.01, 
                  lam1=100.0, 
                  lam2=100.0, 
                  t_start=-0.7,
@@ -17,7 +16,7 @@ class Poisson(PhysicsModel):
                  noise_sd=0.01, 
                 #  n_samples=16
                  ):
-        super().__init__(sigma=sigma, lam1=lam1, lam2=lam2, t_start=t_start, t_end=t_end, noise_sd=noise_sd)
+        super().__init__(lam1=lam1, lam2=lam2, t_start=t_start, t_end=t_end, noise_sd=noise_sd)
 
     def generate_data(self, n_samples, device):
         dataset = PINNDataset(device=device)

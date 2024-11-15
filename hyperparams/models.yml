@@ -26,7 +26,6 @@ nonlinear:
   t_end: 10.0
 
 poisson:
-  sigma: 0.01
   lam1: 1.0
   lam2: 1.0
   t_start: -0.7
