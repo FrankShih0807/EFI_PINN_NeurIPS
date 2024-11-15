@@ -39,25 +39,14 @@ class PINN(BasePINN):
         self.optimiser.zero_grad()
         sol_loss = self.solution_loss()
         pde_loss = self.pde_loss()
-        # outputs = self.net(self.X)
-        # loss = self.mse_loss(self.y, outputs)
         loss = sol_loss + self.physics_loss_weight * pde_loss
-        # loss += self.physics_loss_weight * self.physics_loss(self.net, self.physics_X)
-        
+
         loss.backward()
         self.optimiser.step()
         
         return sol_loss, pde_loss
 
-    # def update(self):
-    #     self.optimiser.zero_grad()
-    #     solution_loss = self.solution_loss()
-    #     pde_loss = self.pde_loss()
-    #     loss = solution_loss + self.physics_loss_weight * pde_loss
-    #     loss.backward()
-    #     self.optimiser.step()
-        
-    #     return loss, solution_loss, pde_loss
+
 
 # if __name__ == "__main__":
 #     physics_model = Poisson(lam1=1.0, lam2=1.0)

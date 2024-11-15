@@ -90,10 +90,7 @@ class PINN_EFI(BasePINN):
     def update(self):
         ## 1. Latent variable sampling (Sample Z)
         self.net.eval()
-        # theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
-        # y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
-        # Z_loss = self.lambda_y * y_loss + self.lambda_theta * theta_loss + torch.mean(self.Z**2)/2/self.noise_sd**2
-        
+
         theta_loss = self.theta_loss()
         y_loss = self.solution_loss()
         z_prior_loss = self.z_prior_loss()
@@ -107,14 +104,7 @@ class PINN_EFI(BasePINN):
         ## 2. DNN weights update (Optimize W)
         
         self.net.train()
-        # theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
-        # y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
-        # prior_loss = - self.net.gmm_prior_loss() / self.n_samples
-        
-        # diff_o = self.differential_operator(self.net, self.physics_X)
-        # pde_loss = self.mse_loss(diff_o, torch.zeros_like(diff_o))
-        # w_loss = self.lambda_y * (y_loss + prior_loss) + self.physics_loss_weight * pde_loss + self.lambda_theta * theta_loss 
-        
+
         theta_loss = self.theta_loss()
         y_loss = self.solution_loss()
         w_prior_loss = - self.net.gmm_prior_loss() / self.n_samples

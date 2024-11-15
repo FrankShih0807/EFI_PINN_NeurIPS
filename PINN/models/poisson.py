@@ -46,26 +46,6 @@ class Poisson(PhysicsModel):
         y += self.noise_sd * torch.randn_like(y)
         return X, y
 
-    # def _data_generation(self, n_samples=16):
-    #     X = np.linspace(self.t_start, self.t_end, n_samples)[:, None]
-    #     lb, rb = np.array([[self.t_start]]), np.array([[self.t_end]])
-    #     y = self.physics_law(X)
-    #     # y = self.lam1 * (-1.08) * np.sin(6 * X) * (np.sin(6 * X) ** 2 - 2 * np.cos(6 * X) ** 2)
-    #     X = np.concatenate([X, lb, rb], axis=0)
-    #     y = np.concatenate([y, np.sin(6 * lb) ** 3 * self.lam2, np.sin(6 * rb) ** 3 * self.lam2], axis=0)
-    #     y = y * (1 + self.sigma * np.random.randn(*y.shape))
-        
-    #     X = torch.FloatTensor(X)
-    #     y = torch.FloatTensor(y)
-        
-    #     self.physics_X = torch.linspace(self.t_start, self.t_end, steps=100).view(-1, 1).requires_grad_(True)
-    #     return X, y
-    
-    # def _eval_data_generation(self):
-    #     X = torch.linspace(self.t_start, self.t_end, steps=100).reshape(100, -1)
-    #     lb, rb = torch.tensor([[self.t_start]]), torch.tensor([[self.t_end]])
-    #     X = torch.cat([X, lb, rb], dim=0)
-    #     return X
     
     def physics_law(self, X):
         y = self.lam2 * torch.sin(6 * X) ** 3
@@ -85,15 +65,7 @@ class Poisson(PhysicsModel):
         
         return pde
     
-    # def physics_loss(self, model: torch.nn.Module, physics_X):
-    #     x = physics_X.requires_grad_(True)
-    #     u = model(x)
-    #     u_x = torch.autograd.grad(u, x, grad_outputs=torch.ones_like(u), create_graph=True)[0]
-    #     u_xx = torch.autograd.grad(u_x, x, grad_outputs=torch.ones_like(u), create_graph=True)[0]
-    #     pde = self.lam1 * 0.01 * u_xx - self.physics_law(x)
-        
-    #     return torch.mean(pde**2)
-    
+
     def plot_true_solution(self, save_path=None):
         X = torch.linspace(self.t_start, self.t_end, steps=100)
         y = self.physics_law(X)
