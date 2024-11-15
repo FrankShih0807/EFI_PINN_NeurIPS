@@ -12,7 +12,7 @@ from PINN.common.base_pinn import BasePINN
 from PINN.common.torch_layers import BaseDNN
 
 
-class NONLINEAR_EFI(BasePINN):
+class Pretrain_EFI(BasePINN):
     def __init__(
         self,
         physics_model,
