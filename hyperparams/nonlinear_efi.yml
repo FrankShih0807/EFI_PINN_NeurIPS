@@ -1,12 +1,36 @@
 nonlinear:
   seed: -1 # -1 means random seed
+  n_samples: 200
   epochs: 10_000
   pinn:
     hidden_layers:
     - 15
     - 15
+    activation_fn: softplus(beta=10)
     lr: 1.0e-4
     physics_loss_weight: 0.0
     sgld_lr: 1e-4
     lambda_y: 20.0
     lambda_theta: 0.2
+    encoder_kwargs:
+      encoder_activation: softplus(beta=10)
+      prior_sd: 0.5
+      sparse_threshold: 0.01
+
+poisson:
+  n_samples: 50
+  epochs: 10_000
+  pinn:
+    hidden_layers:
+    - 20
+    - 20
+    activation_fn: tanh
+    lr: 1.0e-4
+    physics_loss_weight: 50.0
+    sgld_lr: 1e-4
+    lambda_y: 0.01
+    lambda_theta: 1.0
+    encoder_kwargs:
+      encoder_activation: softplus(beta=10)
+      prior_sd: 0.2
+      sparse_threshold: 0.01

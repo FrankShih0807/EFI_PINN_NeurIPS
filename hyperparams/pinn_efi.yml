@@ -36,19 +36,19 @@ european_call:
       sparse_threshold: 0.01
 
 poisson:
-  n_samples: 16
+  n_samples: 50
   epochs: 10_000
   pinn:
     hidden_layers:
     - 20
     - 20
-    activation_fn: softplus(beta=10)
+    activation_fn: tanh
     lr: 1.0e-4
     physics_loss_weight: 50.0
     sgld_lr: 1e-4
-    lambda_y: 10.0
+    lambda_y: 0.01
     lambda_theta: 0.1
     encoder_kwargs:
       encoder_activation: softplus(beta=10)
-      prior_sd: 1.0
+      prior_sd: 0.5
       sparse_threshold: 0.01

@@ -7,6 +7,7 @@ import seaborn as sns
 
 from PINN.common.grad_tool import grad
 from PINN.common.base_physics import PhysicsModel
+from PINN.common.utils import PINNDataset
 
 class Nonlinear(PhysicsModel):
 # class FuncApprox(PhysicsModel):
@@ -15,26 +16,57 @@ class Nonlinear(PhysicsModel):
             t_start=t_start, t_end=t_end, noise_sd=noise_sd
         )
 
-    def _data_generation(self, n_samples=200):
-        self.physics_X = torch.linspace(
-            self.t_start, self.t_end, round((self.t_end - self.t_start) * 10)
-        ).view(-1,1).requires_grad_(True)
-        t = torch.linspace(self.t_start, self.t_end, n_samples).reshape(n_samples, -1)
+    def generate_data(self, n_samples, device):
+        dataset = PINNDataset(device=device)
+        X, y = self.get_solu_data(n_samples)
+        # diff_X, diff_y = self.get_diff_data()
+        eval_X, eval_y = self.get_eval_data()
+        dataset.add_data(X, y, category='solution', noise_sd=self.noise_sd)
+        # dataset.add_data(diff_X, diff_y, category='differential', noise_sd=0)
+        dataset.add_data(eval_X, eval_y, category='evaluation', noise_sd=0)
 
-        # Y1, Y2 = self.physics_law(t)
-        # y = torch.cat([Y1, Y2], dim=1)
-        # y += self.noise_sd * torch.randn_like(y)
-        # return t, y
+        return dataset
     
-        y = self.physics_law(t)
-        y += self.noise_sd * torch.randn_like(y)
-        return t, y
-
-    def _eval_data_generation(self):
+    def get_eval_data(self):
         t = torch.linspace(
             self.t_start, self.t_end, round((self.t_end - self.t_start) * 10)
         ).reshape(round((self.t_end - self.t_start) * 10), -1)
-        return t
+        y = self.physics_law(t)
+        return t, y
+    
+    def get_solu_data(self, n_samples):
+        t = torch.linspace(self.t_start, self.t_end, n_samples).reshape(n_samples, -1)
+        y = self.physics_law(t)
+        y += self.noise_sd * torch.randn_like(y)
+        return t, y
+    
+    def get_diff_data(self):
+        t = torch.linspace(
+            self.t_start, self.t_end, round((self.t_end - self.t_start) * 10)
+        ).reshape(round((self.t_end - self.t_start) * 10), -1)
+        y = torch.zeros_like(t)
+        return t, y
+
+    # def _data_generation(self, n_samples=200):
+    #     self.physics_X = torch.linspace(
+    #         self.t_start, self.t_end, round((self.t_end - self.t_start) * 10)
+    #     ).view(-1,1).requires_grad_(True)
+    #     t = torch.linspace(self.t_start, self.t_end, n_samples).reshape(n_samples, -1)
+
+    #     # Y1, Y2 = self.physics_law(t)
+    #     # y = torch.cat([Y1, Y2], dim=1)
+    #     # y += self.noise_sd * torch.randn_like(y)
+    #     # return t, y
+    
+    #     y = self.physics_law(t)
+    #     y += self.noise_sd * torch.randn_like(y)
+    #     return t, y
+
+    # def _eval_data_generation(self):
+    #     t = torch.linspace(
+    #         self.t_start, self.t_end, round((self.t_end - self.t_start) * 10)
+    #     ).reshape(round((self.t_end - self.t_start) * 10), -1)
+    #     return t
 
     def physics_law(self, time):
         # Y1 = 3 * torch.cos(time)
@@ -46,11 +78,28 @@ class Nonlinear(PhysicsModel):
         Y = 3 * torch.sin(time)
         # Y = time
         # Y = 3 * torch.sin(0.6 * time) ** 3
-        return Y
 
-    def physics_loss(self, model: torch.nn.Module):
-        return 0
+        return Y
     
+    def differential_operator(self, model: torch.nn.Module, physics_X):
+        return 0
+
+    # def physics_loss(self, model: torch.nn.Module):
+    #     return 0
+    
+    def plot_true_solution(self, save_path=None):
+        t = torch.linspace(self.t_start, self.t_end, round((self.t_end - self.t_start) * 10))
+        Y = self.physics_law(t)
+
+        sns.set_theme()
+        plt.plot(t, Y, alpha=0.8, color='b', label='Equation')
+        plt.legend()
+        plt.ylabel('Y(t)')
+        plt.xlabel('t')
+
+        plt.savefig(os.path.join(save_path, 'true_solution.png'))
+        plt.close()
+
     def save_evaluation(self, model, save_path=None):
         preds_upper, preds_lower, preds_mean = model.summary()
 
@@ -109,6 +158,7 @@ class Nonlinear(PhysicsModel):
         plt.scatter(model.X.detach().cpu(), model.y.detach().cpu(), color='r', label='Data', marker='x')
         plt.legend()
         plt.ylabel('Y(t)')
+        plt.xlabel('t')
 
         plt.savefig(os.path.join(save_path, 'pred_solution.png'))
         plt.close()

@@ -23,7 +23,7 @@ european_call:
     physics_loss_weight: 10.0
 
 poisson:
-  n_samples: 16
+  n_samples: 50
   epochs: 10_000
   pinn:
     hidden_layers:
