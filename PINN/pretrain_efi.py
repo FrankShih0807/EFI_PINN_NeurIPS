@@ -145,10 +145,10 @@ class Pretrain_EFI(BasePINN):
             batch_size = noise_X.shape[0]
 
             encoder_output = self.net.encoder(torch.cat([noise_X, noise_y, noise_Z], dim=1))
-            loss = F.mse_loss(
-                encoder_output, param_vector.repeat(batch_size, 1), reduction="sum"
-            )
+            loss = F.mse_loss(encoder_output, param_vector.repeat(batch_size, 1), reduction="sum")
             # loss = self.mse_loss(encoder_output, param_vector)
+            w_prior_loss = -self.net.gmm_prior_loss() 
+            loss += w_prior_loss
 
             self.optimiser.zero_grad()
             loss.backward()
