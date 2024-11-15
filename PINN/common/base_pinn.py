@@ -87,6 +87,7 @@ class BasePINN(object):
                 eval_loss = self.mse_loss(self.eval_y, self.net(self.eval_X))
                 eval_losses.append(eval_loss.item())
                 print(f"Epoch {ep+1}/{epochs}, eval_loss: {eval_losses[-1]:.2f}, sol_loss: {sol_losses[-1]:.2f}, pde_loss: {pde_losses[-1]:.2f} , time: {toc-tic:.2f}s")
+
                 tic = time.time()
                 
             if ep > epochs - 1000:
