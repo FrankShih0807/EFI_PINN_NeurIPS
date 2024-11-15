@@ -60,15 +60,15 @@ poisson:
   epochs: 10_000
   pinn:
     hidden_layers:
-    - 20
-    - 20
+    - 30
+    - 30
     activation_fn: tanh
     lr: 1.0e-4
     physics_loss_weight: 50.0
     sgld_lr: 1e-4
-    lambda_y: 0.01
-    lambda_theta: 1.0
+    lambda_y: 0.1
+    lambda_theta: 10.0
     encoder_kwargs:
-      encoder_activation: softplus(beta=10)
-      prior_sd: 0.2
+      encoder_activation: relu
+      prior_sd: 0.5
       sparse_threshold: 0.01

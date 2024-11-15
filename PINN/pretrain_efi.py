@@ -109,8 +109,15 @@ class Pretrain_EFI(BasePINN):
                     diff_o = self.differential_operator(self.net, d['X'])
                     loss += self.mse_loss(diff_o, d['y'])
         return loss
+    
+    def pretrain_pde_loss(self, net):
+        loss = 0
+        for i, d in enumerate(self.dataset):
+            if d['category'] == 'differential':
+                loss += self.mse_loss(self.differential_operator(net, d['X']), d['y'])
+        return loss
 
-    def train_base_dnn(self, epochs=10000):
+    def train_base_dnn(self, epochs=5000):
         base_net = BaseDNN(
             input_dim=self.input_dim,
             output_dim=self.output_dim,
@@ -122,7 +129,7 @@ class Pretrain_EFI(BasePINN):
         for ep in range(epochs):
             optimiser.zero_grad()
             output = base_net(self.X)
-            loss = self.mse_loss(output, self.y)
+            loss = self.mse_loss(output, self.y) + self.pretrain_pde_loss(base_net)
             loss.backward()
             optimiser.step()
         return base_net
