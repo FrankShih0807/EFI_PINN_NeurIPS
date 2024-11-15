@@ -53,7 +53,7 @@ class EuropeanCall(PhysicsModel):
         eval_S = torch.linspace(self.S_range[0], self.S_range[1], 100)
         S, T = torch.meshgrid(eval_S, eval_t, indexing='ij')
         eval_X = torch.cat([T.reshape(-1, 1), S.reshape(-1, 1)], dim=1)
-        eval_y = self.physics_law(S, self.t_range[1] - T)
+        eval_y = self.physics_law(S, self.t_range[1] - T).reshape(-1, 1)
         return eval_X, eval_y
     
     def get_price_data(self, n_samples):

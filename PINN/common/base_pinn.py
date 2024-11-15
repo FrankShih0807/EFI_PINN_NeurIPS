@@ -71,18 +71,22 @@ class BasePINN(object):
         self._pinn_init()
         self.collection = []
         
-        losses = []
+        eval_losses = []
+        sol_losses = []
+        pde_losses = []
         
         tic = time.time()
         for ep in range(epochs):
-            self.update()
+            sol_loss, pde_loss = self.update()
+            sol_losses.append(sol_loss)
+            pde_losses.append(pde_loss)
             
             ## 3. Loss calculation
             if (ep+1) % eval_freq == 0:
                 toc = time.time()
-                loss = self.mse_loss(self.y, self.net(self.X))
-                losses.append(loss.item())
-                print(f"Epoch {ep+1}/{epochs}, loss: {losses[-1]:.2f}, time: {toc-tic:.2f}s")
+                eval_loss = self.mse_loss(self.eval_y, self.net(self.eval_X))
+                eval_losses.append(eval_loss.item())
+                print(f"Epoch {ep+1}/{epochs}, eval_loss: {eval_losses[-1]:.2f}, sol_loss: {sol_losses[-1]:.2f}, pde_loss: {pde_losses[-1]:.2f} , time: {toc-tic:.2f}s")
                 tic = time.time()
                 
             if ep > epochs - 1000:
@@ -90,7 +94,7 @@ class BasePINN(object):
                 self.collection.append(y_pred)
         
         self.physics_model.save_evaluation(self, self.save_path)
-        return losses
+        return eval_losses, sol_losses, pde_losses
     
 
     def predict(self, X):

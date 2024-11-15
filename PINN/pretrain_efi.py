@@ -202,6 +202,8 @@ class Pretrain_EFI(BasePINN):
         self.optimiser.zero_grad()
         w_loss.backward()
         self.optimiser.step()
+        
+        return y_loss.item(), pde_loss.item()
 
     def train(self, epochs=10000, eval_freq=1000):
         self._pinn_init()
