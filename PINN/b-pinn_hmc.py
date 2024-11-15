@@ -87,27 +87,38 @@ class BayesianPINN(BasePINN):
     def predict(self, X):
         # self.net.eval()
         y_pred_list = []
+        u_pred_list = []
         for i in range(self.num_samples - self.burn):
             params = hamiltorch.util.unflatten(self.net, self.params_hmc[i])
             hamiltorch.util.update_model_params_in_place(self.net, params)
             y_pred = self.net(X)
+            u_pred = self.net.fnn(X)
             y_pred_list.append(y_pred)
+            u_pred_list.append(u_pred)
         y_pred = torch.stack(y_pred_list)
-        return y_pred
+        u_pred = torch.stack(u_pred_list)
+        
+        return y_pred, u_pred
 
     def evaluate(self):
-        y_pred = self.predict(self.eval_X)
+        y_pred, u_pred = self.predict(self.eval_X)
         y_mean = torch.mean(y_pred, dim=0)
         y_std = torch.std(y_pred, dim=0)
         y_up, y_low = y_mean - 2 * y_std, y_mean + 2 * y_std
         return y_mean, y_up, y_low
 
     def summary(self):
-        y_pred = self.predict(self.eval_X)
+        y_pred, u_pred = self.predict(self.eval_X)
+
         y_pred_upper = torch.quantile(y_pred, 0.975, dim=0)
         y_pred_lower = torch.quantile(y_pred, 0.025, dim=0)
         y_pred_mean = torch.mean(y_pred, dim=0)
-        return y_pred_upper, y_pred_lower, y_pred_mean
+
+        u_pred_upper = torch.quantile(u_pred, 0.975, dim=0)
+        u_pred_lower = torch.quantile(u_pred, 0.025, dim=0)
+        u_pred_mean = torch.mean(u_pred, dim=0)
+
+        return y_pred_upper, y_pred_lower, y_pred_mean, u_pred_upper, u_pred_lower, u_pred_mean
 
     
 if __name__ == "__main__":
@@ -127,10 +138,15 @@ if __name__ == "__main__":
 
     # Evaluate the model
     y_mean, y_up, y_low = model.evaluate()
-    y_pred_upper, y_pred_lower, y_pred_mean = model.summary()
+    y_pred_upper, y_pred_lower, y_pred_mean, u_pred_upper, u_pred_lower, u_pred_mean = model.summary()
+
     y_pred_upper = y_pred_upper.flatten()
     y_pred_lower = y_pred_lower.flatten()
     y_pred_mean = y_pred_mean.flatten()
+
+    u_pred_upper = u_pred_upper.flatten()
+    u_pred_lower = u_pred_lower.flatten()
+    u_pred_mean = u_pred_mean.flatten()
 
     # True solution
     for d in dataset:
@@ -141,21 +157,29 @@ if __name__ == "__main__":
     # evaluate the model
     X_test = model.eval_X.flatten()
     y_test = physics_model.differential_function(X_test)
+    u_test = physics_model.physics_law(X_test) / physics_model.lam2
 
     # Plot the results
     sns.set_theme()
 
-    plt.plot(X_test.detach().cpu().numpy(), y_mean.detach().cpu().numpy(), label = 'mean')
-    plt.plot(X_test.detach().cpu().numpy(), y_up.detach().cpu().numpy())
-    plt.plot(X_test.detach().cpu().numpy(), y_low.detach().cpu().numpy())
+    # plt.plot(X_test.detach().cpu().numpy(), y_mean.detach().cpu().numpy(), label = 'mean')
+    # plt.plot(X_test.detach().cpu().numpy(), y_up.detach().cpu().numpy())
+    # plt.plot(X_test.detach().cpu().numpy(), y_low.detach().cpu().numpy())
     # plt.plot(X_test.detach().cpu().numpy(), y_pred_mean.detach().cpu().numpy(), label = 'mean')
     # plt.fill_between(X_test.detach().cpu().numpy(), y_pred_upper.detach().cpu().numpy(), y_pred_lower.detach().cpu().numpy(), alpha=0.2, color='g', label='95% CI')
+    # plt.plot(X_test.detach().cpu().numpy(), y_test.detach().cpu().numpy(), label = 'True')
+    # plt.scatter(X_data.detach().cpu().numpy(), y_data.detach().cpu().numpy(), label = 'Data')
+    # plt.legend()
+    # plt.ylabel('u_xx')
+    # plt.xlabel('x')
 
-    plt.plot(X_test.detach().cpu().numpy(), y_test.detach().cpu().numpy(), label = 'True')
-    plt.scatter(X_data.detach().cpu().numpy(), y_data.detach().cpu().numpy(), label = 'Data')
+    plt.plot(X_test.detach().cpu().numpy(), u_pred_mean.detach().cpu().numpy(), label = 'mean')
+    plt.fill_between(X_test.detach().cpu().numpy(), u_pred_upper.detach().cpu().numpy(), u_pred_lower.detach().cpu().numpy(), alpha=0.2, color='g', label='95% CI')
+    plt.plot(X_test.detach().cpu().numpy(), u_test.detach().cpu().numpy(), label = 'True')
     plt.legend()
-    plt.ylabel('u_xx')
+    plt.ylabel('u')
     plt.xlabel('x')
+    
     plt.show()
 
 

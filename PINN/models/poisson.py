@@ -113,7 +113,7 @@ class Poisson(PhysicsModel):
         preds_upper, preds_lower, preds_mean = model.summary()
         preds_upper = preds_upper.flatten()
         preds_lower = preds_lower.flatten()
-        preds_mean = preds_mean.flatten()     
+        preds_mean = preds_mean.flatten()
 
         X = torch.linspace(self.t_start, self.t_end, steps=100)
         y = self.physics_law(X)
