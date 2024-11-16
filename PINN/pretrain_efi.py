@@ -137,8 +137,8 @@ class Pretrain_EFI(BasePINN):
             optimiser.step()
         return base_net
 
-    def optimize_encoder(self, param_vector, steps=5000):
-
+    def optimize_encoder(self, param_vector, steps=1000):
+    
         for _ in range(steps):
             self.net.train()
             # batch_size = self.n_samples

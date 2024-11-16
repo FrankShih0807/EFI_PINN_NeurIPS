@@ -14,7 +14,6 @@ class Poisson(PhysicsModel):
                  t_start=-0.7,
                  t_end=0.7, 
                  noise_sd=0.01, 
-                #  n_samples=16
                  ):
         super().__init__(lam1=lam1, lam2=lam2, t_start=t_start, t_end=t_end, noise_sd=noise_sd)
 
@@ -57,10 +56,10 @@ class Poisson(PhysicsModel):
     
     def differential_operator(self, model: torch.nn.Module, physics_X):
         u = model(physics_X)
-        u_x = torch.autograd.grad(u, physics_X, grad_outputs=torch.ones_like(u), create_graph=True)[0]
-        u_xx = torch.autograd.grad(u_x, physics_X, grad_outputs=torch.ones_like(u), create_graph=True)[0]
-        # u_x = grad(u, physics_X)[0]
-        # u_xx = grad(u_x, physics_X)[0]
+        # u_x = torch.autograd.grad(u, physics_X, grad_outputs=torch.ones_like(u), create_graph=True)[0]
+        # u_xx = torch.autograd.grad(u_x, physics_X, grad_outputs=torch.ones_like(u), create_graph=True)[0]
+        u_x = grad(u, physics_X)[0]
+        u_xx = grad(u_x, physics_X)[0]
         pde = self.lam1 * 0.01 * u_xx
         
         return pde
