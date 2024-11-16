@@ -112,4 +112,16 @@ class BasePINN(object):
         y_pred_upper = torch.quantile(y_pred_mat, 0.975, dim=0)
         y_pred_lower = torch.quantile(y_pred_mat, 0.025, dim=0)
         y_pred_mean = torch.mean(y_pred_mat, dim=0)
-        return y_pred_upper, y_pred_lower, y_pred_mean
+        y_pred_median = torch.quantile(y_pred_mat, 0.5, dim=0)
+        y_covered = (y_pred_lower <= self.eval_y) & (self.eval_y <= y_pred_upper)
+        
+        summary_dict = {
+            'y_preds_upper': y_pred_upper,
+            'y_preds_lower': y_pred_lower,
+            'y_preds_mean': y_pred_mean,
+            'y_preds_median': y_pred_median,
+            'y_covered': y_covered,
+            'x_eval': self.eval_X.clone().detach().cpu().numpy(),
+        }
+        
+        return summary_dict

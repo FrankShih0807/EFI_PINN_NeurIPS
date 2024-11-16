@@ -33,3 +33,13 @@ poisson:
     lr: 1.0e-3
     physics_loss_weight: 1.0
 
+nonlinear:
+  n_samples: 200
+  epochs: 10_000
+  pinn:
+    hidden_layers:
+    - 30
+    - 30
+    activation_fn: tanh
+    lr: 1.0e-3
+    physics_loss_weight: 0.0

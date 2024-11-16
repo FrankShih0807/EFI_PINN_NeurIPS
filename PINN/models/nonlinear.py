@@ -101,54 +101,19 @@ class Nonlinear(PhysicsModel):
         plt.close()
 
     def save_evaluation(self, model, save_path=None):
-        preds_upper, preds_lower, preds_mean = model.summary()
+        # preds_upper, preds_lower, preds_mean = model.summary()
+        pred_dict = model.summary()
 
-        # Y1_upper = preds_upper[:,0]
-        # Y1_lower = preds_lower[:,0]
-        # Y1_mean = preds_mean[:,0]
-    
-        # Y2_upper = preds_upper[:,1]
-        # Y2_lower = preds_lower[:,1]
-        # Y2_mean = preds_mean[:,1]
 
-        # times = torch.linspace(self.t_start, self.t_extend, (self.t_extend - self.t_start) * 10)
-        # Y1_true, Y2_true = self.physics_law(times)
-
-        # np.savez(os.path.join(save_path, 'evaluation_data.npz'), 
-        #          Y1_upper=Y1_upper, Y1_lower=Y1_lower, Y1_mean=Y1_mean,
-        #          Y2_upper=Y2_upper, Y2_lower=Y2_lower, Y2_mean=Y2_mean)
-        
-        # sns.set_theme()
-
-        # fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(8, 6))
-
-        # ax1.plot(times, Y1_true.flatten().numpy(), 'b', label='True Y1')
-        # ax1.plot(times, Y1_mean, 'g', label='Estimated Y1')
-        # ax1.fill_between(times, Y1_upper, Y1_lower, color='g', alpha=0.2)
-        # ax1.scatter(model.X, model.y[:,0], color='r', label='Data', marker='x')
-        # ax1.set_ylabel('Y1(t)')
-        # ax1.legend()
-
-        # ax2.plot(times, Y2_true.flatten().numpy(), 'b', label='True Y2')
-        # ax2.plot(times, Y2_mean, 'g', label='Estimated Y2')
-        # ax2.fill_between(times, Y2_upper, Y2_lower, color='g', alpha=0.2)
-        # ax2.scatter(model.X, model.y[:,1], color='r', label='Data', marker='x')
-        # ax2.set_xlabel('t')
-        # ax2.set_ylabel('Y2(t)')
-        # ax2.legend()
-
-        # plt.savefig(os.path.join(save_path, 'pred_solution.png'))
-        # plt.close()
-
-        preds_upper = preds_upper.flatten()
-        preds_lower = preds_lower.flatten()
-        preds_mean = preds_mean.flatten()
+        preds_upper = pred_dict['y_preds_upper'].flatten()
+        preds_lower = pred_dict['y_preds_lower'].flatten()
+        preds_mean = pred_dict['y_preds_mean'].flatten()
 
         times = torch.linspace(self.t_start, self.t_end, round((self.t_end - self.t_start) * 10))
         Y_true = self.physics_law(times)
 
-        np.savez(os.path.join(save_path, "evaluation_data.npz"),
-            preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean)
+        # np.savez(os.path.join(save_path, "evaluation_data.npz"), preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean)
+        np.savez(os.path.join(save_path, 'evaluation_data.npz') , **pred_dict)
         
         sns.set_theme()
 

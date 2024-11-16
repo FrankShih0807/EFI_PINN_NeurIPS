@@ -159,15 +159,18 @@ class EuropeanCall(PhysicsModel):
         plt.close()
         
     def save_evaluation(self, model, save_path=None):
-        preds_upper, preds_lower, preds_mean = model.summary()
-        preds_upper = preds_upper.flatten().reshape(self.grids,self.grids).numpy()
-        preds_lower = preds_lower.flatten().reshape(self.grids,self.grids).numpy()
-        preds_mean = preds_mean.flatten().reshape(self.grids,self.grids).numpy()
+        # preds_upper, preds_lower, preds_mean = model.summary()
+        pred_dict = model.summary()
+        
+        preds_upper = pred_dict['y_preds_upper'].flatten().reshape(self.grids,self.grids).numpy()
+        preds_lower =pred_dict['y_preds_lower'].flatten().reshape(self.grids,self.grids).numpy()
+        preds_mean = pred_dict['y_preds_mean'].flatten().reshape(self.grids,self.grids).numpy()
         
         S_grid = model.eval_X[:,1].reshape(self.grids,self.grids).numpy()
         t_grid = 1-model.eval_X[:,0].reshape(self.grids,self.grids).numpy()
         
-        np.savez(os.path.join(save_path, 'evaluation_data.npz'), preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean, S_grid=S_grid, t_grid=t_grid)
+        # np.savez(os.path.join(save_path, 'evaluation_data.npz'), preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean, S_grid=S_grid, t_grid=t_grid)
+        np.savez(os.path.join(save_path, 'evaluation_data.npz') , **pred_dict, S_grid=S_grid, t_grid=t_grid)
         
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d') 

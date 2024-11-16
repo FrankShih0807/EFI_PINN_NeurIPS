@@ -75,16 +75,19 @@ class Cooling(PhysicsModel):
         plt.close()
         
     def save_evaluation(self, model, save_path=None):
-        preds_upper, preds_lower, preds_mean = model.summary()
-        preds_upper = preds_upper.flatten()
-        preds_lower = preds_lower.flatten()
-        preds_mean = preds_mean.flatten()     
+        # preds_upper, preds_lower, preds_mean = model.summary()
+        pred_dict = model.summary()
+        preds_upper = pred_dict['y_preds_upper'].flatten()
+        preds_lower = pred_dict['y_preds_lower'].flatten()
+        preds_mean = pred_dict['y_preds_mean'].flatten()     
+        preds_median = pred_dict['y_preds_median'].flatten()
 
         times = torch.linspace(0, self.t_extend, self.t_extend)
         temps = self.physics_law(times)
         
         
-        np.savez(os.path.join(save_path, 'evaluation_data.npz') , preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean)
+        # np.savez(os.path.join(save_path, 'evaluation_data.npz') , preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean)
+        np.savez(os.path.join(save_path, 'evaluation_data.npz') , **pred_dict)
         
         sns.set_theme()
         plt.plot(times, temps, alpha=0.8, color='b', label='Equation')

@@ -37,7 +37,6 @@ european_call:
 
 
 nonlinear:
-  seed: -1 # -1 means random seed
   n_samples: 200
   epochs: 10_000
   pinn:
