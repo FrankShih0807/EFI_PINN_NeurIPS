@@ -47,45 +47,13 @@ class Nonlinear(PhysicsModel):
         y = torch.zeros_like(t)
         return t, y
 
-    # def _data_generation(self, n_samples=200):
-    #     self.physics_X = torch.linspace(
-    #         self.t_start, self.t_end, round((self.t_end - self.t_start) * 10)
-    #     ).view(-1,1).requires_grad_(True)
-    #     t = torch.linspace(self.t_start, self.t_end, n_samples).reshape(n_samples, -1)
-
-    #     # Y1, Y2 = self.physics_law(t)
-    #     # y = torch.cat([Y1, Y2], dim=1)
-    #     # y += self.noise_sd * torch.randn_like(y)
-    #     # return t, y
-    
-    #     y = self.physics_law(t)
-    #     y += self.noise_sd * torch.randn_like(y)
-    #     return t, y
-
-    # def _eval_data_generation(self):
-    #     t = torch.linspace(
-    #         self.t_start, self.t_end, round((self.t_end - self.t_start) * 10)
-    #     ).reshape(round((self.t_end - self.t_start) * 10), -1)
-    #     return t
-
     def physics_law(self, time):
-        # Y1 = 3 * torch.cos(time)
-        # Y2 = 3 * torch.sin(time)
-        # # Y1 = time**2
-        # # Y2 = (-0.01*time**7-time**4-2*time**2-4*time+1)
-        # return Y1, Y2
-
         Y = 3 * torch.sin(time)
-        # Y = time
-        # Y = 3 * torch.sin(0.6 * time) ** 3
-
         return Y
     
     def differential_operator(self, model: torch.nn.Module, physics_X):
         return 0
 
-    # def physics_loss(self, model: torch.nn.Module):
-    #     return 0
     
     def plot_true_solution(self, save_path=None):
         t = torch.linspace(self.t_start, self.t_end, round((self.t_end - self.t_start) * 10))
