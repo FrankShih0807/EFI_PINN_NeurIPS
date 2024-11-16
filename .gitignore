@@ -1,7 +1,6 @@
 output/
 *pycache*
 *ipynb*
-*.sub
 *.sh
 *log/
 output*
