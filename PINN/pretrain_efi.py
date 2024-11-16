@@ -47,7 +47,7 @@ class Pretrain_EFI(BasePINN):
         self.lambda_y = lambda_y
         self.lambda_theta = lambda_theta
 
-        self.noise_sd = physics_model.noise_sd
+        # self.noise_sd = physics_model.noise_sd
 
         self.n_samples = self.X.shape[0]
 
@@ -66,11 +66,14 @@ class Pretrain_EFI(BasePINN):
         # init latent noise and sampler
         # self.Z = (self.noise_sd * torch.randn_like(self.y)).requires_grad_().to(self.device)
         self.latent_Z = []
+        self.noise_sd = []
         for d in self.dataset:
             if d['noise_sd'] > 0:
                 self.latent_Z.append((d['noise_sd'] * torch.randn_like(d['y'])).requires_grad_().to(self.device))
+                self.noise_sd.append(d['noise_sd'])
             else:
                 self.latent_Z.append(None)
+                self.noise_sd.append(0)
         
         self.sampler = SGLD([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr)
 
@@ -141,7 +144,8 @@ class Pretrain_EFI(BasePINN):
             # batch_size = self.n_samples
             noise_X = torch.cat([d['X'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
             noise_y = torch.cat([d['y'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
-            noise_Z = torch.cat([ Z for Z in self.latent_Z if Z is not None], dim=0)
+            # noise_Z = torch.cat([ Z for Z in self.latent_Z if Z is not None], dim=0)
+            noise_Z = torch.cat([ torch.randn_like(Z) * sd for Z, sd in zip(self.latent_Z, self.noise_sd) if sd > 0], dim=0)
             batch_size = noise_X.shape[0]
 
             encoder_output = self.net.encoder(torch.cat([noise_X, noise_y, noise_Z], dim=1))
