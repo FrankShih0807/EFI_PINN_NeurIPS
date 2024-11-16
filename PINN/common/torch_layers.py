@@ -44,6 +44,7 @@ class EncoderDNN(BaseDNN):
             last_hidden = 2 ** int(np.log2(output_dim))
             # hidden_layers = [last_hidden//4, last_hidden//2 , last_hidden]
             hidden_layers = [last_hidden//2 , last_hidden]
+            # hidden_layers = [input_dim * 2, last_hidden // 4, last_hidden // 2, last_hidden]
         super(EncoderDNN, self).__init__(input_dim, output_dim, hidden_layers, activation_fn)
 
     

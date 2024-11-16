@@ -67,8 +67,8 @@ poisson:
     physics_loss_weight: 50.0
     sgld_lr: 1e-4
     lambda_y: 0.1
-    lambda_theta: 10.0
+    lambda_theta: 1.0
     encoder_kwargs:
-      encoder_activation: relu
+      encoder_activation: leaky_relu
       prior_sd: 0.5
       sparse_threshold: 0.01
