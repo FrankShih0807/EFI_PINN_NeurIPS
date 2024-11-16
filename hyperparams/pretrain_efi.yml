@@ -63,11 +63,11 @@ poisson:
     - 30
     activation_fn: tanh
     lr: 1.0e-4
-    physics_loss_weight: 50.0
+    physics_loss_weight: 10.0
     sgld_lr: 1e-4
     lambda_y: 0.1
     lambda_theta: 1.0
     encoder_kwargs:
       encoder_activation: leaky_relu
-      prior_sd: 0.5
+      prior_sd: 1.0
       sparse_threshold: 0.01
