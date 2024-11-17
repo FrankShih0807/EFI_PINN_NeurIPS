@@ -61,7 +61,8 @@ class Pretrain_EFI(BasePINN):
             device=self.device,
             **self.encoder_kwargs
         )
-        self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
+        # self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
+        self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr)
 
         # init latent noise and sampler
         # self.Z = (self.noise_sd * torch.randn_like(self.y)).requires_grad_().to(self.device)

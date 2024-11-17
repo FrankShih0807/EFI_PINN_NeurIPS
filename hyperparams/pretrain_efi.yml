@@ -62,8 +62,8 @@ poisson:
     - 30
     - 30
     activation_fn: tanh
-    lr: 1.0e-4
-    physics_loss_weight: 10.0
+    lr: 1.0e-3
+    physics_loss_weight: 20.0
     sgld_lr: 1e-4
     lambda_y: 0.1
     lambda_theta: 1.0
