@@ -120,7 +120,7 @@ class BayesianPINN(BasePINN):
         u_pred_lower = torch.quantile(u_pred, 0.025, dim=0)
         u_pred_mean = torch.mean(u_pred, dim=0)
         u_pred_median = torch.quantile(u_pred, 0.5, dim=0)
-        u_covered = (u_pred_lower <= self.eval_y) & (self.eval_y <= u_pred_upper)
+        u_covered = (u_pred_lower <= self.eval_y.clone().detach().cpu()) & (self.eval_y.clone().detach().cpu() <= u_pred_upper)
 
         summary_dict = {
             'f_preds_upper': f_pred_upper,
