@@ -20,7 +20,7 @@ conda activate pinn
 
 
 
-python train.py --algo pretrain_efi --model poisson --exp_name efi_sgd --task_id $SLURM_ARRAY_TASK_ID &
+python train.py --algo pretrain_efi --model poisson --exp_name efi_sgd_adampre_n100 --task_id $SLURM_ARRAY_TASK_ID  --hyperparams n_samples:100 &
 
 
 wait

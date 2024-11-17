@@ -3,6 +3,7 @@ import os
 
 model = "poisson"
 exp = "efi_sgd"
+exp = "efi_sgd_adampre_n100"
 output_folder = f"output/{model}/{exp}"
 
 n_runs = 100
