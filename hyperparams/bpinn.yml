@@ -1,0 +1,15 @@
+poisson:
+  n_samples: 16
+  epochs: 1
+  pinn:
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: tanh
+    lr: 1.0e-3
+    physics_loss_weight: 1.0
+    sigma: 0.01
+    step_size: 0.0006
+    burn: 2000
+    num_samples: 5000
+    L: 6
