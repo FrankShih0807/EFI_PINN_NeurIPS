@@ -146,7 +146,8 @@ class Pretrain_EFI(BasePINN):
         return base_net
 
     def optimize_encoder(self, param_vector, steps=5000):
-        optimiser = optim.Adam(self.net.parameters(), lr=1e-3)
+        # optimiser = optim.Adam(self.net.parameters(), lr=1e-3)
+        optimiser = optim.SGD(self.net.parameters(), lr=1e-3)
         print('Pretraining EFI...')
         for _ in range(steps):
             self.net.train()
