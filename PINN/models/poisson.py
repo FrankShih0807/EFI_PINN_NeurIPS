@@ -39,8 +39,8 @@ class Poisson(PhysicsModel):
         y += self.noise_sd * torch.randn_like(y)
         return X, y
     
-    def get_diff_data(self, n_samples):
-        X = torch.linspace(self.t_start, self.t_end, steps=n_samples).view(-1,1)
+    def get_diff_data(self, n_samples, replicate=5):
+        X = torch.linspace(self.t_start, self.t_end, steps=n_samples).repeat_interleave(replicate).view(-1, 1)
         y = self.differential_function(X)
         y += self.noise_sd * torch.randn_like(y)
         return X, y
