@@ -5,6 +5,7 @@ import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import time
 
 from PINN.common.base_pinn import BasePINN
 from PINN.models.poisson import Poisson
@@ -39,13 +40,13 @@ class BayesianPINN(BasePINN):
         activation_fn=nn.Tanh(),
         lr=1e-3,
         physics_loss_weight=1,
-        save_path=None,
-        device='cpu',
         sigma=0.01,
         step_size=0.0006,
         burn=2000,
         num_samples=5000,
-        L=6
+        L=6, 
+        save_path=None,
+        device='cpu',
     ) -> None:
         super().__init__(physics_model, dataset, hidden_layers, activation_fn, lr, physics_loss_weight, save_path, device)
         self.sigma = sigma
@@ -86,19 +87,19 @@ class BayesianPINN(BasePINN):
 
     def predict(self, X):
         # self.net.eval()
-        y_pred_list = []
+        f_pred_list = []
         u_pred_list = []
         for i in range(self.num_samples - self.burn):
             params = hamiltorch.util.unflatten(self.net, self.params_hmc[i])
             hamiltorch.util.update_model_params_in_place(self.net, params)
-            y_pred = self.net(X)
+            f_pred = self.net(X)
             u_pred = self.net.fnn(X)
-            y_pred_list.append(y_pred)
+            f_pred_list.append(f_pred)
             u_pred_list.append(u_pred)
-        y_pred = torch.stack(y_pred_list)
-        u_pred = torch.stack(u_pred_list)
+        f_pred = torch.stack(f_pred_list).detach().cpu()
+        u_pred = torch.stack(u_pred_list).detach().cpu()
         
-        return y_pred, u_pred
+        return f_pred, u_pred
 
     def evaluate(self):
         y_pred, u_pred = self.predict(self.eval_X)
@@ -108,17 +109,44 @@ class BayesianPINN(BasePINN):
         return y_mean, y_up, y_low
 
     def summary(self):
-        y_pred, u_pred = self.predict(self.eval_X)
+        f_pred, u_pred = self.predict(self.eval_X)
 
-        y_pred_upper = torch.quantile(y_pred, 0.975, dim=0)
-        y_pred_lower = torch.quantile(y_pred, 0.025, dim=0)
-        y_pred_mean = torch.mean(y_pred, dim=0)
+        f_pred_upper = torch.quantile(f_pred, 0.975, dim=0)
+        f_pred_lower = torch.quantile(f_pred, 0.025, dim=0)
+        f_pred_mean = torch.mean(f_pred, dim=0)
+        f_pred_median = torch.quantile(f_pred, 0.5, dim=0)
 
         u_pred_upper = torch.quantile(u_pred, 0.975, dim=0)
         u_pred_lower = torch.quantile(u_pred, 0.025, dim=0)
         u_pred_mean = torch.mean(u_pred, dim=0)
+        u_pred_median = torch.quantile(u_pred, 0.5, dim=0)
+        u_covered = (u_pred_lower <= self.eval_y) & (self.eval_y <= u_pred_upper)
 
-        return y_pred_upper, y_pred_lower, y_pred_mean, u_pred_upper, u_pred_lower, u_pred_mean
+        summary_dict = {
+            'f_preds_upper': f_pred_upper,
+            'f_preds_lower': f_pred_lower,
+            'f_preds_mean': f_pred_mean,
+            'f_preds_median': f_pred_median,
+            'y_preds_upper': u_pred_upper,
+            'y_preds_lower': u_pred_lower,
+            'y_preds_mean': u_pred_mean,
+            'y_preds_median': u_pred_median,
+            'y_covered': u_covered, 
+            'x_eval': self.eval_X.clone().detach().cpu().numpy(),
+        }
+        
+
+        return summary_dict
+    
+    def train(self, epochs, eval_freq=1000):
+        # self._pinn_init()
+        
+        tic = time.time()
+        self.sample_posterior()
+        toc = time.time()
+        print(f"Sampling time: {toc-tic:.2f}s")
+        
+        self.physics_model.save_evaluation(self, self.save_path)
 
     
 if __name__ == "__main__":
@@ -137,68 +165,23 @@ if __name__ == "__main__":
     model.sample_posterior()
 
     # Evaluate the model
-    y_mean, y_up, y_low = model.evaluate()
-    y_pred_upper, y_pred_lower, y_pred_mean, u_pred_upper, u_pred_lower, u_pred_mean = model.summary()
+    pred_dict = model.summary()
 
-    y_pred_upper = y_pred_upper.flatten()
-    y_pred_lower = y_pred_lower.flatten()
-    y_pred_mean = y_pred_mean.flatten()
-
-    u_pred_upper = u_pred_upper.flatten()
-    u_pred_lower = u_pred_lower.flatten()
-    u_pred_mean = u_pred_mean.flatten()
-
-    # True solution
-    for d in dataset:
-        if d['category'] == 'differential':
-            X_data = d['X']
-            y_data = d['y']
+    pred_upper = pred_dict['y_preds_upper'].flatten()
+    pred_lower = pred_dict['y_preds_lower'].flatten()
+    pred_mean = pred_dict['y_preds_mean'].flatten()
 
     # evaluate the model
     X_test = model.eval_X.flatten()
-    y_test = physics_model.differential_function(X_test)
     u_test = physics_model.physics_law(X_test) / physics_model.lam2
 
     # Plot the results
     sns.set_theme()
 
-    # plt.plot(X_test.detach().cpu().numpy(), y_mean.detach().cpu().numpy(), label = 'mean')
-    # plt.plot(X_test.detach().cpu().numpy(), y_up.detach().cpu().numpy())
-    # plt.plot(X_test.detach().cpu().numpy(), y_low.detach().cpu().numpy())
-    # plt.plot(X_test.detach().cpu().numpy(), y_pred_mean.detach().cpu().numpy(), label = 'mean')
-    # plt.fill_between(X_test.detach().cpu().numpy(), y_pred_upper.detach().cpu().numpy(), y_pred_lower.detach().cpu().numpy(), alpha=0.2, color='g', label='95% CI')
-    # plt.plot(X_test.detach().cpu().numpy(), y_test.detach().cpu().numpy(), label = 'True')
-    # plt.scatter(X_data.detach().cpu().numpy(), y_data.detach().cpu().numpy(), label = 'Data')
-    # plt.legend()
-    # plt.ylabel('u_xx')
-    # plt.xlabel('x')
-
-    plt.plot(X_test.detach().cpu().numpy(), u_pred_mean.detach().cpu().numpy(), label = 'mean')
-    plt.fill_between(X_test.detach().cpu().numpy(), u_pred_upper.detach().cpu().numpy(), u_pred_lower.detach().cpu().numpy(), alpha=0.2, color='g', label='95% CI')
+    plt.plot(X_test.detach().cpu().numpy(), pred_mean.detach().cpu().numpy(), label = 'mean')
+    plt.fill_between(X_test.detach().cpu().numpy(), pred_upper.detach().cpu().numpy(), pred_lower.detach().cpu().numpy(), alpha=0.2, color='g', label='95% CI')
     plt.plot(X_test.detach().cpu().numpy(), u_test.detach().cpu().numpy(), label = 'True')
     plt.legend()
     plt.ylabel('u')
     plt.xlabel('x')
-    
     plt.show()
-
-
-    # # Plot the true solution and the predictions
-    # physics_model.plot_true_solution()
-    
-    # preds_upper, preds_lower, preds_mean = model.summary()
-    # preds_upper = preds_upper.flatten()
-    # preds_lower = preds_lower.flatten()
-    # preds_mean = preds_mean.flatten()     
-
-    # X = torch.linspace(-0.7, 0.7, steps=100)
-    # y = physics_model.physics_law(X)
-    
-    # sns.set_theme()
-    # plt.plot(X, y, alpha=0.8, color='b', label='Equation')
-    # plt.plot(X, preds_mean.detach().numpy(), alpha=0.8, color='g', label='PINN')
-    # plt.fill_between(X, preds_upper.detach().numpy(), preds_lower.detach().numpy(), alpha=0.2, color='g', label='95% CI')
-    # plt.legend()
-    # plt.ylabel('Value')
-    # plt.xlabel('X')
-    # plt.show()

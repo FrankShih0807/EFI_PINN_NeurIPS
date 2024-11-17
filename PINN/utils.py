@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
-from PINN import PINN, PINN_DROPOUT, PINN_EFI, PINN_BNN, Pretrain_EFI, PINN_EFI_Discovery
+from PINN import PINN, PINN_DROPOUT, PINN_EFI, PINN_BNN, Pretrain_EFI, PINN_EFI_Discovery, BayesianPINN
 from PINN.models import Cooling, EuropeanCall, Nonlinear, EuropeanCallDiscovery, Poisson
 from torch.utils.data import DataLoader,Dataset
 
@@ -23,6 +23,7 @@ ALGOS: Dict[str, Type[BasePINN]] = {
     "pinn_bnn": PINN_BNN,
     "pretrain_efi": Pretrain_EFI,
     "pinn_efi_discovery": PINN_EFI_Discovery,
+    "bpinn": BayesianPINN,
 }
 
 MODELS: Dict[str, Type[PhysicsModel]] = {
