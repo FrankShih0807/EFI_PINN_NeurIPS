@@ -13,17 +13,18 @@ class Poisson(PhysicsModel):
                  lam2=100.0, 
                  t_start=-0.7,
                  t_end=0.7, 
-                 noise_sd=0.01, 
+                 boundary_sd=0.01,
+                 diff_sd=0.01,
                  ):
-        super().__init__(lam1=lam1, lam2=lam2, t_start=t_start, t_end=t_end, noise_sd=noise_sd)
+        super().__init__(lam1=lam1, lam2=lam2, t_start=t_start, t_end=t_end, boundary_sd=boundary_sd, diff_sd=diff_sd)
 
     def generate_data(self, n_samples, device):
         dataset = PINNDataset(device=device)
         X, y = self.get_solu_data()
         diff_X, diff_y = self.get_diff_data(n_samples)
         eval_X, eval_y = self.get_eval_data()
-        dataset.add_data(X, y, category='solution', noise_sd=self.noise_sd)
-        dataset.add_data(diff_X, diff_y, category='differential', noise_sd=self.noise_sd)
+        dataset.add_data(X, y, category='solution', noise_sd=self.boundary_sd)
+        dataset.add_data(diff_X, diff_y, category='differential', noise_sd=self.diff_sd)
         dataset.add_data(eval_X, eval_y, category='evaluation', noise_sd=0)
         
         return dataset
@@ -36,13 +37,13 @@ class Poisson(PhysicsModel):
     def get_solu_data(self):
         X = torch.tensor([self.t_start, self.t_end]).view(-1, 1)
         y = self.physics_law(X)
-        y += self.noise_sd * torch.randn_like(y)
+        y += self.boundary_sd * torch.randn_like(y)
         return X, y
     
     def get_diff_data(self, n_samples):
         X = torch.linspace(self.t_start, self.t_end, steps=n_samples).view(-1,1)
         y = self.differential_function(X)
-        y += self.noise_sd * torch.randn_like(y)
+        y += self.diff_sd * torch.randn_like(y)
         return X, y
 
     
