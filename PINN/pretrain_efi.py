@@ -122,6 +122,7 @@ class Pretrain_EFI(BasePINN):
         return loss
 
     def train_base_dnn(self, epochs=5000):
+        print('Pretraining PINN...')
         base_net = BaseDNN(
             input_dim=self.input_dim,
             output_dim=self.output_dim,
@@ -133,13 +134,20 @@ class Pretrain_EFI(BasePINN):
         for ep in range(epochs):
             optimiser.zero_grad()
             output = base_net(self.X)
-            loss = self.mse_loss(output, self.y) + self.pretrain_pde_loss(base_net)
+            sol_loss = self.mse_loss(output, self.y)
+            pde_loss = self.pretrain_pde_loss(base_net)
+            loss = sol_loss + pde_loss
             loss.backward()
             optimiser.step()
+            if (ep+1) % 1000 == 0:
+                print(f"Epoch {ep+1}/{epochs}, sol_loss: {sol_loss.item():.2f}, pde_loss: {pde_loss.item():.2f}")
+                # print('haha')
+        print('PINN pretraining done.')
         return base_net
 
-    def optimize_encoder(self, param_vector, steps=1000):
-    
+    def optimize_encoder(self, param_vector, steps=5000):
+        optimiser = optim.Adam(self.net.parameters(), lr=1e-3)
+        print('Pretraining EFI...')
         for _ in range(steps):
             self.net.train()
             # batch_size = self.n_samples
@@ -150,14 +158,15 @@ class Pretrain_EFI(BasePINN):
             batch_size = noise_X.shape[0]
 
             encoder_output = self.net.encoder(torch.cat([noise_X, noise_y, noise_Z], dim=1))
-            loss = F.mse_loss(encoder_output, param_vector.repeat(batch_size, 1), reduction="sum")
-            # loss = self.mse_loss(encoder_output, param_vector)
-            w_prior_loss = -self.net.gmm_prior_loss() 
+            # loss = F.mse_loss(encoder_output, param_vector.repeat(batch_size, 1), reduction="sum")
+            loss = F.mse_loss(encoder_output, param_vector.repeat(batch_size, 1), reduction="sum") / batch_size
+            w_prior_loss = -self.net.gmm_prior_loss() /batch_size
             loss += w_prior_loss
 
-            self.optimiser.zero_grad()
+            optimiser.zero_grad()
             loss.backward()
-            self.optimiser.step()
+            optimiser.step()
+        print('EFI pretraining done.')
 
     def scheduler(self, epoch, total_epochs):
         # Decay lambda_y and lambda_theta using a power function

@@ -41,6 +41,7 @@ class PINN_EFI(BasePINN):
         # init EFI net and optimiser
         self.net = EFI_Net(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn, device=self.device, **self.encoder_kwargs)
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
+        # self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr)
         
         self.latent_Z = []
         for d in self.dataset:
