@@ -4,7 +4,7 @@ import os
 model = "poisson"
 exp = "efi_sgd"
 # exp = "efi_sgd_adampre_n100"
-exp = "efi_adampre_n50"
+exp = "efi_rep_plw30"
 # exp = "efi_3pt_n100"
 output_folder = f"output/{model}/{exp}"
 
