@@ -2,7 +2,7 @@ import numpy as np
 import os
 
 model = "poisson"
-exp = "efi"
+exp = "efi_sgd"
 output_folder = f"output/{model}/{exp}"
 
 n_runs = 100
@@ -18,8 +18,8 @@ for i in range(n_runs):
             # print(data['y_preds_mean'].shape)
             # print(data['y_preds_upper'].shape)
             # print(data['y_preds_lower'].shape)
-            # coverage[i] = data['y_covered'].mean()
-            coverage[i] = (data['y_covered'].sum()==100)
+            coverage[i] = data['y_covered'].mean()
+            # coverage[i] = (data['y_covered'].sum()==100)
     
 print(coverage.mean(), coverage.std())
 
