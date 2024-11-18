@@ -68,7 +68,7 @@ class Poisson(PhysicsModel):
 
     def plot_true_solution(self, save_path=None):
         X = torch.linspace(self.t_start, self.t_end, steps=100)
-        y = self.physics_law(X)
+        y = self.physics_law(X) / self.lam2
         
         sns.set_theme()
         plt.plot(X, y, label='Equation')
@@ -90,7 +90,7 @@ class Poisson(PhysicsModel):
         preds_mean = pred_dict['y_preds_mean'].flatten()
 
         X = torch.linspace(self.t_start, self.t_end, steps=100)
-        y = self.physics_law(X)
+        y = self.physics_law(X) / self.lam2
         
         if save_path is None:
             save_path = './evaluation_results'
