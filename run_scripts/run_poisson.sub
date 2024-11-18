@@ -20,7 +20,7 @@ conda activate pinn
 
 
 
-python train.py --algo pretrain_efi --model poisson --exp_name efi_rep_plw30 --task_id $SLURM_ARRAY_TASK_ID  --hyperparams physics_loss_weight:30.0 &
+python train.py --algo pretrain_efi --model poisson --exp_name efi_adam_plw20_sgld5 --task_id $SLURM_ARRAY_TASK_ID  --hyperparams physics_loss_weight:20.0 sgld_lr:1e-5 &
 
 
 wait
