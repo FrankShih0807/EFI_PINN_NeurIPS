@@ -40,7 +40,7 @@ class Poisson(PhysicsModel):
         y += self.boundary_sd * torch.randn_like(y)
         return X, y
     
-    def get_diff_data(self, n_samples, replicate=5):
+    def get_diff_data(self, n_samples, replicate=10):
         X = torch.linspace(self.t_start, self.t_end, steps=n_samples).repeat_interleave(replicate).view(-1, 1)
         y = self.differential_function(X)
         y += self.diff_sd * torch.randn_like(y)
