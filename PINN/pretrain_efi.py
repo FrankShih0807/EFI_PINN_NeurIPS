@@ -42,14 +42,15 @@ class Pretrain_EFI(BasePINN):
         # EFI configs
         self.encoder_kwargs = encoder_kwargs
         self.sgld_lr = sgld_lr
-        self.initial_lambda_y = lambda_y
-        self.initial_lambda_theta = lambda_theta
+        # self.initial_lambda_y = lambda_y
+        # self.initial_lambda_theta = lambda_theta
         self.lambda_y = lambda_y
         self.lambda_theta = lambda_theta
 
         # self.noise_sd = physics_model.noise_sd
 
         self.n_samples = self.X.shape[0]
+        self.mse_loss = nn.MSELoss(reduction="sum")
 
     def _pinn_init(self):
         # init EFI net and optimiser
@@ -118,7 +119,7 @@ class Pretrain_EFI(BasePINN):
         loss = 0
         for i, d in enumerate(self.dataset):
             if d['category'] == 'differential':
-                loss += self.mse_loss(self.differential_operator(net, d['X']), d['y'])
+                loss += F.mse_loss(self.differential_operator(net, d['X']), d['y'])
         return loss
 
     def train_base_dnn(self, epochs=5000):
@@ -147,7 +148,6 @@ class Pretrain_EFI(BasePINN):
 
     def optimize_encoder(self, param_vector, steps=5000):
         optimiser = optim.Adam(self.net.parameters(), lr=1e-3)
-        # optimiser = optim.SGD(self.net.parameters(), lr=1e-4)
         print('Pretraining EFI...')
         for _ in range(steps):
             self.net.train()
@@ -169,16 +169,16 @@ class Pretrain_EFI(BasePINN):
             optimiser.step()
         print('EFI pretraining done.')
 
-    def scheduler(self, epoch, total_epochs):
-        # Decay lambda_y and lambda_theta using a power function
-        if epoch > 5000:
-            decay_factor = 10 ** (epoch / total_epochs)
-            self.lambda_y = self.initial_lambda_y * decay_factor
+    # def scheduler(self, epoch, total_epochs):
+    #     # Decay lambda_y and lambda_theta using a power function
+    #     if epoch > 5000:
+    #         decay_factor = 10 ** (epoch / total_epochs)
+    #         self.lambda_y = self.initial_lambda_y * decay_factor
             # self.lambda_theta = self.initial_lambda_theta * decay_factor
 
     def update(self, epoch, total_epochs):
         # Adjust lambda_y and lambda_theta
-        self.scheduler(epoch, total_epochs)
+        # self.scheduler(epoch, total_epochs)
 
         ## 1. Latent variable sampling (Sample Z)
         self.net.eval()
