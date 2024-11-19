@@ -6,7 +6,7 @@ import time
 import torch.nn.functional as F
 import seaborn as sns
 from torch.nn.utils import parameters_to_vector
-from PINN.common import SGLD
+from PINN.common import SGLD, SGHMC
 from PINN.common.torch_layers import EFI_Net
 from PINN.common.base_pinn import BasePINN
 from PINN.common.torch_layers import BaseDNN
@@ -78,6 +78,7 @@ class Pretrain_EFI(BasePINN):
                 self.noise_sd.append(0)
         
         self.sampler = SGLD([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr)
+        # self.sampler = SGHMC([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr, alpha=0.1)
 
     def solution_loss(self):
         loss = 0
@@ -100,7 +101,8 @@ class Pretrain_EFI(BasePINN):
         loss = 0
         for i, d in enumerate(self.dataset):
             if d['noise_sd'] > 0:
-                loss += torch.mean(self.latent_Z[i]**2)/2/d['noise_sd']**2
+                loss += torch.sum(self.latent_Z[i]**2)/2/d['noise_sd']**2
+                # loss += torch.mean(self.latent_Z[i]**2)/2/d['noise_sd']**2
         return loss
     
     def pde_loss(self):
