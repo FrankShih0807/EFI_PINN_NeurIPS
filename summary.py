@@ -3,7 +3,7 @@ import os
 
 model = "poisson"
 # exp = "efi_sgd"
-exp = "efi_default3"
+exp = "efi_noise01"
 # exp = "efi_sgd_plw20"
 # exp = "efi_adam_plw20"
 # exp = "efi_adam_plw20"
