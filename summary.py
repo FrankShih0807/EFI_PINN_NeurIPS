@@ -2,10 +2,12 @@ import numpy as np
 import os
 
 model = "poisson"
-exp = "efi_sgd"
-# exp = "efi_sgd_adampre_n100"
-exp = "efi_adampre_n50"
-# exp = "efi_3pt_n100"
+# exp = "efi_sgd"
+exp = "efi_default3"
+# exp = "efi_sgd_plw20"
+# exp = "efi_adam_plw20"
+# exp = "efi_adam_plw20"
+
 output_folder = f"output/{model}/{exp}"
 
 n_runs = 100

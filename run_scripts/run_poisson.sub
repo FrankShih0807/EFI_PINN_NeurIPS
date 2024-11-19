@@ -2,7 +2,7 @@
 #FILENAME: job_name.sub
 
 #SBATCH -A standby
-#SBATCH --array=0-99  
+#SBATCH --array=0-199  
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=8
@@ -20,7 +20,7 @@ conda activate pinn
 
 
 
-python train.py --algo pretrain_efi --model poisson --exp_name efi_3pt_n100 --task_id $SLURM_ARRAY_TASK_ID  --hyperparams n_samples:100 &
+python train.py --algo pretrain_efi --model poisson --exp_name efi_default3 --task_id $SLURM_ARRAY_TASK_ID  --hyperparams physics_loss_weight:1.0 &
 
 
 wait
