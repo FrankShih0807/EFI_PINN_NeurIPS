@@ -116,6 +116,7 @@ class Poisson(PhysicsModel):
     def get_pretrain_eval(self, base_model: torch.nn.Module):
         with torch.no_grad():
             X = torch.linspace(self.t_start, self.t_end, steps=100)
+            base_model = base_model.to(X.device)
             preds = base_model(X.unsqueeze(1))
 
         self.pretrain_eval = preds

@@ -234,7 +234,7 @@ class Pretrain_EFI(BasePINN):
         self.physics_model.get_pretrain_eval(base_net)
 
         # Convert BaseDNN parameters to vector
-        param_vector = parameters_to_vector(base_net.parameters())
+        param_vector = parameters_to_vector(base_net.parameters()).to(self.device)
 
         # Optimize encoder network
         self.optimize_encoder(param_vector)
