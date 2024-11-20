@@ -31,7 +31,8 @@ class Poisson(PhysicsModel):
     
     def get_eval_data(self):
         X = torch.linspace(self.t_start, self.t_end, steps=100).reshape(100, -1)
-        y = self.physics_law(X)
+        y = self.physics_law(X) / self.lam2
+        # X = torch.cat([X, torch.tensor([[self.t_start], [self.t_end]])], dim=0)
         return X, y
     
     def get_solu_data(self):
@@ -40,7 +41,7 @@ class Poisson(PhysicsModel):
         y += self.boundary_sd * torch.randn_like(y)
         return X, y
     
-    def get_diff_data(self, n_samples, replicate=10):
+    def get_diff_data(self, n_samples, replicate=3):
         X = torch.linspace(self.t_start, self.t_end, steps=n_samples).repeat_interleave(replicate).view(-1, 1)
         y = self.differential_function(X)
         y += self.diff_sd * torch.randn_like(y)
@@ -92,11 +93,11 @@ class Poisson(PhysicsModel):
         X = torch.linspace(self.t_start, self.t_end, steps=100)
         y = self.physics_law(X) / self.lam2
         
-        if save_path is None:
-            save_path = './evaluation_results'
+        # if save_path is None:
+        #     save_path = './evaluation_results'
         
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
+        # if not os.path.exists(save_path):
+        #     os.makedirs(save_path)
         
         # np.savez(os.path.join(save_path, 'evaluation_data.npz'), preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean)
         np.savez(os.path.join(save_path, 'evaluation_data.npz') , **pred_dict)
@@ -109,6 +110,21 @@ class Poisson(PhysicsModel):
         plt.ylabel('u')
         plt.xlabel('x')
         plt.savefig(os.path.join(save_path, 'pred_solution.png'))
+        plt.close()
+
+    def get_pretrain_eval(self, base_model: torch.nn.Module, save_path=None):
+        with torch.no_grad():
+            X = torch.linspace(self.t_start, self.t_end, steps=100)
+            y = self.physics_law(X) / self.lam2
+            preds = base_model(X.unsqueeze(1))
+        
+        sns.set_theme()
+        plt.plot(X, y, alpha=0.8, color='b', label='True')
+        plt.plot(X, preds, alpha=0.8, color='g', label='Pretrained')
+        plt.legend()
+        plt.ylabel('u')
+        plt.xlabel('x')
+        plt.savefig(os.path.join(save_path, 'pretrain_solution.png'))
         plt.close()
 
 

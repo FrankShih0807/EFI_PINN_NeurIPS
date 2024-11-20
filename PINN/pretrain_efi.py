@@ -229,6 +229,21 @@ class Pretrain_EFI(BasePINN):
         # Train BaseDNN
         base_net = self.train_base_dnn()
 
+        # Plot pretraining result
+        base_net.eval()
+        self.physics_model.get_pretrain_eval(base_net, self.save_path)
+        # with torch.no_grad():
+        #     X_plot = torch.linspace(self.physics_model.t_start, self.physics_model.t_end, 100).to(self.device)
+        #     y_plot = base_net(X_plot.unsqueeze(1)).cpu()
+        
+        # plt.figure()
+        # plt.plot(X_plot.cpu(), y_plot, label='Pretrained BaseDNN')
+        # plt.xlabel('X')
+        # plt.ylabel('Y')
+        # plt.title('Pretraining Result')
+        # plt.legend()
+        # plt.show()
+
         # Convert BaseDNN parameters to vector
         param_vector = parameters_to_vector(base_net.parameters())
 
