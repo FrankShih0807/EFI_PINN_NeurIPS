@@ -31,16 +31,17 @@ class Poisson(PhysicsModel):
     
     def get_eval_data(self):
         X = torch.linspace(self.t_start, self.t_end, steps=100).reshape(100, -1)
-        y = self.physics_law(X)
+        y = self.physics_law(X) / self.lam2
+        # X = torch.cat([X, torch.tensor([[self.t_start], [self.t_end]])], dim=0)
         return X, y
     
     def get_solu_data(self):
-        X = torch.tensor([self.t_start, self.t_end]).view(-1, 1)
+        X = torch.tensor([self.t_start, self.t_end, -0.5, 0.5]).view(-1, 1)
         y = self.physics_law(X)
         y += self.boundary_sd * torch.randn_like(y)
         return X, y
     
-    def get_diff_data(self, n_samples, replicate=10):
+    def get_diff_data(self, n_samples, replicate=3):
         X = torch.linspace(self.t_start, self.t_end, steps=n_samples).repeat_interleave(replicate).view(-1, 1)
         y = self.differential_function(X)
         y += self.diff_sd * torch.randn_like(y)
@@ -68,7 +69,7 @@ class Poisson(PhysicsModel):
 
     def plot_true_solution(self, save_path=None):
         X = torch.linspace(self.t_start, self.t_end, steps=100)
-        y = self.physics_law(X)
+        y = self.physics_law(X) / self.lam2
         
         sns.set_theme()
         plt.plot(X, y, label='Equation')
@@ -90,13 +91,13 @@ class Poisson(PhysicsModel):
         preds_mean = pred_dict['y_preds_mean'].flatten()
 
         X = torch.linspace(self.t_start, self.t_end, steps=100)
-        y = self.physics_law(X)
+        y = self.physics_law(X) / self.lam2
         
-        if save_path is None:
-            save_path = './evaluation_results'
+        # if save_path is None:
+        #     save_path = './evaluation_results'
         
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
+        # if not os.path.exists(save_path):
+        #     os.makedirs(save_path)
         
         # np.savez(os.path.join(save_path, 'evaluation_data.npz'), preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean)
         np.savez(os.path.join(save_path, 'evaluation_data.npz') , **pred_dict)
@@ -104,12 +105,21 @@ class Poisson(PhysicsModel):
         sns.set_theme()
         plt.plot(X, y, alpha=0.8, color='b', label='True')
         plt.plot(X, preds_mean, alpha=0.8, color='g', label='Mean')
+        plt.plot(X, self.pretrain_eval, alpha=0.8, color='r', label='Pretrained', linestyle='--')
         plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
         plt.legend()
         plt.ylabel('u')
         plt.xlabel('x')
         plt.savefig(os.path.join(save_path, 'pred_solution.png'))
         plt.close()
+
+    def get_pretrain_eval(self, base_model: torch.nn.Module):
+        with torch.no_grad():
+            X = torch.linspace(self.t_start, self.t_end, steps=100)
+            base_model = base_model.to(X.device)
+            preds = base_model(X.unsqueeze(1))
+
+        self.pretrain_eval = preds
 
 
 # if __name__ == "__main__":
