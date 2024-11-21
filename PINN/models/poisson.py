@@ -37,7 +37,8 @@ class Poisson(PhysicsModel):
     
     def get_solu_data(self):
         # X = torch.tensor([self.t_start, self.t_end, -0.5, 0.5]).view(-1, 1)
-        X = torch.tensor([self.t_start, self.t_end, 0.0]).repeat_interleave(5).view(-1, 1)
+        # X = torch.tensor([self.t_start, self.t_end, 0.0]).repeat_interleave(5).view(-1, 1)
+        X = torch.linspace(self.t_start, self.t_end, steps=20).reshape(-1, 1)
         # X = torch.tensor([self.t_start, self.t_end]).view(-1, 1)
         y = self.physics_law(X)
         y += self.boundary_sd * torch.randn_like(y)
