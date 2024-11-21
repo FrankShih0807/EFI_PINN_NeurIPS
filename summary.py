@@ -3,7 +3,7 @@ import os
 
 model = "poisson"
 # exp = "efi_sgd"
-exp = "efi_noise01"
+exp = "efi_y_noise_sd005_4"
 # exp = "efi_sgd_plw20"
 # exp = "efi_adam_plw20"
 # exp = "efi_adam_plw20"
@@ -28,8 +28,8 @@ def cr(dir):
                 coverage[i] = data['y_covered'].mean()
                 # coverage[i] = (data['y_covered'].sum()==100)
     print(dir)
-    print(coverage)
-    print(coverage.mean(), coverage.std())
+    print(np.hstack([np.arange(n_runs).reshape(-1,1), coverage.reshape(-1,1)]))
+    print(coverage.mean(), coverage.std(), np.quantile(coverage, 0.5))
 
         
 cr(output_folder)

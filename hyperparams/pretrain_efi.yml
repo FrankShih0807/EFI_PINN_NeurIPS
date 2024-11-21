@@ -55,7 +55,7 @@ nonlinear:
       sparse_threshold: 0.01
 
 poisson:
-  n_samples: 20
+  n_samples: 200
   epochs: 15_000
   pinn:
     hidden_layers:
