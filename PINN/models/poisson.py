@@ -36,12 +36,14 @@ class Poisson(PhysicsModel):
         return X, y
     
     def get_solu_data(self):
-        X = torch.tensor([self.t_start, self.t_end, -0.5, 0.5]).view(-1, 1)
+        # X = torch.tensor([self.t_start, self.t_end, -0.5, 0.5]).view(-1, 1)
+        X = torch.tensor([self.t_start, self.t_end, 0.0]).repeat_interleave(5).view(-1, 1)
+        # X = torch.tensor([self.t_start, self.t_end]).view(-1, 1)
         y = self.physics_law(X)
         y += self.boundary_sd * torch.randn_like(y)
         return X, y
     
-    def get_diff_data(self, n_samples, replicate=3):
+    def get_diff_data(self, n_samples, replicate=1):
         X = torch.linspace(self.t_start, self.t_end, steps=n_samples).repeat_interleave(replicate).view(-1, 1)
         y = self.differential_function(X)
         y += self.diff_sd * torch.randn_like(y)
@@ -105,7 +107,10 @@ class Poisson(PhysicsModel):
         sns.set_theme()
         plt.plot(X, y, alpha=0.8, color='b', label='True')
         plt.plot(X, preds_mean, alpha=0.8, color='g', label='Mean')
-        plt.plot(X, self.pretrain_eval, alpha=0.8, color='r', label='Pretrained', linestyle='--')
+        try:
+            plt.plot(X, self.pretrain_eval, alpha=0.8, color='r', label='Pretrained', linestyle='--')
+        except:
+            pass
         plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
         plt.legend()
         plt.ylabel('u')
