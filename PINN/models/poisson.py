@@ -32,7 +32,6 @@ class Poisson(PhysicsModel):
     def get_eval_data(self):
         X = torch.linspace(self.t_start, self.t_end, steps=100).reshape(100, -1)
         y = self.physics_law(X) / self.lam2
-        # X = torch.cat([X, torch.tensor([[self.t_start], [self.t_end]])], dim=0)
         return X, y
     
     def get_solu_data(self):
@@ -68,7 +67,6 @@ class Poisson(PhysicsModel):
         pde = self.lam1 * 0.01 * u_xx
         
         return pde
-    
 
     def plot_true_solution(self, save_path=None):
         X = torch.linspace(self.t_start, self.t_end, steps=100)
