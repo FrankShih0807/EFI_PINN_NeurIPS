@@ -139,11 +139,11 @@ if __name__ == "__main__":
     # np.random.seed(123)
 
     # Initialize the physics model
-    physics_model = Poisson(boundary_sd=1.0, diff_sd=1.0)
-    dataset = physics_model.generate_data(16, device='cpu')
+    physics_model = Poisson(boundary_sd=0.05, diff_sd=0.0)
+    dataset = physics_model.generate_data(100, device='cpu')
 
     # Initialize the Bayesian PINN model
-    model = BayesianPINN(physics_model, dataset=dataset, device='cpu', step_size=0.0006)
+    model = BayesianPINN(physics_model, dataset=dataset, device='cpu', step_size=0.0001)
     num_bd = model.num_bd
 
     # print(model.eval_X.shape)
