@@ -9,27 +9,8 @@ import time
 
 from PINN.common.base_pinn import BasePINN
 from PINN.models.poisson import Poisson
+from PINN.common.torch_layers import BayesianPINNNet
 
-class PoissonPINN(torch.nn.Module):
-    def __init__(self, width, lam1, lam2):
-        super(PoissonPINN, self).__init__()
-        self.fnn = nn.Sequential(
-            nn.Linear(1, width),
-            nn.Tanh(),
-            nn.Linear(width, width),
-            nn.Tanh(),
-            nn.Linear(width, 1)
-        )
-        self.lam1 = lam1
-        self.lam2 = lam2
-        
-    def forward(self, X):
-        x = X[:-2].requires_grad_(True)
-        u = self.fnn(x)
-        u_x = torch.autograd.grad(u, x, grad_outputs = torch.ones_like(u), create_graph = True)[0]
-        u_xx = torch.autograd.grad(u_x, x, grad_outputs = torch.ones_like(u), create_graph = True)[0]
-        u_bd = self.fnn(X[-2:])
-        return torch.cat([u_xx * self.lam1 * 0.01, u_bd * self.lam2], dim = 0)
 
 class BayesianPINN(BasePINN):
     def __init__(
@@ -56,18 +37,18 @@ class BayesianPINN(BasePINN):
         self.L = L
         self.tau_list = []
 
-        for d in self.dataset:
-            if d['category'] == 'differential':
-                self.X = d['X']
-                self.y = d['y']
+        diff_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'differential'], dim=0)
+        diff_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'differential'], dim=0)
 
-        for d in self.dataset:
-            if d['category'] == 'solution':
-                self.X = torch.cat([self.X, d['X']], dim=0)
-                self.y = torch.cat([self.y, d['y']], dim=0)
+        sol_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'solution'], dim=0)
+        sol_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'solution'], dim=0)
+
+        self.num_bd = sol_X.shape[0]
+        self.X = torch.cat([diff_X, sol_X], dim=0)
+        self.y = torch.cat([diff_y, sol_y], dim=0)
 
     def _pinn_init(self):
-        self.net = PoissonPINN(self.hidden_layers[0], self.physics_model.lam1, self.physics_model.lam2)
+        self.net = BayesianPINNNet(self.physics_model, self.num_bd)
         for param in self.net.parameters():
             torch.nn.init.normal_(param)
         self.net.to(self.device)
@@ -92,8 +73,8 @@ class BayesianPINN(BasePINN):
         for i in range(self.num_samples - self.burn):
             params = hamiltorch.util.unflatten(self.net, self.params_hmc[i])
             hamiltorch.util.update_model_params_in_place(self.net, params)
-            f_pred = self.net(X)
-            u_pred = self.net.fnn(X)
+            f_pred = self.net(X)[:-2]
+            u_pred = self.net.fnn(X)[:-2]
             f_pred_list.append(f_pred)
             u_pred_list.append(u_pred)
         f_pred = torch.stack(f_pred_list).detach().cpu()
@@ -150,16 +131,16 @@ class BayesianPINN(BasePINN):
 
     
 if __name__ == "__main__":
-    hamiltorch.set_random_seed(123)
-    torch.manual_seed(123)
-    np.random.seed(123)
+    # hamiltorch.set_random_seed(123)
+    # torch.manual_seed(123)
+    # np.random.seed(123)
 
     # Initialize the physics model
     physics_model = Poisson()
     dataset = physics_model.generate_data(16, device='cpu')
 
     # Initialize the Bayesian PINN model
-    model = BayesianPINN(physics_model, dataset=dataset, device='cpu')
+    model = BayesianPINN(physics_model, dataset=dataset, device='cpu', step_size=0.0001)
 
     # Perform HMC sampling
     model.sample_posterior()
@@ -172,7 +153,7 @@ if __name__ == "__main__":
     pred_mean = pred_dict['y_preds_mean'].flatten()
 
     # evaluate the model
-    X_test = model.eval_X.flatten()
+    X_test = model.eval_X.flatten()[:-2]
     u_test = physics_model.physics_law(X_test) / physics_model.lam2
 
     # Plot the results
