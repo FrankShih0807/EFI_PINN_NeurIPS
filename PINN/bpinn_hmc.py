@@ -43,9 +43,12 @@ class BayesianPINN(BasePINN):
         sol_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'solution'], dim=0)
         sol_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'solution'], dim=0)
 
+        eval_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'evaluation'], dim=0)
+
         self.num_bd = sol_X.shape[0]
-        self.X = torch.cat([diff_X, sol_X], dim=0)
-        self.y = torch.cat([diff_y, sol_y], dim=0)
+        self.X = torch.cat([diff_X, sol_X], dim=0).to(self.device)
+        self.y = torch.cat([diff_y, sol_y], dim=0).to(self.device)
+        self.eval_X = torch.cat([eval_X, sol_X], dim=0).to(self.device)
 
     def _pinn_init(self):
         self.net = BayesianPINNNet(self.physics_model, self.num_bd)
@@ -73,8 +76,8 @@ class BayesianPINN(BasePINN):
         for i in range(self.num_samples - self.burn):
             params = hamiltorch.util.unflatten(self.net, self.params_hmc[i])
             hamiltorch.util.update_model_params_in_place(self.net, params)
-            f_pred = self.net(X)[:-2]
-            u_pred = self.net.fnn(X)[:-2]
+            f_pred = self.net(X)[:-self.num_bd]
+            u_pred = self.net.fnn(X)[:-self.num_bd]
             f_pred_list.append(f_pred)
             u_pred_list.append(u_pred)
         f_pred = torch.stack(f_pred_list).detach().cpu()
@@ -82,12 +85,12 @@ class BayesianPINN(BasePINN):
         
         return f_pred, u_pred
 
-    def evaluate(self):
-        y_pred, u_pred = self.predict(self.eval_X)
-        y_mean = torch.mean(y_pred, dim=0)
-        y_std = torch.std(y_pred, dim=0)
-        y_up, y_low = y_mean - 2 * y_std, y_mean + 2 * y_std
-        return y_mean, y_up, y_low
+    # def evaluate(self):
+    #     y_pred, u_pred = self.predict(self.eval_X)
+    #     y_mean = torch.mean(y_pred, dim=0)
+    #     y_std = torch.std(y_pred, dim=0)
+    #     y_up, y_low = y_mean - 2 * y_std, y_mean + 2 * y_std
+    #     return y_mean, y_up, y_low
 
     def summary(self):
         f_pred, u_pred = self.predict(self.eval_X)
@@ -136,11 +139,16 @@ if __name__ == "__main__":
     # np.random.seed(123)
 
     # Initialize the physics model
-    physics_model = Poisson()
-    dataset = physics_model.generate_data(16, device='cpu')
+    physics_model = Poisson(boundary_sd=0.05, diff_sd=0.0)
+    dataset = physics_model.generate_data(100, device='cpu')
 
     # Initialize the Bayesian PINN model
     model = BayesianPINN(physics_model, dataset=dataset, device='cpu', step_size=0.0001)
+    num_bd = model.num_bd
+
+    # print(model.eval_X.shape)
+    # print(model.eval_y.shape)
+    # print(model.eval_X[-num_bd:])
 
     # Perform HMC sampling
     model.sample_posterior()
@@ -153,7 +161,7 @@ if __name__ == "__main__":
     pred_mean = pred_dict['y_preds_mean'].flatten()
 
     # evaluate the model
-    X_test = model.eval_X.flatten()[:-2]
+    X_test = model.eval_X.flatten()[:-num_bd]
     u_test = physics_model.physics_law(X_test) / physics_model.lam2
 
     # Plot the results
