@@ -1,5 +1,5 @@
 poisson:
-  n_samples: 16
+  n_samples: 100
   epochs: 1
   pinn:
     hidden_layers:

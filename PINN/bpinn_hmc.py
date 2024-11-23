@@ -19,9 +19,6 @@ class BayesianPINN(BasePINN):
         dataset,
         hidden_layers=[50, 50],
         activation_fn=nn.Tanh(),
-        # lr=1e-3,
-        # physics_loss_weight=1,
-        # sigma=0.01,
         step_size=0.0006,
         burn=2000,
         num_samples=5000,
@@ -31,8 +28,8 @@ class BayesianPINN(BasePINN):
         save_path=None,
         device='cpu',
     ) -> None:
-        super().__init__(physics_model, dataset, hidden_layers, activation_fn, save_path, device)
-        # self.sigma = sigma
+        super().__init__(physics_model, dataset, hidden_layers, activation_fn, save_path=save_path, device=device)
+        
         self.step_size = step_size
         self.burn = burn
         self.num_samples = num_samples
@@ -126,7 +123,7 @@ class BayesianPINN(BasePINN):
 
         return summary_dict
     
-    def train(self, epochs, eval_freq=1000):
+    def train(self, epochs):
         # self._pinn_init()
         
         tic = time.time()
