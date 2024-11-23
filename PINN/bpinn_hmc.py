@@ -19,29 +19,30 @@ class BayesianPINN(BasePINN):
         dataset,
         hidden_layers=[50, 50],
         activation_fn=nn.Tanh(),
-        lr=1e-3,
-        physics_loss_weight=1,
-        sigma=0.01,
         step_size=0.0006,
         burn=2000,
         num_samples=5000,
         L=6, 
+        lam1=1.0,
+        lam2=1.0,
         save_path=None,
         device='cpu',
     ) -> None:
-        super().__init__(physics_model, dataset, hidden_layers, activation_fn, lr, physics_loss_weight, save_path, device)
-        self.sigma = sigma
+        super().__init__(physics_model, dataset, hidden_layers, activation_fn, save_path=save_path, device=device)
+        
         self.step_size = step_size
         self.burn = burn
         self.num_samples = num_samples
         self.L = L
+        self.lam1 = lam1
+        self.lam2 = lam2
         self.tau_list = []
 
         diff_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'differential'], dim=0)
-        diff_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'differential'], dim=0)
+        diff_y = self.lam1 * torch.cat([d['y'] for d in self.dataset if d['category'] == 'differential'], dim=0)
 
         sol_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'solution'], dim=0)
-        sol_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'solution'], dim=0)
+        sol_y = self.lam2 * torch.cat([d['y'] for d in self.dataset if d['category'] == 'solution'], dim=0)
 
         eval_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'evaluation'], dim=0)
 
@@ -51,7 +52,7 @@ class BayesianPINN(BasePINN):
         self.eval_X = torch.cat([eval_X, sol_X], dim=0).to(self.device)
 
     def _pinn_init(self):
-        self.net = BayesianPINNNet(self.physics_model, self.num_bd)
+        self.net = BayesianPINNNet(self.lam1, self.lam2, self.physics_model, self.num_bd)
         for param in self.net.parameters():
             torch.nn.init.normal_(param)
         self.net.to(self.device)
@@ -122,7 +123,7 @@ class BayesianPINN(BasePINN):
 
         return summary_dict
     
-    def train(self, epochs, eval_freq=1000):
+    def train(self, epochs):
         # self._pinn_init()
         
         tic = time.time()
@@ -143,7 +144,7 @@ if __name__ == "__main__":
     dataset = physics_model.generate_data(100, device='cpu')
 
     # Initialize the Bayesian PINN model
-    model = BayesianPINN(physics_model, dataset=dataset, device='cpu', step_size=0.0001)
+    model = BayesianPINN(physics_model, dataset=dataset, device='cpu', step_size=0.001, lam1=1.0, lam2=1.0)
     num_bd = model.num_bd
 
     # print(model.eval_X.shape)
@@ -162,7 +163,7 @@ if __name__ == "__main__":
 
     # evaluate the model
     X_test = model.eval_X.flatten()[:-num_bd]
-    u_test = physics_model.physics_law(X_test) / physics_model.lam2
+    u_test = physics_model.physics_law(X_test)
 
     # Plot the results
     sns.set_theme()

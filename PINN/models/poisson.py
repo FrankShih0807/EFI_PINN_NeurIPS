@@ -9,14 +9,12 @@ from PINN.common.utils import PINNDataset
 
 class Poisson(PhysicsModel):
     def __init__(self, 
-                 lam1=100.0, 
-                 lam2=100.0, 
                  t_start=-0.7,
                  t_end=0.7, 
                  boundary_sd=0.01,
                  diff_sd=0.01,
                  ):
-        super().__init__(lam1=lam1, lam2=lam2, t_start=t_start, t_end=t_end, boundary_sd=boundary_sd, diff_sd=diff_sd)
+        super().__init__(t_start=t_start, t_end=t_end, boundary_sd=boundary_sd, diff_sd=diff_sd)
 
     def generate_data(self, n_samples, device):
         dataset = PINNDataset(device=device)
@@ -31,7 +29,7 @@ class Poisson(PhysicsModel):
     
     def get_eval_data(self):
         X = torch.linspace(self.t_start, self.t_end, steps=100).reshape(100, -1)
-        y = self.physics_law(X) / self.lam2
+        y = self.physics_law(X)
         return X, y
     
     def get_solu_data(self):
@@ -51,11 +49,11 @@ class Poisson(PhysicsModel):
 
     
     def physics_law(self, X):
-        y = self.lam2 * torch.sin(6 * X) ** 3
+        y = torch.sin(6 * X) ** 3
         return y
     
     def differential_function(self, X):
-        y = self.lam1 * (-1.08) * torch.sin(6 * X) * (torch.sin(6 * X) ** 2 - 2 * torch.cos(6 * X) ** 2)
+        y = -1.08 * torch.sin(6 * X) * (torch.sin(6 * X) ** 2 - 2 * torch.cos(6 * X) ** 2)
         return y
     
     def differential_operator(self, model: torch.nn.Module, physics_X):
@@ -64,23 +62,23 @@ class Poisson(PhysicsModel):
         # u_xx = torch.autograd.grad(u_x, physics_X, grad_outputs=torch.ones_like(u), create_graph=True)[0]
         u_x = grad(u, physics_X)[0]
         u_xx = grad(u_x, physics_X)[0]
-        pde = self.lam1 * 0.01 * u_xx
+        pde = 0.01 * u_xx
         
         return pde
 
     def plot_true_solution(self, save_path=None):
         X = torch.linspace(self.t_start, self.t_end, steps=100)
-        y = self.physics_law(X) / self.lam2
+        y = self.physics_law(X)
         
         sns.set_theme()
         plt.plot(X, y, label='Equation')
         plt.legend()
         plt.ylabel('u')
         plt.xlabel('x')
-        if save_path:
+        if save_path is not None:
             plt.savefig(os.path.join(save_path, 'true_solution.png'))
-        else:
-            plt.show()
+        # else:
+        #     plt.show()
         plt.close()
         
     def save_evaluation(self, model, save_path=None):
@@ -92,7 +90,7 @@ class Poisson(PhysicsModel):
         preds_mean = pred_dict['y_preds_mean'].flatten()
 
         X = torch.linspace(self.t_start, self.t_end, steps=100)
-        y = self.physics_law(X) / self.lam2
+        y = self.physics_law(X)
         
         # if save_path is None:
         #     save_path = './evaluation_results'
