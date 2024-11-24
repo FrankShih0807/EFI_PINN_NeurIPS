@@ -28,6 +28,12 @@ class Pretrain_EFI(BasePINN):
         save_path=None,
         device="cpu",
     ) -> None:
+        # EFI configs
+        self.encoder_kwargs = encoder_kwargs
+        self.sgld_lr = sgld_lr
+        self.lambda_y = lambda_y
+        self.lambda_theta = lambda_theta
+        
         super().__init__(
             physics_model,
             dataset,
@@ -39,16 +45,11 @@ class Pretrain_EFI(BasePINN):
             device,
         )
 
-        # EFI configs
-        self.encoder_kwargs = encoder_kwargs
-        self.sgld_lr = sgld_lr
-        # self.initial_lambda_y = lambda_y
-        # self.initial_lambda_theta = lambda_theta
-        self.lambda_y = lambda_y
-        self.lambda_theta = lambda_theta
-
-        # self.noise_sd = physics_model.noise_sd
-
+        # # EFI configs
+        # self.encoder_kwargs = encoder_kwargs
+        # self.sgld_lr = sgld_lr
+        # self.lambda_y = lambda_y
+        # self.lambda_theta = lambda_theta
         self.n_samples = self.X.shape[0]
         self.mse_loss = nn.MSELoss(reduction="sum")
 
@@ -172,22 +173,12 @@ class Pretrain_EFI(BasePINN):
             optimiser.step()
         print('EFI pretraining done.')
 
-    # def scheduler(self, epoch, total_epochs):
-    #     # Decay lambda_y and lambda_theta using a power function
-    #     if epoch > 5000:
-    #         decay_factor = 10 ** (epoch / total_epochs)
-    #         self.lambda_y = self.initial_lambda_y * decay_factor
-            # self.lambda_theta = self.initial_lambda_theta * decay_factor
 
-    def update(self, epoch, total_epochs):
-        # Adjust lambda_y and lambda_theta
-        # self.scheduler(epoch, total_epochs)
+    def update(self):
 
         ## 1. Latent variable sampling (Sample Z)
         self.net.eval()
-        # theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
         theta_loss = self.theta_loss()
-        # y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
         y_loss = self.solution_loss()
         z_prior_loss = self.z_prior_loss()
         pde_loss = self.pde_loss()
@@ -203,9 +194,6 @@ class Pretrain_EFI(BasePINN):
 
         ## 2. DNN weights update (Optimize W)
         self.net.train()
-        # theta_loss = self.net.theta_encode(self.X, self.y, self.Z)
-        # y_loss = self.mse_loss(self.y, self.net(self.X) + self.Z)
-        # prior_loss = -self.net.gmm_prior_loss() / self.n_samples
         theta_loss = self.theta_loss()
         y_loss = self.solution_loss()
         w_prior_loss = -self.net.gmm_prior_loss() / self.n_samples
@@ -224,9 +212,6 @@ class Pretrain_EFI(BasePINN):
         return y_loss.item(), pde_loss.item()
 
     def train(self, epochs=10000, eval_freq=1000):
-        self._pinn_init()
-        self.collection = []
-
         # Train BaseDNN
         base_net = self.train_base_dnn()
 
@@ -239,29 +224,5 @@ class Pretrain_EFI(BasePINN):
 
         # Optimize encoder network
         self.optimize_encoder(param_vector)
-
-        eval_losses = []
-        sol_losses = []
-        pde_losses = []
-
-        tic = time.time()
-        for ep in range(epochs):
-            sol_loss, pde_loss = self.update(ep, epochs)
-            sol_losses.append(sol_loss)
-            pde_losses.append(pde_loss)
-            
-            ## 3. Loss calculation
-            if (ep+1) % eval_freq == 0:
-                toc = time.time()
-                loss = self.mse_loss(self.eval_y, self.net(self.eval_X))
-                eval_losses.append(loss.item())
-                # print(f"Epoch {ep+1}/{epochs}, loss: {eval_losses[-1]:.2f}, time: {toc-tic:.2f}s")
-                print(f"Epoch {ep+1}/{epochs}, eval_loss: {eval_losses[-1]:.2f}, sol_loss: {sol_losses[-1]:.2f}, pde_loss: {pde_losses[-1]:.2f} , time: {toc-tic:.2f}s")
-                tic = time.time()
-                
-            if ep > epochs - 1000:
-                y_pred = self.evaluate().detach().cpu()
-                self.collection.append(y_pred)
-
-        self.physics_model.save_evaluation(self, self.save_path)
-        return eval_losses, sol_losses, pde_losses
+        
+        super().train(epochs, eval_freq)

@@ -8,6 +8,7 @@ import time
 from collections import deque
 
 from PINN.common.torch_layers import BaseDNN
+from PINN.common.logger import Logger, configure
 
 
 
@@ -21,7 +22,8 @@ class BasePINN(object):
         lr=1e-3,
         physics_loss_weight=1,
         save_path=None,
-        device='cpu'
+        device='cpu',
+        verbose=1,
     ) -> None:
         super().__init__()
         self.physics_model = physics_model
@@ -53,6 +55,15 @@ class BasePINN(object):
         
         self.input_dim = self.X.shape[1]
         self.output_dim = self.y.shape[1]
+        
+        self.verbose = verbose
+        if self.verbose == 1:
+            format_strings = ["stdout", "csv"]
+        else:
+            format_strings = ["csv"]
+        
+        self.logger = configure(self.save_path, format_strings)
+        self._pinn_init()
 
 
     def _pinn_init(self):
@@ -68,27 +79,39 @@ class BasePINN(object):
         raise NotImplementedError()
     
     def train(self, epochs, eval_freq=1000):
-        self._pinn_init()
         self.collection = []
         
         eval_losses = []
         sol_losses = []
         pde_losses = []
         
-        tic = time.time()
+        # tic = time.time()
         for ep in range(epochs):
+            tic = time.time()
             sol_loss, pde_loss = self.update()
+            toc = time.time()
+            
             sol_losses.append(sol_loss)
             pde_losses.append(pde_loss)
             
+            
+            self.logger.record_mean('train/sol_loss', sol_loss)
+            self.logger.record_mean('train/pde_loss', pde_loss)
+            self.logger.record_mean('train/time', toc-tic)
+            self.logger.record('train/epoch', ep+1)
             ## 3. Loss calculation
             if (ep+1) % eval_freq == 0:
-                toc = time.time()
+                # toc = time.time()
                 eval_loss = self.mse_loss(self.eval_y, self.net(self.eval_X))
                 eval_losses.append(eval_loss.item())
-                print(f"Epoch {ep+1}/{epochs}, eval_loss: {eval_losses[-1]:.2f}, sol_loss: {sol_losses[-1]:.2f}, pde_loss: {pde_losses[-1]:.2f} , time: {toc-tic:.2f}s")
+                
+                self.logger.record('eval/loss', eval_loss.item())
+                self.logger.dump()
+                # print(f"Epoch {ep+1}/{epochs}, eval_loss: {eval_losses[-1]:.2f}, sol_loss: {sol_losses[-1]:.2f}, pde_loss: {pde_losses[-1]:.2f} , time: {toc-tic:.2f}s")
 
-                tic = time.time()
+                # tic = time.time()
+                
+                
                 
             if ep > epochs - 1000:
                 y_pred = self.evaluate().detach().cpu()
