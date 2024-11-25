@@ -145,7 +145,10 @@ class Pretrain_EFI(BasePINN):
             output = base_net(self.X)
             sol_loss = self.mse_loss(output, self.y)
             pde_loss = self.pretrain_pde_loss(base_net)
-            loss = sol_loss + pde_loss
+            l2_loss = 0
+            for param in base_net.parameters():
+                l2_loss += torch.sum(param**2)
+            loss = sol_loss + pde_loss + l2_loss * 1e-5
             loss.backward()
             optimiser.step()
             if (ep+1) % 1000 == 0:
@@ -155,15 +158,14 @@ class Pretrain_EFI(BasePINN):
         return base_net
 
     def optimize_encoder(self, param_vector, steps=5000):
-        optimiser = optim.Adam(self.net.parameters(), lr=1e-3)
-        # optimiser = optim.SGD(self.net.parameters(), lr=self.lr)
+        optimiser = optim.Adam(self.net.parameters(), lr=3e-4)
+        # optimiser = optim.SGD(self.net.parameters(), lr=1e-3)
         print('Pretraining EFI...')
         for _ in range(steps):
             self.net.train()
             # batch_size = self.n_samples
             noise_X = torch.cat([d['X'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
             noise_y = torch.cat([d['y'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
-            # noise_Z = torch.cat([ Z for Z in self.latent_Z if Z is not None], dim=0)
             noise_Z = torch.cat([ torch.randn_like(Z) * sd for Z, sd in zip(self.latent_Z, self.noise_sd) if sd > 0], dim=0)
             batch_size = noise_X.shape[0]
 
@@ -180,7 +182,9 @@ class Pretrain_EFI(BasePINN):
 
 
     def update(self):
+        # update training parameters
         lambda_pde = self.lambda_pde(self.progress*2)
+        
 
         ## 1. Latent variable sampling (Sample Z)
         self.net.eval()
