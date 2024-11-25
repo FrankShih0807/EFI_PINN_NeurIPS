@@ -10,6 +10,7 @@ from PINN.common import SGLD, SGHMC
 from PINN.common.torch_layers import EFI_Net
 from PINN.common.base_pinn import BasePINN
 from PINN.common.torch_layers import BaseDNN
+from PINN.common.scheduler import get_schedule
 
 
 class Pretrain_EFI(BasePINN):
@@ -21,10 +22,11 @@ class Pretrain_EFI(BasePINN):
         activation_fn=nn.Softplus(beta=10),
         encoder_kwargs=dict(),
         lr=1e-3,
-        physics_loss_weight=10,
+        lambda_pde=10,
         sgld_lr=1e-3,
         lambda_y=1,
         lambda_theta=1,
+        pretrain_epochs=5000,
         save_path=None,
         device="cpu",
     ) -> None:
@@ -33,23 +35,20 @@ class Pretrain_EFI(BasePINN):
         self.sgld_lr = sgld_lr
         self.lambda_y = lambda_y
         self.lambda_theta = lambda_theta
+        self.pretrain_epochs = pretrain_epochs
         
         super().__init__(
-            physics_model,
-            dataset,
-            hidden_layers,
-            activation_fn,
-            lr,
-            physics_loss_weight,
-            save_path,
-            device,
+            physics_model=physics_model,
+            dataset=dataset,
+            hidden_layers=hidden_layers,
+            activation_fn=activation_fn,
+            lr=lr,
+            lambda_pde=lambda_pde,
+            save_path=save_path,
+            device=device,
         )
 
         # # EFI configs
-        # self.encoder_kwargs = encoder_kwargs
-        # self.sgld_lr = sgld_lr
-        # self.lambda_y = lambda_y
-        # self.lambda_theta = lambda_theta
         self.n_samples = self.X.shape[0]
         self.mse_loss = nn.MSELoss(reduction="sum")
 
@@ -81,6 +80,12 @@ class Pretrain_EFI(BasePINN):
         self.sampler = SGLD([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr)
         # self.sampler = SGHMC([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr, alpha=0.1)
 
+    def _get_scheduler(self):
+        # self.lr_schedule_fn = get_schedule(self.lr)
+        # self.sgld_lr_schedule_fn = get_schedule(self.sgld_lr)
+        self.lambda_pde = get_schedule(self.lambda_pde)
+        
+    
     def solution_loss(self):
         loss = 0
         for i, d in enumerate(self.dataset):
@@ -125,7 +130,7 @@ class Pretrain_EFI(BasePINN):
                 loss += F.mse_loss(self.differential_operator(net, d['X']), d['y'])
         return loss
 
-    def train_base_dnn(self, epochs=5000):
+    def train_base_dnn(self):
         print('Pretraining PINN...')
         base_net = BaseDNN(
             input_dim=self.input_dim,
@@ -135,7 +140,7 @@ class Pretrain_EFI(BasePINN):
         ).to(self.device)
         optimiser = optim.Adam(base_net.parameters(), lr=1e-3)
         base_net.train()
-        for ep in range(epochs):
+        for ep in range(self.pretrain_epochs):
             optimiser.zero_grad()
             output = base_net(self.X)
             sol_loss = self.mse_loss(output, self.y)
@@ -144,7 +149,7 @@ class Pretrain_EFI(BasePINN):
             loss.backward()
             optimiser.step()
             if (ep+1) % 1000 == 0:
-                print(f"Epoch {ep+1}/{epochs}, sol_loss: {sol_loss.item():.2f}, pde_loss: {pde_loss.item():.2f}")
+                print(f"Epoch {ep+1}/{self.pretrain_epochs}, sol_loss: {sol_loss.item():.2f}, pde_loss: {pde_loss.item():.2f}")
                 # print('haha')
         print('PINN pretraining done.')
         return base_net
@@ -175,6 +180,7 @@ class Pretrain_EFI(BasePINN):
 
 
     def update(self):
+        lambda_pde = self.lambda_pde(self.progress*2)
 
         ## 1. Latent variable sampling (Sample Z)
         self.net.eval()
@@ -185,7 +191,7 @@ class Pretrain_EFI(BasePINN):
         Z_loss = (
             self.lambda_y * y_loss
             + self.lambda_theta * theta_loss
-            + z_prior_loss + self.physics_loss_weight * pde_loss
+            + z_prior_loss + lambda_pde * pde_loss
         )
 
         self.sampler.zero_grad()
@@ -202,12 +208,17 @@ class Pretrain_EFI(BasePINN):
         w_loss = (
             self.lambda_y * (y_loss + w_prior_loss)
             + self.lambda_theta * theta_loss
-            + self.physics_loss_weight * pde_loss
+            + lambda_pde * pde_loss
         )
 
         self.optimiser.zero_grad()
         w_loss.backward()
         self.optimiser.step()
+        
+        # record training parameters
+        self.logger.record('train_param/lr', self.optimiser.param_groups[0]['lr'])
+        self.logger.record('train_param/sgld_lr', self.sampler.param_groups[0]['lr'])
+        self.logger.record('train_param/lambda_pde', lambda_pde)
         
         return y_loss.item(), pde_loss.item()
 

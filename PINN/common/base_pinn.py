@@ -20,7 +20,7 @@ class BasePINN(object):
         hidden_layers=[15, 15],
         activation_fn=nn.Softplus(beta=10),
         lr=1e-3,
-        physics_loss_weight=1,
+        lambda_pde=1,
         save_path=None,
         device='cpu',
         verbose=1,
@@ -28,13 +28,10 @@ class BasePINN(object):
         super().__init__()
         self.physics_model = physics_model
         self.dataset = dataset.copy()
-        # for key, value in self.physics_model.__dict__.items():
-        #     setattr(self, key, value)
 
         # Physics loss
-        # self.physics_loss = self.physics_model.physics_loss
         self.differential_operator = self.physics_model.differential_operator
-        self.physics_loss_weight = physics_loss_weight
+        self.lambda_pde = lambda_pde
         
         # Common configs
         self.lr = lr
@@ -64,7 +61,7 @@ class BasePINN(object):
         
         self.logger = configure(self.save_path, format_strings)
         self._pinn_init()
-
+        self._get_scheduler()
 
     def _pinn_init(self):
         # init pinn net and optimiser
@@ -72,7 +69,8 @@ class BasePINN(object):
         self.net.to(self.device)
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
     
-        
+    def _get_scheduler(self):
+        pass
 
     def update(self):
         ''' Implement the network parameter update here '''
@@ -87,6 +85,7 @@ class BasePINN(object):
         
         # tic = time.time()
         for ep in range(epochs):
+            self.progress = (ep+1) / epochs
             tic = time.time()
             sol_loss, pde_loss = self.update()
             toc = time.time()
@@ -95,27 +94,23 @@ class BasePINN(object):
             pde_losses.append(pde_loss)
             
             
+            
+            self.logger.record('train/progress', self.progress)
+            self.logger.record('train/epoch', ep+1)
             self.logger.record_mean('train/sol_loss', sol_loss)
             self.logger.record_mean('train/pde_loss', pde_loss)
             self.logger.record_mean('train/time', toc-tic)
-            self.logger.record('train/epoch', ep+1)
             ## 3. Loss calculation
             if (ep+1) % eval_freq == 0:
-                # toc = time.time()
-                eval_loss = self.mse_loss(self.eval_y, self.net(self.eval_X))
-                eval_losses.append(eval_loss.item())
-                
-                self.logger.record('eval/loss', eval_loss.item())
+                eval_loss = self.mse_loss(self.eval_y, self.net(self.eval_X)).item()
+                eval_losses.append(eval_loss)
+                self.logger.record('eval/loss', eval_loss)
                 self.logger.dump()
-                # print(f"Epoch {ep+1}/{epochs}, eval_loss: {eval_losses[-1]:.2f}, sol_loss: {sol_losses[-1]:.2f}, pde_loss: {pde_losses[-1]:.2f} , time: {toc-tic:.2f}s")
 
-                # tic = time.time()
-                
-                
-                
-            if ep > epochs - 1000:
-                y_pred = self.evaluate().detach().cpu()
-                self.collection.append(y_pred)
+
+            # if ep > epochs - 1000:
+            y_pred = self.evaluate().detach().cpu()
+            self.collection.append(y_pred)
         
         self.physics_model.save_evaluation(self, self.save_path)
         return eval_losses, sol_losses, pde_losses
@@ -131,7 +126,7 @@ class BasePINN(object):
         return y
     
     def summary(self):
-        y_pred_mat = torch.stack(self.collection, dim=0)
+        y_pred_mat = torch.stack(self.collection[-1000::], dim=0)
         y_pred_upper = torch.quantile(y_pred_mat, 0.975, dim=0)
         y_pred_lower = torch.quantile(y_pred_mat, 0.025, dim=0)
         y_pred_mean = torch.mean(y_pred_mat, dim=0)
