@@ -7,7 +7,7 @@ cooling:
     - 20
     activation_fn: softplus(beta=5)
     lr: 1.0e-3
-    physics_loss_weight: 50.0
+    lambda_pde: 50.0
 
 
 european_call:
@@ -20,18 +20,20 @@ european_call:
     - 20
     activation_fn: softplus(beta=5)
     lr: 1.0e-3
-    physics_loss_weight: 10.0
+    lambda_pde: 10.0
 
 poisson:
-  n_samples: 20
-  epochs: 10_000
+  n_samples: 200
+  epochs: 20_000
   pinn:
     hidden_layers:
     - 50
     - 50
     activation_fn: tanh
     lr: 1.0e-3
-    physics_loss_weight: 1.0
+    lambda_pde: 1.0
+  callback:
+    
 
 nonlinear:
   n_samples: 200
@@ -42,4 +44,4 @@ nonlinear:
     - 30
     activation_fn: tanh
     lr: 1.0e-3
-    physics_loss_weight: 0.0
+    lambda_pde: 0.0

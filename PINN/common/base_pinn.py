@@ -126,7 +126,7 @@ class BasePINN(object):
         return y
     
     def summary(self):
-        y_pred_mat = torch.stack(self.collection[-2000::], dim=0)
+        y_pred_mat = torch.stack(self.collection[-1000::], dim=0)
         y_pred_upper = torch.quantile(y_pred_mat, 0.975, dim=0)
         y_pred_lower = torch.quantile(y_pred_mat, 0.025, dim=0)
         y_pred_mean = torch.mean(y_pred_mat, dim=0)

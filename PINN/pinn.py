@@ -11,11 +11,11 @@ class PINN(BasePINN):
         hidden_layers=[15, 15],
         activation_fn=nn.Softplus(beta=10),
         lr=1e-3,
-        physics_loss_weight=1,
+        lambda_pde=1,
         save_path=None,
         device='cpu'
     ) -> None:
-        super().__init__(physics_model, dataset, hidden_layers, activation_fn, lr, physics_loss_weight, save_path, device)
+        super().__init__(physics_model, dataset, hidden_layers, activation_fn, lr, lambda_pde, save_path, device)
     
     
 
@@ -39,12 +39,12 @@ class PINN(BasePINN):
         self.optimiser.zero_grad()
         sol_loss = self.solution_loss()
         pde_loss = self.pde_loss()
-        loss = sol_loss + self.physics_loss_weight * pde_loss
+        loss = sol_loss + self.lambda_pde * pde_loss
 
         loss.backward()
         self.optimiser.step()
         
-        return sol_loss, pde_loss
+        return sol_loss.item(), pde_loss.item()
 
 
 
