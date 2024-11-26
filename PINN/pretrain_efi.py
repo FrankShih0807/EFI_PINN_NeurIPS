@@ -169,7 +169,9 @@ class Pretrain_EFI(BasePINN):
             # batch_size = self.n_samples
             noise_X = torch.cat([d['X'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
             noise_y = torch.cat([d['y'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
-            noise_Z = torch.cat([ torch.randn_like(Z) * sd for Z, sd in zip(self.latent_Z, self.noise_sd) if sd > 0], dim=0)
+            # noise_Z = torch.cat([ torch.randn_like(Z) * sd for Z, sd in zip(self.latent_Z, self.noise_sd) if sd > 0], dim=0)
+            noise_Z = torch.cat([ Z for Z, sd in zip(self.latent_Z, self.noise_sd) if sd > 0], dim=0)
+            
             batch_size = noise_X.shape[0]
 
             encoder_output = self.net.encoder(torch.cat([noise_X, noise_y, noise_Z], dim=1))
