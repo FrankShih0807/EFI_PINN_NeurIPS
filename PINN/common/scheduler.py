@@ -27,23 +27,23 @@ def constant_schedule(value):
 def linear_schedule(start_value, end_value):
     if start_value >= end_value:
         def schedule(progress):
-            progress = min(progress, 1.0)
+            progress = np.clip(progress, 0.0, 1.0)
             return max(start_value - (start_value - end_value) * progress, end_value)
     else:
         def schedule(progress):
-            progress = min(progress, 1.0)
+            progress = np.clip(progress, 0.0, 1.0)
             return min(start_value + (end_value - start_value) * progress, end_value)
     return schedule
 
 def log_schedule(start_value, end_value):
     def schedule(progress):
-        progress = min(progress, 1.0)
+        progress = np.clip(progress, 0.0, 1.0)
         return np.exp(np.log(start_value) + (np.log(end_value) - np.log(start_value)) * progress)
     return schedule
 
 def polynomial_schedule(start_value, scale, power):
     def schedule(progress):
-        progress = min(progress, 1.0)
+        progress = np.clip(progress, 0.0, 1.0)
         return start_value / (1 + (scale * progress) ** power)
     return schedule
 
