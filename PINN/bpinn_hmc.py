@@ -144,12 +144,8 @@ if __name__ == "__main__":
     dataset = physics_model.generate_data(100, device='cpu')
 
     # Initialize the Bayesian PINN model
-    model = BayesianPINN(physics_model, dataset=dataset, device='cpu', step_size=0.001, lam1=1.0, lam2=1.0)
+    model = BayesianPINN(physics_model, dataset=dataset, device='cpu', step_size=0.0002, lam1=100.0, lam2=30.0)
     num_bd = model.num_bd
-
-    # print(model.eval_X.shape)
-    # print(model.eval_y.shape)
-    # print(model.eval_X[-num_bd:])
 
     # Perform HMC sampling
     model.sample_posterior()
