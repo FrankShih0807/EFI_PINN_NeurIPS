@@ -1,0 +1,124 @@
+import os
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import seaborn as sns
+from PINN.common.grad_tool import grad
+from PINN.common.base_physics import PhysicsModel
+from PINN.common.utils import PINNDataset
+
+class Poisson(PhysicsModel):
+    def __init__(self, 
+                 t_start=-0.7,
+                 t_end=0.7, 
+                 boundary_sd=0.01,
+                 diff_sd=0.01,
+                 ):
+        super().__init__(t_start=t_start, t_end=t_end, boundary_sd=boundary_sd, diff_sd=diff_sd)
+
+    def generate_data(self, n_samples, device):
+        dataset = PINNDataset(device=device)
+        X, y = self.get_solu_data()
+        diff_X, diff_y = self.get_diff_data(n_samples)
+        eval_X, eval_y = self.get_eval_data()
+        dataset.add_data(X, y, category='solution', noise_sd=self.boundary_sd)
+        dataset.add_data(diff_X, diff_y, category='differential', noise_sd=self.diff_sd)
+        dataset.add_data(eval_X, eval_y, category='evaluation', noise_sd=0)
+        
+        return dataset
+    
+    def get_eval_data(self):
+        X = torch.linspace(self.t_start, self.t_end, steps=100).reshape(100, -1)
+        y = self.physics_law(X)
+        return X, y
+    
+    def get_solu_data(self):
+        # X = torch.tensor([self.t_start, self.t_end, -0.5, 0.5]).view(-1, 1)
+        X = torch.tensor([self.t_start, self.t_end]).repeat_interleave(5).view(-1, 1)
+        # X = torch.linspace(self.t_start, self.t_end, steps=5).repeat_interleave(5).reshape(-1, 1)
+        # X = torch.tensor([self.t_start, self.t_end]).view(-1, 1)
+        y = self.physics_law(X)
+        y += self.boundary_sd * torch.randn_like(y)
+        return X, y
+    
+    def get_diff_data(self, n_samples, replicate=1):
+        X = torch.linspace(self.t_start, self.t_end, steps=n_samples).repeat_interleave(replicate).view(-1, 1)
+        y = self.differential_function(X)
+        y += self.diff_sd * torch.randn_like(y)
+        return X, y
+
+    
+    def physics_law(self, X):
+        y = torch.sin(6 * X) ** 3
+        return y
+    
+    def differential_function(self, X):
+        y = -1.08 * torch.sin(6 * X) * (torch.sin(6 * X) ** 2 - 2 * torch.cos(6 * X) ** 2)
+        return y
+    
+    def differential_operator(self, model: torch.nn.Module, physics_X):
+        u = model(physics_X)
+        # u_x = torch.autograd.grad(u, physics_X, grad_outputs=torch.ones_like(u), create_graph=True)[0]
+        # u_xx = torch.autograd.grad(u_x, physics_X, grad_outputs=torch.ones_like(u), create_graph=True)[0]
+        u_x = grad(u, physics_X)[0]
+        u_xx = grad(u_x, physics_X)[0]
+        pde = 0.01 * u_xx
+        
+        return pde
+
+    def plot_true_solution(self, save_path=None):
+        X = torch.linspace(self.t_start, self.t_end, steps=100)
+        y = self.physics_law(X)
+        
+        sns.set_theme()
+        plt.plot(X, y, label='Equation')
+        plt.legend()
+        plt.ylabel('u')
+        plt.xlabel('x')
+        if save_path is not None:
+            plt.savefig(os.path.join(save_path, 'true_solution.png'))
+        # else:
+        #     plt.show()
+        plt.close()
+        
+    def save_evaluation(self, model, save_path=None):
+        # preds_upper, preds_lower, preds_mean = model.summary()
+        pred_dict = model.summary()
+        
+        preds_upper = pred_dict['y_preds_upper'].flatten()
+        preds_lower = pred_dict['y_preds_lower'].flatten()
+        preds_mean = pred_dict['y_preds_mean'].flatten()
+
+        X = torch.linspace(self.t_start, self.t_end, steps=100)
+        y = self.physics_law(X)
+        
+        # if save_path is None:
+        #     save_path = './evaluation_results'
+        
+        # if not os.path.exists(save_path):
+        #     os.makedirs(save_path)
+        
+        # np.savez(os.path.join(save_path, 'evaluation_data.npz'), preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean)
+        np.savez(os.path.join(save_path, 'evaluation_data.npz') , **pred_dict)
+        
+        sns.set_theme()
+        plt.plot(X, y, alpha=0.8, color='b', label='True')
+        plt.plot(X, preds_mean, alpha=0.8, color='g', label='Mean')
+        try:
+            plt.plot(X, self.pretrain_eval, alpha=0.8, color='r', label='Pretrained', linestyle='--')
+        except:
+            pass
+        plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
+        plt.legend()
+        plt.ylabel('u')
+        plt.xlabel('x')
+        plt.savefig(os.path.join(save_path, 'pred_solution.png'))
+        plt.close()
+
+    def get_pretrain_eval(self, base_model: torch.nn.Module):
+        with torch.no_grad():
+            X = torch.linspace(self.t_start, self.t_end, steps=100)
+            base_model = base_model.to(X.device)
+            preds = base_model(X.unsqueeze(1))
+
+        self.pretrain_eval = preds

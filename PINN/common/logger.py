@@ -684,3 +684,18 @@ def read_csv(filename: str) -> pandas.DataFrame:
     :return: the data in the csv
     """
     return pandas.read_csv(filename, index_col=None, comment="#")
+
+
+if __name__ == "__main__":
+    
+    save_path = "output/test_logger"
+    logger = configure(save_path, ["stdout", "csv"])
+    logger.info("Hello World")
+    logger.record("value", 120)
+    logger.record("value", 10)
+    logger.record_mean("value_mean", 20)
+    logger.record_mean("value_mean", 30)
+    logger.dump()
+    
+    
+    logger.close()

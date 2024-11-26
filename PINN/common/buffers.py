@@ -9,7 +9,7 @@ import numpy as np
 
 
     
-class PredictionBuffer(object):
+class EvaluationBuffer(object):
     def __init__(self, size) -> None:
         self.size = size
         self.ensemble_tensor = None
@@ -48,7 +48,7 @@ class PredictionBuffer(object):
 
 
 if __name__ == '__main__':
-    buffer = PredictionBuffer(10)
+    buffer = EvaluationBuffer(10)
     for i in range(20):
         buffer.add(torch.rand(5,1))
         # print(buffer.ensemble_tensor.shape)
