@@ -7,3 +7,4 @@ output*
 .DS_Store
 *.egg-info/
 *.ipynb
+run_scripts/
