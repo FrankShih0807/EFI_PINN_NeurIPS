@@ -84,6 +84,8 @@ class Pretrain_EFI(BasePINN):
         self.lr = get_schedule(self.lr)
         self.sgld_lr = get_schedule(self.sgld_lr)
         self.lambda_pde = get_schedule(self.lambda_pde)
+        self.sparse_threshold = get_schedule(self.encoder_kwargs.get('sparse_threshold', 0.01))
+        self.encoder_kwargs['sparse_threshold'] = self.sparse_threshold(0)
         
     def _update_lr(self, optimiser, lr):
         for param_group in optimiser.param_groups:
@@ -191,6 +193,7 @@ class Pretrain_EFI(BasePINN):
         annealing_period = 0.5
         annealing_progress = self.progress / annealing_period
         lambda_pde = self.lambda_pde(annealing_progress)
+        self.net.sparse_threshold = self.sparse_threshold(max(0, annealing_progress - 1))
         lr = self.lr(annealing_progress)
         sgld_lr = self.sgld_lr(annealing_progress)
         self._update_lr(self.optimiser, lr)
@@ -234,6 +237,7 @@ class Pretrain_EFI(BasePINN):
         self.logger.record('train_param/lr', self.optimiser.param_groups[0]['lr'])
         self.logger.record('train_param/sgld_lr', self.sampler.param_groups[0]['lr'])
         self.logger.record('train_param/lambda_pde', lambda_pde)
+        self.logger.record('train_param/sparse_threshold', self.net.sparse_threshold)
         
         return y_loss.item(), pde_loss.item()
 

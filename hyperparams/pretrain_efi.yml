@@ -70,5 +70,5 @@ poisson:
     pretrain_epochs: 5_000
     encoder_kwargs:
       encoder_activation: leaky_relu
-      prior_sd: 1.0
-      sparse_threshold: 0.01
+      prior_sd: 1.0 
+      sparse_threshold: 'lin_0.0_0.01'
