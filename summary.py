@@ -20,7 +20,7 @@ def remove_outliers_iqr(data, multiplier=1.5):
 
 model = "poisson"
 # exp = "efi_sgd"
-exp = "efi_test"
+exp = "efi_test5"
 # exp = "efi_sgd_plw20"
 # exp = "efi_adam_plw20"
 # exp = "efi_adam_plw20"
@@ -105,3 +105,5 @@ def collect_y_covered(output_dir):
 output_dir = "output"
 df_cr = collect_y_covered(output_dir)
 print(df_cr.groupby(['model', 'algo'])['cr'].mean())
+
+print(df_cr[df_cr['cr']<0.3])
