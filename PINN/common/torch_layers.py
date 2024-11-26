@@ -239,10 +239,13 @@ class EFI_Net(nn.Module):
         return log_prior
     
     def sparsity_loss(self, theta):
-        # xi = 0.01
-        # a = 1
         return torch.where(theta.abs() > self.sparse_threshold, torch.zeros_like(theta.abs()).to(self.device), theta.abs()).sum()
-    
+        
+        # if self.sparse_threshold > 0:
+        #     return (theta.pow(5) * torch.exp(-theta.pow(5) / (2 * self.sparse_threshold))).sum()
+        # else:
+        #     return 0
+        
 class EFI_Discovery_Net(nn.Module):
     def __init__(self, 
                  input_dim=1, 
@@ -491,20 +494,6 @@ class BayesianPINNNet(nn.Module):
 
 if __name__ == '__main__':
 
-    # branch1 = MLP(100,100,75,2)
-    # branch2 = BaseDNN(100,100,[75,75,75],F.tanh)
-    # print('parameters1:', sum(p.numel() for p in branch1.parameters()))
-    # print('parameters2:', sum(p.numel() for p in branch2.parameters()))
-    
-    # for name, p in branch1.named_parameters():
-    #     print(name, p.shape)
-        
-    # for name, p in branch2.named_parameters():
-    #     print(name, p.shape)
-    
-
-    # branch = BaseDNN(input_dim=100, output_dim=75, hidden_layers=[75,75,75,75,75], activation_fn=F.tanh)
-    # trunk = BaseDNN(input_dim=1, output_dim=75, hidden_layers=[75,75,75,75,75], activation_fn=F.tanh)
     
     branch = MLP(100,75,75,4)
     trunk = MLP(1,75,75,4)
@@ -522,47 +511,5 @@ if __name__ == '__main__':
     print(branch(us).shape)
     print(trunk(ys).shape)
     print(outputs.shape)
-        
-    # mlp = MLP(layers=[64, 128, 64, 10], activation=F.relu)
-    # m=10
-    # branch_layers = [m, 50, 50]
-    # trunk_layers =  [2, 50, 50]
     
-    # deeponet = DeepONet(branch_layers, trunk_layers)
-
-    # # Run a forward pass with some sample data
-    # u_samples = torch.randn(100, m)
-    # y_points = torch.randn(100, 2)
     
-    # outputs = deeponet(u_samples, y_points)
-    # print(outputs.shape)    
-    
-    # params_count = sum(p.numel() for p in deeponet.parameters())
-    # print(f"Total number of parameters: {params_count}")
-    # for name, p in deeponet.named_parameters():
-    #     print(name, p.shape)
-    
-
-    # # Example Usage
-    # input_dim_A = 10  # Input dimension for Network A
-    # hidden_dims_A = [20, 30]  # Hidden dimensions for Network A
-    # output_dim_A = 5  # Output dimension for Network A
-
-    # # Calculate total number of weights needed for Network A
-    # dummy_A = NetworkA(input_dim_A, hidden_dims_A, output_dim_A)
-    # num_weights_A = sum(p.numel() for p in dummy_A.parameters())
-
-    # # Instantiate Network A and Network B
-    # network_a = NetworkA(input_dim_A, hidden_dims_A, output_dim_A)
-    # network_b = NetworkB(input_dim=15, num_weights=num_weights_A)  # Input to B can be any context vector
-
-    # # Forward pass example
-    # context_vector = torch.randn(1, 15)  # Example input for Network B
-    # weights_for_A = network_b(context_vector).squeeze()  # Output weights for Network A
-    # input_to_A = torch.randn(1, input_dim_A)  # Example input for Network A
-
-    # # Forward pass through Network A using the weights from Network B
-    # output_from_A = network_a(input_to_A, weights_for_A)
-
-    # # Compute gradients with respect to parameters of Network B
-    # output_from_A.backward(torch.ones_like(output_from_A))
