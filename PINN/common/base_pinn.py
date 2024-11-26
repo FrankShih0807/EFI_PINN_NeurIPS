@@ -60,8 +60,8 @@ class BasePINN(object):
             format_strings = ["csv"]
         
         self.logger = configure(self.save_path, format_strings)
-        self._pinn_init()
         self._get_scheduler()
+        self._pinn_init()
 
     def _pinn_init(self):
         # init pinn net and optimiser

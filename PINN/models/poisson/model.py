@@ -33,7 +33,10 @@ class Poisson(PhysicsModel):
         return X, y
     
     def get_solu_data(self):
+        # X = torch.tensor([self.t_start, self.t_end, -0.5, 0.5]).view(-1, 1)
         X = torch.tensor([self.t_start, self.t_end]).repeat_interleave(5).view(-1, 1)
+        # X = torch.linspace(self.t_start, self.t_end, steps=5).repeat_interleave(5).reshape(-1, 1)
+        # X = torch.tensor([self.t_start, self.t_end]).view(-1, 1)
         y = self.physics_law(X)
         y += self.boundary_sd * torch.randn_like(y)
         return X, y
@@ -55,6 +58,8 @@ class Poisson(PhysicsModel):
     
     def differential_operator(self, model: torch.nn.Module, physics_X):
         u = model(physics_X)
+        # u_x = torch.autograd.grad(u, physics_X, grad_outputs=torch.ones_like(u), create_graph=True)[0]
+        # u_xx = torch.autograd.grad(u_x, physics_X, grad_outputs=torch.ones_like(u), create_graph=True)[0]
         u_x = grad(u, physics_X)[0]
         u_xx = grad(u_x, physics_X)[0]
         pde = 0.01 * u_xx

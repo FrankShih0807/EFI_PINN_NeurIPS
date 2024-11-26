@@ -63,7 +63,7 @@ class Pretrain_EFI(BasePINN):
             **self.encoder_kwargs
         )
         # self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
-        self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr)
+        self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr(0))
 
         # init latent noise and sampler
         # self.Z = (self.noise_sd * torch.randn_like(self.y)).requires_grad_().to(self.device)
@@ -77,14 +77,17 @@ class Pretrain_EFI(BasePINN):
                 self.latent_Z.append(None)
                 self.noise_sd.append(0)
         
-        self.sampler = SGLD([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr)
+        self.sampler = SGLD([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0))
         # self.sampler = SGHMC([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr, alpha=0.1)
 
     def _get_scheduler(self):
-        # self.lr_schedule_fn = get_schedule(self.lr)
-        # self.sgld_lr_schedule_fn = get_schedule(self.sgld_lr)
+        self.lr = get_schedule(self.lr)
+        self.sgld_lr = get_schedule(self.sgld_lr)
         self.lambda_pde = get_schedule(self.lambda_pde)
         
+    def _update_lr(self, optimiser, lr):
+        for param_group in optimiser.param_groups:
+            param_group['lr'] = lr
     
     def solution_loss(self):
         loss = 0
@@ -183,9 +186,15 @@ class Pretrain_EFI(BasePINN):
 
     def update(self):
         # update training parameters
-        lambda_pde = self.lambda_pde(self.progress*2)
+        annealing_period = 0.5
+        annealing_progress = self.progress / annealing_period
+        lambda_pde = self.lambda_pde(annealing_progress)
+        lr = self.lr(annealing_progress)
+        sgld_lr = self.sgld_lr(annealing_progress)
+        self._update_lr(self.optimiser, lr)
+        self._update_lr(self.sampler, sgld_lr)
         
-
+        
         ## 1. Latent variable sampling (Sample Z)
         self.net.eval()
         theta_loss = self.theta_loss()
