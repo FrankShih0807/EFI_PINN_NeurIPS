@@ -62,9 +62,9 @@ poisson:
     - 30
     - 30
     activation_fn: tanh
-    lr: 'poly_3e-4_1.0_0.57'
-    lambda_pde: 'lin_0.5_2.0'
-    sgld_lr: 'poly_1e-3_1.0_0.70'
+    lr: 'poly_3e-4_5.0_0.7'
+    lambda_pde: 'lin_0.5_4.0'
+    sgld_lr: 'poly_1e-3_5.0_0.8'
     lambda_y: 1.0
     lambda_theta: 10.0
     pretrain_epochs: 5_000

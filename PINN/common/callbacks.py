@@ -22,21 +22,16 @@ class BaseCallback(ABC):
 
     logger: Logger
 
-    def __init__(self, callback_kwargs=dict(), verbose: int = 0):
+    def __init__(self):
         super().__init__()
         # An alias for physical model
         self.physics_model = None
         # Number of time the callback was called
         self.n_trains = 0  # type: int
         self.n_calls = 0  # type: int
-        # n_envs * n times env.step() was called
-        self.verbose = verbose
-        # Sometimes, for event callback, it is useful
-        # to have access to the parent object
-        self.callback_kwargs = callback_kwargs
 
     # Type hint as string to avoid circular import
-    def init_callback(self, model) -> None:
+    def init_callback(self, model, eval_freq=1000, buffer_size=1000) -> None:
         """
         Initialize the callback by saving references to the
         RL model and the training environment for convenience.
