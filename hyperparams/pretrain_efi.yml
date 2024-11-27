@@ -71,5 +71,5 @@ poisson:
     encoder_kwargs:
       encoder_activation: leaky_relu
       prior_sd: 1.0 
-      sparse_threshold: 'lin_0.0_500'
+      sparse_threshold: 0.0
       # sparse_threshold: 'lin_0.0_0.01'

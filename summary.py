@@ -20,7 +20,7 @@ def remove_outliers_iqr(data, multiplier=1.5):
 
 model = "poisson"
 # exp = "efi_sgd"
-exp = "efi_test1"
+exp = "efi_new_loss2"
 # exp = "efi_sgd_plw20"
 # exp = "efi_adam_plw20"
 # exp = "efi_adam_plw20"
