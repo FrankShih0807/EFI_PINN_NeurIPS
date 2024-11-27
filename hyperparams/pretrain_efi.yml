@@ -56,7 +56,7 @@ nonlinear:
 
 poisson:
   n_samples: 200
-  epochs: 20_000
+  epochs: 40_000
   pinn:
     hidden_layers:
     - 30
@@ -71,4 +71,5 @@ poisson:
     encoder_kwargs:
       encoder_activation: leaky_relu
       prior_sd: 1.0 
-      sparse_threshold: 'lin_0.0_0.01'
+      sparse_threshold: 'lin_0.0_500'
+      # sparse_threshold: 'lin_0.0_0.01'

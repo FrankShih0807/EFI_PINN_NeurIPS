@@ -239,12 +239,12 @@ class EFI_Net(nn.Module):
         return log_prior
     
     def sparsity_loss(self, theta):
-        return torch.where(theta.abs() > self.sparse_threshold, torch.zeros_like(theta.abs()).to(self.device), theta.abs()).sum()
-        
-        # if self.sparse_threshold > 0:
-        #     return (theta.pow(5) * torch.exp(-theta.pow(5) / (2 * self.sparse_threshold))).sum()
-        # else:
-        #     return 0
+        # return torch.where(theta.abs() > self.sparse_threshold, torch.zeros_like(theta.abs()).to(self.device), theta.abs()).sum()
+        xi = 1e-5
+        if self.sparse_threshold > 0:
+            return self.sparse_threshold * (theta.pow(2) * torch.exp(-theta.pow(2) / (2 * xi))).sum()
+        else:
+            return 0
         
 class EFI_Discovery_Net(nn.Module):
     def __init__(self, 
@@ -495,21 +495,30 @@ class BayesianPINNNet(nn.Module):
 if __name__ == '__main__':
 
     
-    branch = MLP(100,75,75,4)
-    trunk = MLP(1,75,75,4)
+    # branch = MLP(100,75,75,4)
+    # trunk = MLP(1,75,75,4)
     
-    Onet = DeepONet(1, branch, trunk)
-    # Onet = DeepONet(1, branch = MLP(100,75,75,4), trunk = MLP(1,75,75,4))
+    # Onet = DeepONet(1, branch, trunk)
+    # # Onet = DeepONet(1, branch = MLP(100,75,75,4), trunk = MLP(1,75,75,4))
     
-    print('parameters:', sum(p.numel() for p in Onet.parameters()))
+    # print('parameters:', sum(p.numel() for p in Onet.parameters()))
     
-    ys = torch.randn(500, 100,1)
-    us = torch.randn(500, 1, 100)
-    Guys = torch.randn(500, 100, 1)
+    # ys = torch.randn(500, 100,1)
+    # us = torch.randn(500, 1, 100)
+    # Guys = torch.randn(500, 100, 1)
     
-    outputs = Onet(ys, us)
-    print(branch(us).shape)
-    print(trunk(ys).shape)
-    print(outputs.shape)
+    # outputs = Onet(ys, us)
+    # print(branch(us).shape)
+    # print(trunk(ys).shape)
+    # print(outputs.shape)
     
     
+    def sparse_function(x):
+        return torch.where(x.abs() > 0.5, torch.zeros_like(x.abs()), x.abs())* 0.5 
+        
+    x = torch.randn(5)
+    
+    
+    y = sparse_function(x)
+    print(x)
+    print(y)
