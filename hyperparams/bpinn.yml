@@ -13,6 +13,6 @@ poisson:
     burn: 2000
     num_samples: 5000
     L: 6
-    lam1: 1.0
-    lam2: 1.0
+    lam_diff: 1.0
+    lam_sol: 1.0
     

@@ -468,7 +468,7 @@ class DeepONet(nn.Module):
 #         return weights
     
 class BayesianPINNNet(nn.Module):
-    def __init__(self, lam1, lam2, physics_model, num_bd):
+    def __init__(self, lam_diff, lam_sol, physics_model, num_bd):
         super(BayesianPINNNet, self).__init__()
 
         self.fnn = nn.Sequential(
@@ -479,8 +479,8 @@ class BayesianPINNNet(nn.Module):
             nn.Linear(50, 1), 
         )
 
-        self.lam1 = lam1
-        self.lam2 = lam2
+        self.lam_diff = lam_diff
+        self.lam_sol = lam_sol
         self.num_bd = num_bd
         
         self.differential_operator = physics_model.differential_operator
@@ -490,7 +490,7 @@ class BayesianPINNNet(nn.Module):
         pde = self.differential_operator(self.fnn, x)
         u_bd = self.fnn(X[-self.num_bd:])
 
-        return torch.cat([pde * self.lam1, u_bd * self.lam2], dim=0)
+        return torch.cat([pde * self.lam_diff, u_bd * self.lam_sol], dim=0)
 
 if __name__ == '__main__':
 
