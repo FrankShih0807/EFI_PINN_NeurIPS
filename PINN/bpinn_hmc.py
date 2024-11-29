@@ -28,8 +28,15 @@ class BayesianPINN(BasePINN):
         save_path=None,
         device='cpu',
     ) -> None:
-        super().__init__(physics_model, dataset, hidden_layers, activation_fn, save_path=save_path, device=device)
-        
+        super().__init__(
+            physics_model=physics_model,
+            dataset=dataset,
+            hidden_layers=hidden_layers,
+            activation_fn=activation_fn,
+            save_path=save_path,
+            device=device,
+        )
+
         self.step_size = step_size
         self.burn = burn
         self.num_samples = num_samples
@@ -83,7 +90,7 @@ class BayesianPINN(BasePINN):
             u_pred_list.append(u_pred)
         f_pred = torch.stack(f_pred_list).detach().cpu()
         u_pred = torch.stack(u_pred_list).detach().cpu()
-        
+
         return f_pred, u_pred
 
     # def evaluate(self):
@@ -119,21 +126,20 @@ class BayesianPINN(BasePINN):
             'y_covered': u_covered, 
             'x_eval': self.eval_X.clone().detach().cpu().numpy(),
         }
-        
 
         return summary_dict
-    
+
     def train(self, epochs):
         # self._pinn_init()
-        
+
         tic = time.time()
         self.sample_posterior()
         toc = time.time()
         print(f"Sampling time: {toc-tic:.2f}s")
-        
+
         self.physics_model.save_evaluation(self, self.save_path)
 
-    
+
 if __name__ == "__main__":
     # hamiltorch.set_random_seed(123)
     # torch.manual_seed(123)
