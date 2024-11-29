@@ -28,7 +28,7 @@ sns.heatmap(
 
 plt.gca().invert_yaxis()  # Reverse the y-axis to show lam_sol increasing upward
 plt.title("Coverage Rate", fontsize=15)
-plt.xlabel(r"$\lambda_{diff}$", fontsize=15)
-plt.ylabel(r"$\lambda_{sol}$", fontsize=15)
+plt.xlabel(r"$\lambda_{\text{diff}}$", fontsize=15)
+plt.ylabel(r"$\lambda_{\text{sol}}$", fontsize=15)
 # plt.savefig("Coverage_rate_map.png")
 plt.show()
