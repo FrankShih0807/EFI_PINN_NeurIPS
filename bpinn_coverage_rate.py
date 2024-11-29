@@ -4,8 +4,8 @@ import seaborn as sns
 
 
 # Data
-lam1 = np.array([1.0, 3.16, 10.0, 31.6, 100.0])
-lam2 = np.array([1.0, 3.16, 10.0, 31.6, 100.0])
+lam_diff = np.array([1.0, 3.16, 10.0, 31.6, 100.0])
+lam_sol = np.array([1.0, 3.16, 10.0, 31.6, 100.0])
 cr = np.array([
     [1.0, 0.99, 0.9394, 0.4128, 0.1383], 
     [1.0, 0.95, 0.9496, 0.6306, 0.1267],
@@ -21,14 +21,14 @@ sns.heatmap(
     cr, 
     annot=True, 
     fmt=".4f", 
-    xticklabels=lam1, # Set the x-axis labels to lam1
-    yticklabels=lam2, # Set the y-axis labels to lam2
+    xticklabels=lam_diff, # Set the x-axis labels to lam_diff
+    yticklabels=lam_sol, # Set the y-axis labels to lam_sol
     cmap="coolwarm"
 )
 
-plt.gca().invert_yaxis()  # Reverse the y-axis to show lam2 increasing upward
-plt.title("Coverage Rate")
-plt.xlabel("lam1")
-plt.ylabel("lam2")
+plt.gca().invert_yaxis()  # Reverse the y-axis to show lam_sol increasing upward
+plt.title("Coverage Rate", fontsize=15)
+plt.xlabel(r"$\lambda_{diff}$", fontsize=15)
+plt.ylabel(r"$\lambda_{sol}$", fontsize=15)
 # plt.savefig("Coverage_rate_map.png")
 plt.show()
