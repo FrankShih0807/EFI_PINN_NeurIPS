@@ -32,6 +32,7 @@ poisson:
     activation_fn: tanh
     lr: 1.0e-3
     lambda_pde: 1.0
+    dropout_rate: 0.0
   callback:
     
 

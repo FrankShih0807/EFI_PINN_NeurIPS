@@ -55,11 +55,11 @@ class DropoutDNN(nn.Module):
         # Define input, output dimensions, hidden layers, and activation function
         self.input_dim = input_dim
         self.output_dim = output_dim
-        if hidden_layers is None:
-            self.hidden_layers = [self.output_dim]
-        else:
-            self.hidden_layers = hidden_layers
-        self.activation_fn = activation_fn
+        # if hidden_layers is None:
+        #     self.hidden_layers = [self.output_dim]
+        # else:
+        self.hidden_layers = hidden_layers
+        self.activation_fn = get_activation_fn(activation_fn)
         self.dropout_rate = dropout_rate
 
         # Initialize layers
