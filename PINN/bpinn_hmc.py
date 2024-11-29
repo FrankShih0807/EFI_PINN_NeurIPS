@@ -74,14 +74,26 @@ class BayesianPINN(BasePINN):
             self.tau_list.append(1.0)
         self.tau_list = torch.tensor(self.tau_list).to(self.device)
 
-    def sample_posterior(self):
-        self._pinn_init()
-        params_init = hamiltorch.util.flatten(self.net).to(self.device).clone()
-        self.params_hmc = hamiltorch.sample_model(
-            self.net, self.X, self.y, model_loss='regression', params_init=params_init,
-            num_samples=self.num_samples, step_size=self.step_size, burn=self.burn,
+        self.params_init = hamiltorch.util.flatten(self.net).to(self.device).clone()
+        self.params_hmc = []
+
+    def sample_posterior(self, num_samples):
+        # self._pinn_init()
+
+        # params_init = hamiltorch.util.flatten(self.net).to(self.device).clone()
+        # self.params_hmc = hamiltorch.sample_model(
+        #     self.net, self.X, self.y, model_loss='regression', params_init=params_init,
+        #     num_samples=self.num_samples, step_size=self.step_size, burn=self.burn,
+        #     num_steps_per_sample=self.L, tau_list=self.tau_list, tau_out=1
+        # )
+
+        params_hmc = hamiltorch.sample_model(
+            self.net, self.X, self.y, model_loss='regression', params_init=self.params_init,
+            num_samples=num_samples, step_size=self.step_size, burn=0,
             num_steps_per_sample=self.L, tau_list=self.tau_list, tau_out=1
         )
+
+        return params_hmc
 
     def predict(self, X):
         # self.net.eval()
@@ -135,13 +147,24 @@ class BayesianPINN(BasePINN):
 
         return summary_dict
 
-    def train(self, epochs):
+    def train(self, epochs, eval_freq=1000):
         # self._pinn_init()
 
-        tic = time.time()
-        self.sample_posterior()
-        toc = time.time()
-        print(f"Sampling time: {toc-tic:.2f}s")
+        for rd in range(int(epochs / eval_freq)):
+            self.progress = (rd+1) / int(epochs / eval_freq)
+            tic = time.time()
+            params_hmc = self.sample_posterior(num_samples=eval_freq)
+            toc = time.time()
+            print(f"Sampling time: {toc-tic:.2f}s")
+            print(f"Progress: {self.progress:.2f}")
+
+            self.params_hmc += params_hmc
+            self.params_init = self.params_hmc[-1].clone()
+
+        # tic = time.time()
+        # self.sample_posterior()
+        # toc = time.time()
+        # print(f"Sampling time: {toc-tic:.2f}s")
 
         self.physics_model.save_evaluation(self, self.save_path)
 
@@ -156,30 +179,38 @@ if __name__ == "__main__":
     dataset = physics_model.generate_data(100, device='cpu')
 
     # Initialize the Bayesian PINN model
-    model = BayesianPINN(physics_model, dataset=dataset, device='cpu', step_size=0.0002, lam_diff=100.0, lam_sol=30.0)
+    model = BayesianPINN(physics_model, dataset=dataset, device='cpu', step_size=0.0002, lam_diff=100.0, lam_sol=30.0, num_samples=100, burn=0)
     num_bd = model.num_bd
 
     # Perform HMC sampling
     model.sample_posterior()
 
-    # Evaluate the model
-    pred_dict = model.summary()
+    add1 = model.params_hmc.copy()
+    add2 = model.params_hmc.copy()
 
-    pred_upper = pred_dict['y_preds_upper'].flatten()
-    pred_lower = pred_dict['y_preds_lower'].flatten()
-    pred_mean = pred_dict['y_preds_mean'].flatten()
+    add = add1 + add2
 
-    # evaluate the model
-    X_test = model.eval_X.flatten()[:-num_bd]
-    u_test = physics_model.physics_law(X_test)
+    print(len(add))
+    print(add[0].shape)
 
-    # Plot the results
-    sns.set_theme()
+    # # Evaluate the model
+    # pred_dict = model.summary()
 
-    plt.plot(X_test.detach().cpu().numpy(), pred_mean.detach().cpu().numpy(), label = 'mean')
-    plt.fill_between(X_test.detach().cpu().numpy(), pred_upper.detach().cpu().numpy(), pred_lower.detach().cpu().numpy(), alpha=0.2, color='g', label='95% CI')
-    plt.plot(X_test.detach().cpu().numpy(), u_test.detach().cpu().numpy(), label = 'True')
-    plt.legend()
-    plt.ylabel('u')
-    plt.xlabel('x')
-    plt.show()
+    # pred_upper = pred_dict['y_preds_upper'].flatten()
+    # pred_lower = pred_dict['y_preds_lower'].flatten()
+    # pred_mean = pred_dict['y_preds_mean'].flatten()
+
+    # # evaluate the model
+    # X_test = model.eval_X.flatten()[:-num_bd]
+    # u_test = physics_model.physics_law(X_test)
+
+    # # Plot the results
+    # sns.set_theme()
+
+    # plt.plot(X_test.detach().cpu().numpy(), pred_mean.detach().cpu().numpy(), label = 'mean')
+    # plt.fill_between(X_test.detach().cpu().numpy(), pred_upper.detach().cpu().numpy(), pred_lower.detach().cpu().numpy(), alpha=0.2, color='g', label='95% CI')
+    # plt.plot(X_test.detach().cpu().numpy(), u_test.detach().cpu().numpy(), label = 'True')
+    # plt.legend()
+    # plt.ylabel('u')
+    # plt.xlabel('x')
+    # plt.show()
