@@ -61,7 +61,7 @@ class BayesianPINN(BasePINN):
         self.y = torch.cat([diff_y, sol_y], dim=0).to(self.device)
         self.eval_X = torch.cat([eval_X, sol_X], dim=0).to(self.device)
 
-
+        self.mse_loss = nn.MSELoss(reduction="sum")
 
     def _pinn_init(self):
         self.net = BayesianPINNNet(self.lam_diff, self.lam_sol, self.physics_model, self.num_bd)
@@ -90,7 +90,7 @@ class BayesianPINN(BasePINN):
         params_hmc = hamiltorch.sample_model(
             self.net, self.X, self.y, model_loss='regression', params_init=self.params_init,
             num_samples=num_samples, step_size=self.step_size, burn=0,
-            num_steps_per_sample=self.L, tau_list=self.tau_list, tau_out=1
+            num_steps_per_sample=self.L, tau_list=self.tau_list, tau_out=1, verbose=False
         )
 
         return params_hmc
@@ -150,6 +150,10 @@ class BayesianPINN(BasePINN):
     def train(self, epochs, eval_freq=1000):
         # self._pinn_init()
 
+        eval_losses = []
+        sol_losses = []
+        pde_losses = []
+
         for rd in range(int(epochs / eval_freq)):
             self.progress = (rd+1) / int(epochs / eval_freq)
             tic = time.time()
@@ -160,6 +164,11 @@ class BayesianPINN(BasePINN):
 
             self.params_hmc += params_hmc
             self.params_init = self.params_hmc[-1].clone()
+
+            hamiltorch.util.update_model_params_in_place(self.net, hamiltorch.util.unflatten(self.net, self.params_hmc[-1]))
+            eval_loss = self.mse_loss(self.net.fnn(self.eval_X)[:-self.num_bd], self.eval_y).item()
+            print(f"Eval loss: {eval_loss:.4f}")
+            eval_losses.append(eval_loss)
 
         # tic = time.time()
         # self.sample_posterior()
