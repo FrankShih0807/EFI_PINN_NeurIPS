@@ -8,7 +8,7 @@ from collections import defaultdict
 from PINN.common.gmm import GaussianMixtureModel
 from PINN.common.utils import get_activation_fn
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
-
+from PINN.common.losses import gmm_loss
     
 class BaseDNN(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_layers, activation_fn):
@@ -120,8 +120,8 @@ class EFI_Net(nn.Module):
                  encoder_hidden_layers=None,
                  encoder_activation='relu',
                  prior_sd=0.1, 
-                #  sparse_sd=0.01, 
-                #  sparsity=1.0,
+                 sparse_sd=0.01,
+                 sparsity=1.0,
                  device='cpu'
                  ):
         super(EFI_Net, self).__init__()
@@ -137,9 +137,11 @@ class EFI_Net(nn.Module):
         # Encoder Net Info
         self.encoder_input_dim = self.input_dim + 2 * self.output_dim
         self.encoder_activation = get_activation_fn(encoder_activation)
-        # self.sparsity = sparsity
+        
+        # sparse prior settings
+        self.sparsity = sparsity
         self.prior_sd = prior_sd
-        # self.sparse_sd = sparse_sd
+        self.sparse_sd = sparse_sd
         
         sample_net = nn.ModuleList()
         sample_net.append(nn.Linear(input_dim, hidden_layers[0]))
@@ -186,12 +188,6 @@ class EFI_Net(nn.Module):
         theta_weight_split = torch.split(theta_weight, self.nn_numel['weight'], dim=-1)
         theta_bias_split = torch.split(theta_bias, self.nn_numel['bias'], dim=-1)
         
-        # weight_tensors = []
-        # bias_tensors = []
-        # for i, shape in enumerate(self.nn_shape['weight']):
-        #     weight_tensors.append(theta_weight_split[i].view(*shape))
-        # for i, shape in enumerate(self.nn_shape['bias']):
-        #     bias_tensors.append(theta_bias_split[i].view(*shape))
         weight_tensors = [theta_weight_split[i].view(*shape).to(self.device) for i, shape in enumerate(self.nn_shape['weight'])]
         bias_tensors = [theta_bias_split[i].view(*shape).to(self.device) for i, shape in enumerate(self.nn_shape['bias'])]
         
@@ -224,19 +220,14 @@ class EFI_Net(nn.Module):
         theta_bar = batch_theta.mean(dim=0)
         theta_loss = F.mse_loss(batch_theta, theta_bar.repeat(batch_size, 1), reduction='mean')
         theta_loss += self.sparsity_loss(theta_bar)
-        
         self.weight_tensors, self.bias_tensors = self.split_encoder_output(theta_bar)
-        
         return theta_loss
         
     def gmm_prior_loss(self):
-        # if sparsity is None:
-        #     sparsity = self.sparsity
-        log_prior = 0
+        loss = 0
         for p in self.parameters():
-            # log_prior += self.gmm.log_prob(p.flatten(), sparsity).sum()
-            log_prior += self.prior_dist.log_prob(p).sum()
-        return log_prior
+            loss += gmm_loss(p, self.prior_sd, self.sparse_sd, self.sparsity).sum()
+        return loss
     
     def sparsity_loss(self, theta):
         # return torch.where(theta.abs() > self.sparse_threshold, torch.zeros_like(theta.abs()).to(self.device), theta.abs()).sum()

@@ -63,13 +63,15 @@ poisson:
     - 30
     activation_fn: tanh
     lr: 'poly_3e-4_1.0_0.7'
-    lambda_pde: 'lin_0.5_1.0'
+    lambda_pde: 1.0
     sgld_lr: 'poly_1e-3_5.0_0.8'
     lambda_y: 1.0
     lambda_theta: 10.0
-    pretrain_epochs: 5_000
+    pretrain_epochs: 0
     encoder_kwargs:
       encoder_activation: leaky_relu
-      prior_sd: 1.0 
+      prior_sd: 2.0
+      sparse_sd: 0.1
+      sparsity: 1.0
       sparse_threshold: 0.0
       # sparse_threshold: 'lin_0.0_0.01'
