@@ -104,10 +104,10 @@ class Poisson(PhysicsModel):
         sns.set_theme()
         plt.plot(X, y, alpha=0.8, color='b', label='True')
         plt.plot(X, preds_mean, alpha=0.8, color='g', label='Mean')
-        try:
-            plt.plot(X, self.pretrain_eval, alpha=0.8, color='r', label='Pretrained', linestyle='--')
-        except:
-            pass
+        # try:
+        #     plt.plot(X, self.pretrain_eval, alpha=0.8, color='r', label='Pretrained', linestyle='--')
+        # except:
+        #     pass
         plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
         plt.legend()
         plt.ylabel('u')

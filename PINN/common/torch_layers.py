@@ -170,9 +170,9 @@ class EFI_Net(nn.Module):
         
         # self.encoder = BaseDNN(input_dim=self.encoder_input_dim, output_dim=self.n_parameters, activation_fn=activation_fn)
         self.encoder = EncoderDNN(input_dim=self.encoder_input_dim, output_dim=self.n_parameters, activation_fn=self.encoder_activation, hidden_layers=encoder_hidden_layers).to(self.device)
-        for p in self.parameters():
-            p.data = torch.randn_like(p.data) * 0.001
-            p.data = p.data.to(self.device)
+        # for p in self.parameters():
+        #     p.data = torch.randn_like(p.data) * 0.001
+        #     p.data = p.data.to(self.device)
 
 
     def split_encoder_output(self, theta):
