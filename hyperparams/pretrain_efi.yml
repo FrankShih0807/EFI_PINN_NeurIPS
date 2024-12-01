@@ -62,7 +62,7 @@ poisson:
     - 30
     - 30
     activation_fn: tanh
-    lr: 'poly_3e-4_1.0_0.7'
+    lr: 'poly_3e-4_5.0_0.7'
     lambda_pde: 1.0
     sgld_lr: 'poly_1e-3_5.0_0.8'
     lambda_y: 1.0
