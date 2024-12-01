@@ -23,52 +23,77 @@ class BayesianPINN(BasePINN):
         burn=2000,
         num_samples=5000,
         L=6, 
-        lam1=1.0,
-        lam2=1.0,
+        lam_diff=1.0,
+        lam_sol=1.0,
         save_path=None,
         device='cpu',
     ) -> None:
-        super().__init__(physics_model, dataset, hidden_layers, activation_fn, save_path=save_path, device=device)
-        
         self.step_size = step_size
         self.burn = burn
         self.num_samples = num_samples
         self.L = L
-        self.lam1 = lam1
-        self.lam2 = lam2
-        self.tau_list = []
+        self.lam_diff = lam_diff
+        self.lam_sol = lam_sol
+        # self.tau_list = []
+
+        self.dataset = dataset.copy()
 
         diff_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'differential'], dim=0)
-        diff_y = self.lam1 * torch.cat([d['y'] for d in self.dataset if d['category'] == 'differential'], dim=0)
+        diff_y = self.lam_diff * torch.cat([d['y'] for d in self.dataset if d['category'] == 'differential'], dim=0)
 
         sol_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'solution'], dim=0)
-        sol_y = self.lam2 * torch.cat([d['y'] for d in self.dataset if d['category'] == 'solution'], dim=0)
+        sol_y = self.lam_sol * torch.cat([d['y'] for d in self.dataset if d['category'] == 'solution'], dim=0)
 
         eval_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'evaluation'], dim=0)
 
         self.num_bd = sol_X.shape[0]
+
+        super().__init__(
+            physics_model=physics_model,
+            dataset=dataset,
+            hidden_layers=hidden_layers,
+            activation_fn=activation_fn,
+            save_path=save_path,
+            device=device,
+        )
+        
         self.X = torch.cat([diff_X, sol_X], dim=0).to(self.device)
         self.y = torch.cat([diff_y, sol_y], dim=0).to(self.device)
         self.eval_X = torch.cat([eval_X, sol_X], dim=0).to(self.device)
 
+        self.mse_loss = nn.MSELoss(reduction="sum")
+
     def _pinn_init(self):
-        self.net = BayesianPINNNet(self.lam1, self.lam2, self.physics_model, self.num_bd)
+        self.net = BayesianPINNNet(self.lam_diff, self.lam_sol, self.physics_model, self.num_bd)
         for param in self.net.parameters():
             torch.nn.init.normal_(param)
         self.net.to(self.device)
         # self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
+        self.tau_list = []
         for w in self.net.parameters():
             self.tau_list.append(1.0)
         self.tau_list = torch.tensor(self.tau_list).to(self.device)
 
-    def sample_posterior(self):
-        self._pinn_init()
-        params_init = hamiltorch.util.flatten(self.net).to(self.device).clone()
-        self.params_hmc = hamiltorch.sample_model(
-            self.net, self.X, self.y, model_loss='regression', params_init=params_init,
-            num_samples=self.num_samples, step_size=self.step_size, burn=self.burn,
-            num_steps_per_sample=self.L, tau_list=self.tau_list, tau_out=1
+        self.params_init = hamiltorch.util.flatten(self.net).to(self.device).clone()
+        self.params_hmc = []
+
+    def sample_posterior(self, num_samples):
+        # self._pinn_init()
+
+        # params_init = hamiltorch.util.flatten(self.net).to(self.device).clone()
+        # self.params_hmc = hamiltorch.sample_model(
+        #     self.net, self.X, self.y, model_loss='regression', params_init=params_init,
+        #     num_samples=self.num_samples, step_size=self.step_size, burn=self.burn,
+        #     num_steps_per_sample=self.L, tau_list=self.tau_list, tau_out=1
+        # )
+
+        params_hmc = hamiltorch.sample_model(
+            self.net, self.X, self.y, model_loss='regression', params_init=self.params_init,
+            num_samples=num_samples, step_size=self.step_size, burn=0,
+            num_steps_per_sample=self.L, tau_list=self.tau_list, tau_out=1, verbose=False
         )
+
+        return params_hmc
 
     def predict(self, X):
         # self.net.eval()
@@ -83,7 +108,7 @@ class BayesianPINN(BasePINN):
             u_pred_list.append(u_pred)
         f_pred = torch.stack(f_pred_list).detach().cpu()
         u_pred = torch.stack(u_pred_list).detach().cpu()
-        
+
         return f_pred, u_pred
 
     # def evaluate(self):
@@ -119,21 +144,40 @@ class BayesianPINN(BasePINN):
             'y_covered': u_covered, 
             'x_eval': self.eval_X.clone().detach().cpu().numpy(),
         }
-        
 
         return summary_dict
-    
-    def train(self, epochs):
+
+    def train(self, epochs, eval_freq=1000):
         # self._pinn_init()
-        
-        tic = time.time()
-        self.sample_posterior()
-        toc = time.time()
-        print(f"Sampling time: {toc-tic:.2f}s")
-        
+
+        eval_losses = []
+        sol_losses = []
+        pde_losses = []
+
+        for rd in range(int(epochs / eval_freq)):
+            self.progress = (rd+1) / int(epochs / eval_freq)
+            tic = time.time()
+            params_hmc = self.sample_posterior(num_samples=eval_freq)
+            toc = time.time()
+            print(f"Sampling time: {toc-tic:.2f}s")
+            print(f"Progress: {self.progress:.2f}")
+
+            self.params_hmc += params_hmc
+            self.params_init = self.params_hmc[-1].clone()
+
+            hamiltorch.util.update_model_params_in_place(self.net, hamiltorch.util.unflatten(self.net, self.params_hmc[-1]))
+            eval_loss = self.mse_loss(self.net.fnn(self.eval_X)[:-self.num_bd], self.eval_y).item()
+            print(f"Eval loss: {eval_loss:.4f}")
+            eval_losses.append(eval_loss)
+
+        # tic = time.time()
+        # self.sample_posterior()
+        # toc = time.time()
+        # print(f"Sampling time: {toc-tic:.2f}s")
+
         self.physics_model.save_evaluation(self, self.save_path)
 
-    
+
 if __name__ == "__main__":
     # hamiltorch.set_random_seed(123)
     # torch.manual_seed(123)
@@ -144,30 +188,38 @@ if __name__ == "__main__":
     dataset = physics_model.generate_data(100, device='cpu')
 
     # Initialize the Bayesian PINN model
-    model = BayesianPINN(physics_model, dataset=dataset, device='cpu', step_size=0.0002, lam1=100.0, lam2=30.0)
+    model = BayesianPINN(physics_model, dataset=dataset, device='cpu', step_size=0.0002, lam_diff=100.0, lam_sol=30.0, num_samples=100, burn=0)
     num_bd = model.num_bd
 
     # Perform HMC sampling
     model.sample_posterior()
 
-    # Evaluate the model
-    pred_dict = model.summary()
+    add1 = model.params_hmc.copy()
+    add2 = model.params_hmc.copy()
 
-    pred_upper = pred_dict['y_preds_upper'].flatten()
-    pred_lower = pred_dict['y_preds_lower'].flatten()
-    pred_mean = pred_dict['y_preds_mean'].flatten()
+    add = add1 + add2
 
-    # evaluate the model
-    X_test = model.eval_X.flatten()[:-num_bd]
-    u_test = physics_model.physics_law(X_test)
+    print(len(add))
+    print(add[0].shape)
 
-    # Plot the results
-    sns.set_theme()
+    # # Evaluate the model
+    # pred_dict = model.summary()
 
-    plt.plot(X_test.detach().cpu().numpy(), pred_mean.detach().cpu().numpy(), label = 'mean')
-    plt.fill_between(X_test.detach().cpu().numpy(), pred_upper.detach().cpu().numpy(), pred_lower.detach().cpu().numpy(), alpha=0.2, color='g', label='95% CI')
-    plt.plot(X_test.detach().cpu().numpy(), u_test.detach().cpu().numpy(), label = 'True')
-    plt.legend()
-    plt.ylabel('u')
-    plt.xlabel('x')
-    plt.show()
+    # pred_upper = pred_dict['y_preds_upper'].flatten()
+    # pred_lower = pred_dict['y_preds_lower'].flatten()
+    # pred_mean = pred_dict['y_preds_mean'].flatten()
+
+    # # evaluate the model
+    # X_test = model.eval_X.flatten()[:-num_bd]
+    # u_test = physics_model.physics_law(X_test)
+
+    # # Plot the results
+    # sns.set_theme()
+
+    # plt.plot(X_test.detach().cpu().numpy(), pred_mean.detach().cpu().numpy(), label = 'mean')
+    # plt.fill_between(X_test.detach().cpu().numpy(), pred_upper.detach().cpu().numpy(), pred_lower.detach().cpu().numpy(), alpha=0.2, color='g', label='95% CI')
+    # plt.plot(X_test.detach().cpu().numpy(), u_test.detach().cpu().numpy(), label = 'True')
+    # plt.legend()
+    # plt.ylabel('u')
+    # plt.xlabel('x')
+    # plt.show()

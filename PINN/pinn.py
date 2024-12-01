@@ -12,14 +12,22 @@ class PINN(BasePINN):
         activation_fn=nn.Softplus(beta=10),
         lr=1e-3,
         lambda_pde=1,
+        dropout_rate=0.0,
         save_path=None,
         device='cpu'
     ) -> None:
-        super().__init__(physics_model, dataset, hidden_layers, activation_fn, lr, lambda_pde, save_path, device)
-    
-    
+        super().__init__(
+            physics_model=physics_model,
+            dataset=dataset,
+            hidden_layers=hidden_layers,
+            activation_fn=activation_fn,
+            lr=lr,
+            lambda_pde=lambda_pde,
+            dropout_rate=dropout_rate,
+            save_path=save_path,
+            device=device,
+        )
 
-    
     def pde_loss(self):
         loss = 0
         for i, d in enumerate(self.dataset):
@@ -27,14 +35,14 @@ class PINN(BasePINN):
                 diff_o = self.differential_operator(self.net, d['X'])
                 loss += self.mse_loss(diff_o, d['y'])
         return loss
-    
+
     def solution_loss(self):
         loss = 0
         for i, d in enumerate(self.dataset):
             if d['category'] == 'solution':
                 loss += self.mse_loss(d['y'], self.net(d['X']))
         return loss
-    
+
     def update(self):
         self.optimiser.zero_grad()
         sol_loss = self.solution_loss()
@@ -43,6 +51,5 @@ class PINN(BasePINN):
 
         loss.backward()
         self.optimiser.step()
-        
-        return sol_loss.item(), pde_loss.item()
 
+        return sol_loss.item(), pde_loss.item()

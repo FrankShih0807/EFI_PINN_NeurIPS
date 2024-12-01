@@ -7,7 +7,8 @@ import time
 
 from collections import deque
 
-from PINN.common.torch_layers import BaseDNN
+# from PINN.common.torch_layers import BaseDNN
+from PINN.common.torch_layers import DropoutDNN
 from PINN.common.logger import Logger, configure
 
 
@@ -21,6 +22,7 @@ class BasePINN(object):
         activation_fn=nn.Softplus(beta=10),
         lr=1e-3,
         lambda_pde=1,
+        dropout_rate=0.0,
         save_path=None,
         device='cpu',
         verbose=1,
@@ -32,6 +34,9 @@ class BasePINN(object):
         # Physics loss
         self.differential_operator = self.physics_model.differential_operator
         self.lambda_pde = lambda_pde
+
+        # Dropout config
+        self.dropout_rate = dropout_rate
         
         # Common configs
         self.lr = lr
@@ -65,7 +70,14 @@ class BasePINN(object):
 
     def _pinn_init(self):
         # init pinn net and optimiser
-        self.net = BaseDNN(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn)
+        self.net = DropoutDNN(
+            input_dim=self.input_dim,
+            output_dim=self.output_dim,
+            hidden_layers=self.hidden_layers,
+            activation_fn=self.activation_fn,
+            dropout_rate=self.dropout_rate,
+        )
+        # self.net = BaseDNN(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn)
         self.net.to(self.device)
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
     
