@@ -1,5 +1,5 @@
 from PINN.pinn_efi import PINN_EFI
-from PINN.pinn_dropout import PINN_DROPOUT
+from archive.pinn_dropout import PINN_DROPOUT
 from PINN.pinn import PINN
 from PINN.pretrain_efi import NONLINEAR_EFI
 
