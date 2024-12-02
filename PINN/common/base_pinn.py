@@ -66,7 +66,6 @@ class BasePINN(object):
             format_strings = ["csv"]
         
         
-        self.eval_buffer = EvaluationBuffer()
         self.logger = configure(self.save_path, format_strings)
         self._get_scheduler()
         self._pinn_init()
@@ -91,8 +90,10 @@ class BasePINN(object):
         ''' Implement the network parameter update here '''
         raise NotImplementedError()
     
-    def train(self, epochs, eval_freq=1000, burn=0.5):
+    def train(self, epochs, eval_freq=1000, burn=0.0):
+        self.eval_buffer = EvaluationBuffer(burn=burn)
         self.burn_steps = int(epochs * burn)
+        self.n_eval = 0
 
         for ep in range(epochs):
             self.progress = (ep+1) / epochs
@@ -101,8 +102,7 @@ class BasePINN(object):
             toc = time.time()
             
 
-            if ep > self.burn_steps:
-                self.eval_buffer.add(self.net(self.eval_X).detach())
+            self.eval_buffer.add(self.net(self.eval_X).detach())
             
             self.logger.record('train/progress', self.progress)
             self.logger.record('train/epoch', ep+1)
@@ -114,20 +114,16 @@ class BasePINN(object):
 
             ## 3. Loss calculation
             if (ep+1) % eval_freq == 0:
-                if ep > self.burn_steps:
-                    self.evaluate()
+                self.evaluate_metric()
+                self.physics_model.save_evaluation(self, self.save_path)
+                self.physics_model.save_temp_frames(self, self.n_eval, self.save_path)
                 
                 self.logger.dump()
-
-        self.physics_model.save_evaluation(self, self.save_path)
+                self.n_eval += 1
+        self.physics_model.create_gif(self.save_path)
     
-
-    def predict(self, X):
-        self.net.eval()
-        out = self.net(X)
-        return out.detach().cpu().numpy()
     
-    def evaluate(self):
+    def evaluate_metric(self):
         eval_mean = self.eval_buffer.get_mean()
         ci_lower, ci_upper = self.eval_buffer.get_ci()
         ci_range = (ci_upper - ci_lower).mean().item()

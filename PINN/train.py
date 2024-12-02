@@ -57,7 +57,7 @@ def train():
                       save_path=output_dir,
                       device=device
                       )
-    pinn.train(epochs=hyperparams['epochs'])
+    pinn.train(epochs=hyperparams['epochs'], eval_freq=hyperparams['eval_freq'], burn=hyperparams['burn'])
 
     
 

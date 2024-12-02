@@ -419,44 +419,7 @@ class DeepONet(nn.Module):
 
     def forward(self,y,u):
         return self.fc(self.trunk(y)*self.branch(u))
-# class NetworkA(nn.Module):
-#     def __init__(self, input_dim, hidden_dims, output_dim):
-#         super(NetworkA, self).__init__()
-#         self.layers = nn.ModuleList()
-#         dims = [input_dim] + hidden_dims + [output_dim]
-        
-#         # Store the structure for assigning weights later
-#         self.shapes = []
-        
-#         for i in range(len(dims) - 1):
-#             layer = nn.Linear(dims[i], dims[i + 1], bias=False)
-#             self.layers.append(layer)
-#             self.shapes.append((dims[i], dims[i + 1]))  # Store layer shapes for reshaping weights
 
-#     def forward(self, x, weights):
-#         # Set weights dynamically
-#         index = 0
-#         for layer, shape in zip(self.layers, self.shapes):
-#             # Extract the weight slice for the current layer and reshape
-#             layer_weight = weights[index:index + shape[0] * shape[1]].view(shape)
-#             layer.weight = nn.Parameter(layer_weight)  # Dynamically assign weights
-#             x = F.relu(layer(x))  # Apply layer with ReLU activation
-#             index += shape[0] * shape[1]
-#         return x
-
-# # Define Network B to approximate weights of Network A
-# class NetworkB(nn.Module):
-#     def __init__(self, input_dim, num_weights):
-#         super(NetworkB, self).__init__()
-#         self.fc1 = nn.Linear(input_dim, 128)
-#         self.fc2 = nn.Linear(128, 256)
-#         self.fc3 = nn.Linear(256, num_weights)  # Output size matches total parameters of Network A
-
-#     def forward(self, x):
-#         x = F.relu(self.fc1(x))
-#         x = F.relu(self.fc2(x))
-#         weights = self.fc3(x)  # Output shape: [batch_size, num_weights]
-#         return weights
     
 class BayesianPINNNet(nn.Module):
     def __init__(self, lam_diff, lam_sol, physics_model, num_bd):
@@ -485,23 +448,6 @@ class BayesianPINNNet(nn.Module):
 
 if __name__ == '__main__':
 
-    
-    # branch = MLP(100,75,75,4)
-    # trunk = MLP(1,75,75,4)
-    
-    # Onet = DeepONet(1, branch, trunk)
-    # # Onet = DeepONet(1, branch = MLP(100,75,75,4), trunk = MLP(1,75,75,4))
-    
-    # print('parameters:', sum(p.numel() for p in Onet.parameters()))
-    
-    # ys = torch.randn(500, 100,1)
-    # us = torch.randn(500, 1, 100)
-    # Guys = torch.randn(500, 100, 1)
-    
-    # outputs = Onet(ys, us)
-    # print(branch(us).shape)
-    # print(trunk(ys).shape)
-    # print(outputs.shape)
     
     
     def sparse_function(x):

@@ -56,7 +56,9 @@ nonlinear:
 
 poisson:
   n_samples: 200
-  epochs: 40_000
+  epochs: 100_000
+  eval_freq: 1000
+  burn: 0.9
   pinn:
     hidden_layers:
     - 30

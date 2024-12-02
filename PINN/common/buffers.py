@@ -10,62 +10,51 @@ import numpy as np
 
     
 class EvaluationBuffer(object):
-    def __init__(self) -> None:
+    def __init__(self, burn:float=0.5) -> None:
         # self.size = size
-        self.ensemble_tensor = None
+        self.burn = burn
+        self.total_ensemble = None
+        self.n_ensemble = 0
         
     def add(self, value_tensor):
         value_tensor = value_tensor.unsqueeze(dim = 0).squeeze(dim=-1)
-            
-        if self.ensemble_tensor is None:
-            self.ensemble_tensor = value_tensor.clone()
-        else:
-            self.ensemble_tensor = torch.cat([self.ensemble_tensor, value_tensor])
-        # if self.ensemble_tensor.shape[0] > self.size:
-        #     self.ensemble_tensor = self.ensemble_tensor[-self.size::]
+        
 
-    def mean(self):
-        return torch.mean(self.ensemble_tensor, dim=0)
-    
-    def last(self):
-        return self.ensemble_tensor[-1,...]
-    
-    def quantile(self, p=0.05):
-        if self.ensemble_tensor is not None:
-            q = torch.tensor([p/2, 0.5, 1-p/2])
-            quantiles = self.ensemble_tensor.quantile(q=q, dim=0)
-            return quantiles[0], quantiles[1], quantiles[2]
-    
-    def prediction(self):
-        lo, med, hi = self.quantile()
-        center = self.last()
-        upper = center + (hi-lo)/2
-        lower = center - (hi-lo)/2
-        return lower, upper
+        if self.total_ensemble is None:
+            self.total_ensemble = value_tensor.clone()
+        else:
+            self.total_ensemble = torch.cat([self.total_ensemble, value_tensor])
+
     
     def get_ci(self, p=0.05):
+        self.ensemble_tensor = self.total_ensemble[int(self.burn*self.total_ensemble.shape[0]):]
         if self.ensemble_tensor is not None:
             q = torch.tensor([p/2, 1-p/2])
             quantiles = self.ensemble_tensor.quantile(q=q, dim=0)
         return quantiles[0], quantiles[1]
     
     def get_mean(self):
+        self.ensemble_tensor = self.total_ensemble[int(self.burn*self.total_ensemble.shape[0]):]
         return self.ensemble_tensor.mean(dim=0)
         
     def __len__(self):
+        self.ensemble_tensor = self.total_ensemble[int(self.burn*self.total_ensemble.shape[0]):]
         return self.ensemble_tensor.shape[0]
 
 
 if __name__ == '__main__':
     buffer = EvaluationBuffer()
-    for i in range(10000):
+    for i in range(500):
         buffer.add(torch.randn(5,1))
+        print(len(buffer))
+        
         # print(buffer.ensemble_tensor.shape)
     # print(buffer.mean())
+    print(len(buffer))
+    
     print(buffer.get_ci())
     print(buffer.get_mean())
     # print(buffer.quantile())
     # print(buffer.last())
-    print(len(buffer))
     print('---')
         

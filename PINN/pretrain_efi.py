@@ -241,7 +241,7 @@ class Pretrain_EFI(BasePINN):
         
         return y_loss.item(), pde_loss.item()
 
-    def train(self, epochs=10000, eval_freq=1000):
+    def train(self, epochs=10000, eval_freq=1000, burn=0.5):
         # Train BaseDNN
         base_net = self.train_base_dnn()
 
