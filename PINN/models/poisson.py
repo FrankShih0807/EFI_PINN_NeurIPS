@@ -77,8 +77,6 @@ class Poisson(PhysicsModel):
         plt.xlabel('x')
         if save_path is not None:
             plt.savefig(os.path.join(save_path, 'true_solution.png'))
-        # else:
-        #     plt.show()
         plt.close()
         
     def save_evaluation(self, model, save_path=None):
@@ -107,10 +105,7 @@ class Poisson(PhysicsModel):
         sns.set_theme()
         plt.plot(X, y, alpha=0.8, color='b', label='True')
         plt.plot(X, preds_mean, alpha=0.8, color='g', label='Mean')
-        # try:
-        #     plt.plot(X, self.pretrain_eval, alpha=0.8, color='r', label='Pretrained', linestyle='--')
-        # except:
-        #     pass
+
         plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
         plt.legend()
         plt.ylabel('u')

@@ -93,27 +93,16 @@ class BasePINN(object):
     
     def train(self, epochs, eval_freq=1000, burn=0.5):
         self.burn_steps = int(epochs * burn)
-        self.collection = []
-        
-        eval_losses = []
-        sol_losses = []
-        pde_losses = []
-        
-        # tic = time.time()
+
         for ep in range(epochs):
             self.progress = (ep+1) / epochs
             tic = time.time()
             sol_loss, pde_loss = self.update()
             toc = time.time()
             
-            sol_losses.append(sol_loss)
-            pde_losses.append(pde_loss)
-            
 
             if ep > self.burn_steps:
                 self.eval_buffer.add(self.net(self.eval_X).detach())
-            # y_pred = self.evaluate().detach().cpu()
-            # self.collection.append(y_pred)
             
             self.logger.record('train/progress', self.progress)
             self.logger.record('train/epoch', ep+1)
@@ -128,17 +117,9 @@ class BasePINN(object):
                 if ep > self.burn_steps:
                     self.evaluate()
                 
-                # eval_loss = self.mse_loss(self.eval_y, self.net(self.eval_X)).item()
-                # eval_losses.append(eval_loss)
-                # self.logger.record('eval/loss', eval_loss)
                 self.logger.dump()
 
-
-            # if ep > epochs - 1000:
-
-        
         self.physics_model.save_evaluation(self, self.save_path)
-        return eval_losses, sol_losses, pde_losses
     
 
     def predict(self, X):
@@ -147,38 +128,33 @@ class BasePINN(object):
         return out.detach().cpu().numpy()
     
     def evaluate(self):
-        # y = self.net(self.eval_X).detach()
         eval_mean = self.eval_buffer.get_mean()
         ci_lower, ci_upper = self.eval_buffer.get_ci()
         ci_range = (ci_upper - ci_lower).mean().item()
         cr = ((ci_lower <= self.eval_y.flatten()) & (self.eval_y.flatten() <= ci_upper)).float().detach().cpu().mean().item()
         mse = F.mse_loss(eval_mean, self.eval_y.flatten(), reduction='mean').item()
         
-        # print(ci_lower.shape)
-        # print(self.eval_y.shape)
-        
-        # raise
         self.logger.record('eval/ci_range', ci_range)
         self.logger.record('eval/coverage_rate', cr)
         self.logger.record('eval/mse', mse)
         
     
-    def summary(self):
+    # def summary(self):
         
-        y_pred_mat = torch.stack(self.collection[self.burn_steps+1::], dim=0)
-        y_pred_upper = torch.quantile(y_pred_mat, 0.975, dim=0)
-        y_pred_lower = torch.quantile(y_pred_mat, 0.025, dim=0)
-        y_pred_mean = torch.mean(y_pred_mat, dim=0)
-        y_pred_median = torch.quantile(y_pred_mat, 0.5, dim=0)
-        y_covered = (y_pred_lower <= self.eval_y.clone().detach().cpu()) & (self.eval_y.clone().detach().cpu() <= y_pred_upper)
+    #     y_pred_mat = torch.stack(self.collection[self.burn_steps+1::], dim=0)
+    #     y_pred_upper = torch.quantile(y_pred_mat, 0.975, dim=0)
+    #     y_pred_lower = torch.quantile(y_pred_mat, 0.025, dim=0)
+    #     y_pred_mean = torch.mean(y_pred_mat, dim=0)
+    #     y_pred_median = torch.quantile(y_pred_mat, 0.5, dim=0)
+    #     y_covered = (y_pred_lower <= self.eval_y.clone().detach().cpu()) & (self.eval_y.clone().detach().cpu() <= y_pred_upper)
         
-        summary_dict = {
-            'y_preds_upper': y_pred_upper,
-            'y_preds_lower': y_pred_lower,
-            'y_preds_mean': y_pred_mean,
-            'y_preds_median': y_pred_median,
-            'y_covered': y_covered,
-            'x_eval': self.eval_X.clone().detach().cpu().numpy(),
-        }
+    #     summary_dict = {
+    #         'y_preds_upper': y_pred_upper,
+    #         'y_preds_lower': y_pred_lower,
+    #         'y_preds_mean': y_pred_mean,
+    #         'y_preds_median': y_pred_median,
+    #         'y_covered': y_covered,
+    #         'x_eval': self.eval_X.clone().detach().cpu().numpy(),
+    #     }
         
-        return summary_dict
+    #     return summary_dict
