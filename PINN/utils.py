@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
-from PINN import PINN, PINN_DROPOUT, PINN_EFI, PINN_BNN, Pretrain_EFI, PINN_EFI_Discovery, BayesianPINN
+from PINN import PINN, PINN_EFI, PINN_BNN, Pretrain_EFI, PINN_EFI_Discovery, BayesianPINN
 from PINN.models import Cooling, EuropeanCall, Nonlinear, EuropeanCallDiscovery, Poisson
 from torch.utils.data import DataLoader,Dataset
 
@@ -18,7 +18,6 @@ yaml.preserve_quotes = True
 
 ALGOS: Dict[str, Type[BasePINN]] = {
     "pinn": PINN,
-    "pinn_dropout": PINN_DROPOUT,
     "pinn_efi": PINN_EFI,
     "pinn_bnn": PINN_BNN,
     "pretrain_efi": Pretrain_EFI,
