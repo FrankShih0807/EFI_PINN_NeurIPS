@@ -2,57 +2,31 @@ import numpy as np
 import os
 import pandas as pd
 
-def remove_outliers_iqr(data, multiplier=1.5):
-    if len(data) == 0:
-        return data  # Return empty array if input is empty
-    # Calculate Q1 (25th percentile) and Q3 (75th percentile)
-    q1 = np.percentile(data, 25)
-    q3 = np.percentile(data, 75)
-    # Compute the IQR
-    iqr = q3 - q1
-    # Define the lower and upper bounds for non-outliers
-    lower_bound = q1 - multiplier * iqr
-    upper_bound = q3 + multiplier * iqr
-    # Filter the data
-    filtered_data = data[(data >= lower_bound) & (data <= upper_bound)]
+# def remove_outliers_iqr(data, multiplier=1.5):
+#     if len(data) == 0:
+#         return data  # Return empty array if input is empty
+#     # Calculate Q1 (25th percentile) and Q3 (75th percentile)
+#     q1 = np.percentile(data, 25)
+#     q3 = np.percentile(data, 75)
+#     # Compute the IQR
+#     iqr = q3 - q1
+#     # Define the lower and upper bounds for non-outliers
+#     lower_bound = q1 - multiplier * iqr
+#     upper_bound = q3 + multiplier * iqr
+#     # Filter the data
+#     filtered_data = data[(data >= lower_bound) & (data <= upper_bound)]
     
-    return filtered_data
+#     return filtered_data
 
-model = "poisson"
-# exp = "efi_sgd"
-exp = "efi_new_loss2"
-# exp = "efi_sgd_plw20"
-# exp = "efi_adam_plw20"
-# exp = "efi_adam_plw20"
+# model = "poisson"
+# # exp = "efi_sgd"
+# exp = "efi_new_loss2"
+# # exp = "efi_sgd_plw20"
+# # exp = "efi_adam_plw20"
+# # exp = "efi_adam_plw20"
 
-output_folder = f"output/{model}/{exp}"
+# output_folder = f"output/{model}/{exp}"
 
-n_runs = 100
-
-
-def cr(dir):
-    
-    coverage = np.zeros(n_runs)
-    for i in range(n_runs):
-        run_path = f"{dir}/exp_{i}" 
-        data_path = os.path.join(run_path, 'evaluation_data.npz')   
-        if os.path.exists(run_path):
-            if os.path.exists(data_path):
-                data = np.load(data_path)
-                # print(data['y_preds_mean'].shape)
-                # print(data['y_preds_upper'].shape)
-                # print(data['y_preds_lower'].shape)
-                coverage[i] = data['y_covered'].sum()
-                # coverage[i] = (data['y_covered'].sum()==100)
-    print(dir)
-    print(np.hstack([np.arange(n_runs).reshape(-1,1), coverage.reshape(-1,1)]))
-    print(coverage.mean(), coverage.std(), np.quantile(coverage, 0.5))
-    
-    filtered_coverage = remove_outliers_iqr(coverage)
-    print('mean without outliers:', filtered_coverage.mean())
-
-        
-cr(output_folder)
 
 def collect_progress_data(output_dir):
     """
@@ -104,8 +78,14 @@ def collect_progress_data(output_dir):
 # Example usage
 output_dir = "output"
 progress_df = collect_progress_data(output_dir)
+
+df = progress_df[progress_df['train/progress']==1.0]
 # print(df_cr.groupby(['model', 'algo'])['cr'].mean())
 
 # print(df_cr[df_cr['cr']<0.3])
-print(progress_df)
-print(progress_df.groupby(['model', 'algo'])['eval/coverage_rate'].mean())
+# print(progress_df[progress_df['train/progress']==1.0])
+print(df.groupby(['model', 'algo'])['eval/coverage_rate'].mean())
+print(df.groupby(['model', 'algo'])['eval/mse'].mean())
+
+print(df[df['eval/coverage_rate']<0.2][['model', 'algo', 'exp']])
+
