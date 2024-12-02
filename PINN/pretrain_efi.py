@@ -143,7 +143,7 @@ class Pretrain_EFI(BasePINN):
             hidden_layers=self.hidden_layers,
             activation_fn=self.activation_fn,
         ).to(self.device)
-        optimiser = optim.Adam(base_net.parameters(), lr=1e-3)
+        optimiser = optim.Adam(base_net.parameters(), lr=3e-4)
         base_net.train()
         for ep in range(self.pretrain_epochs):
             optimiser.zero_grad()

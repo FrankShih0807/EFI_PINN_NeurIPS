@@ -83,14 +83,17 @@ class Poisson(PhysicsModel):
         
     def save_evaluation(self, model, save_path=None):
         # preds_upper, preds_lower, preds_mean = model.summary()
-        pred_dict = model.summary()
+        # pred_dict = model.summary()
         
-        preds_upper = pred_dict['y_preds_upper'].flatten()
-        preds_lower = pred_dict['y_preds_lower'].flatten()
-        preds_mean = pred_dict['y_preds_mean'].flatten()
+        # preds_upper = pred_dict['y_preds_upper'].flatten()
+        # preds_lower = pred_dict['y_preds_lower'].flatten()
+        # preds_mean = pred_dict['y_preds_mean'].flatten()
 
         X = torch.linspace(self.t_start, self.t_end, steps=100)
         y = self.physics_law(X)
+        
+        preds_mean = model.eval_buffer.get_mean()
+        preds_upper, preds_lower = model.eval_buffer.get_ci()
         
         # if save_path is None:
         #     save_path = './evaluation_results'
@@ -99,7 +102,7 @@ class Poisson(PhysicsModel):
         #     os.makedirs(save_path)
         
         # np.savez(os.path.join(save_path, 'evaluation_data.npz'), preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean)
-        np.savez(os.path.join(save_path, 'evaluation_data.npz') , **pred_dict)
+        # np.savez(os.path.join(save_path, 'evaluation_data.npz') , **pred_dict)
         
         sns.set_theme()
         plt.plot(X, y, alpha=0.8, color='b', label='True')
