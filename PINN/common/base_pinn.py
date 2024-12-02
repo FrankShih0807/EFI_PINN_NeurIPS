@@ -90,7 +90,9 @@ class BasePINN(object):
         ''' Implement the network parameter update here '''
         raise NotImplementedError()
     
-    def train(self, epochs, eval_freq=1000, burn=0.0):
+    def train(self, epochs, eval_freq=-1, burn=0.5):
+        if eval_freq == -1:
+            eval_freq = epochs // 10
         self.eval_buffer = EvaluationBuffer(burn=burn)
         self.burn_steps = int(epochs * burn)
         self.n_eval = 0
