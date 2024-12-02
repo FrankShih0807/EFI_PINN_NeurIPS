@@ -54,17 +54,18 @@ def cr(dir):
         
 cr(output_folder)
 
-def collect_y_covered(output_dir):
+def collect_progress_data(output_dir):
     """
-    Collects 'y_covered' from all evaluation_data.npz files in the given directory structure.
-    
+    Collects all progress data from progress.csv files in the directory structure
+    and combines them into a single DataFrame with additional columns for 'model', 'algo', and 'exp'.
+
     Parameters:
-    - output_dir (str): Root directory of the structure 'output/{model}/{algo}/exp_{i}/evaluation_data.npz'
+    - output_dir (str): Root directory of the structure 'output/{model}/{algo}/exp_{i}/progress.csv'
     
     Returns:
-    - pd.DataFrame: DataFrame containing 'model', 'algo', 'exp', and 'y_covered'.
+    - pd.DataFrame: Combined DataFrame containing progress data with 'model', 'algo', and 'exp' information.
     """
-    data = []
+    data_frames = []
 
     # Walk through the directory structure
     for model in os.listdir(output_dir):
@@ -82,28 +83,29 @@ def collect_y_covered(output_dir):
                 if not os.path.isdir(exp_path):
                     continue
                 
-                npz_file = os.path.join(exp_path, 'evaluation_data.npz')
-                if os.path.exists(npz_file):
-                    # Load the npz file and extract 'y_covered'
-                    with np.load(npz_file) as npz_data:
-                        if 'y_covered' in npz_data:
-                            cr = npz_data['y_covered'].mean()
-                            data.append({
-                                'model': model,
-                                'algo': algo,
-                                'exp': exp,
-                                'cr': cr
-                            })
-                        else:
-                            print(f"'y_covered' not found in {npz_file}")
+                csv_file = os.path.join(exp_path, 'progress.csv')
+                if os.path.exists(csv_file):
+                    try:
+                        # Read the CSV file
+                        df = pd.read_csv(csv_file)
+                        # Add columns for 'model', 'algo', and 'exp'
+                        df['model'] = model
+                        df['algo'] = algo
+                        df['exp'] = exp
+                        # Append to the list of DataFrames
+                        data_frames.append(df)
+                    except Exception as e:
+                        print(f"Error reading {csv_file}: {e}")
     
-    # Convert to a DataFrame
-    df = pd.DataFrame(data)
-    return df
+    # Combine all DataFrames into one
+    combined_df = pd.concat(data_frames, ignore_index=True) if data_frames else pd.DataFrame()
+    return combined_df
 
 # Example usage
 output_dir = "output"
-df_cr = collect_y_covered(output_dir)
-print(df_cr.groupby(['model', 'algo'])['cr'].mean())
+progress_df = collect_progress_data(output_dir)
+# print(df_cr.groupby(['model', 'algo'])['cr'].mean())
 
-print(df_cr[df_cr['cr']<0.3])
+# print(df_cr[df_cr['cr']<0.3])
+print(progress_df)
+print(progress_df.groupby(['model', 'algo'])['eval/coverage_rate'].mean())
