@@ -6,4 +6,4 @@ seaborn
 jupyter
 ruamel.yaml
 tqdm
-torchbnn
+git+https://github.com/AdamCobb/hamiltorch.git
