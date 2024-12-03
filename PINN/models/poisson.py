@@ -81,12 +81,6 @@ class Poisson(PhysicsModel):
         plt.close()
         
     def save_evaluation(self, model, save_path=None):
-        # preds_upper, preds_lower, preds_mean = model.summary()
-        # pred_dict = model.summary()
-        
-        # preds_upper = pred_dict['y_preds_upper'].flatten()
-        # preds_lower = pred_dict['y_preds_lower'].flatten()
-        # preds_mean = pred_dict['y_preds_mean'].flatten()
 
         X = torch.linspace(self.t_start, self.t_end, steps=100)
         y = self.physics_law(X)
@@ -94,18 +88,12 @@ class Poisson(PhysicsModel):
         preds_mean = model.eval_buffer.get_mean()
         preds_upper, preds_lower = model.eval_buffer.get_ci()
         
-        # if save_path is None:
-        #     save_path = './evaluation_results'
-        
-        # if not os.path.exists(save_path):
-        #     os.makedirs(save_path)
-        
-        # np.savez(os.path.join(save_path, 'evaluation_data.npz'), preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean)
-        # np.savez(os.path.join(save_path, 'evaluation_data.npz') , **pred_dict)
         
         sns.set_theme()
         plt.plot(X, y, alpha=0.8, color='b', label='True')
         plt.plot(X, preds_mean, alpha=0.8, color='g', label='Mean')
+        plt.plot(model.X.clone().to('cpu').numpy() , model.y.clone().to('cpu').numpy(), 'x', label='Training data', color='orange')
+        
 
         plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
         plt.legend()
@@ -130,6 +118,7 @@ class Poisson(PhysicsModel):
         plt.subplots(figsize=(6, 6))
         plt.plot(X, y, alpha=0.8, color='b', label='True')
         plt.plot(X, preds_mean, alpha=0.8, color='g', label='Mean')
+        plt.plot(model.X.clone().to('cpu').numpy() , model.y.clone().to('cpu').numpy(), 'x', label='Training data', color='orange')
         plt.ylim(-1.5, 1.5)
         
         plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')

@@ -47,7 +47,12 @@ class BasePINN(object):
         
         self.save_path = save_path
         self.device = device
-        self.physics_model.plot_true_solution(save_path)
+        
+        try:
+            self.physics_model.plot_true_solution(save_path)
+        except:
+            print("No true solution to plot")
+        # self.physics_model.plot_true_solution(save_path)
 
         # To device
         self.X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'solution'], dim=0).to(self.device)
