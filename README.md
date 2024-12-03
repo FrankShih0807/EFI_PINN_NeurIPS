@@ -2,7 +2,7 @@
 
 requirements are:
 - torch
-- torchbnn
+- hamiltorch
 - scikit-learn
 - numpy
 - matplotlib
