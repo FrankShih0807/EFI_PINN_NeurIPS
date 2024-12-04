@@ -36,8 +36,8 @@ class BasePINN(object):
         self.differential_operator = self.physics_model.differential_operator
         self.lambda_pde = lambda_pde
 
-        # Dropout config
-        self.dropout_rate = dropout_rate
+        # # Dropout config
+        # self.dropout_rate = dropout_rate
         
         # Common configs
         self.lr = lr
@@ -76,19 +76,11 @@ class BasePINN(object):
         self._pinn_init()
 
     def _pinn_init(self):
-        # init pinn net and optimiser
-        self.net = DropoutDNN(
-            input_dim=self.input_dim,
-            output_dim=self.output_dim,
-            hidden_layers=self.hidden_layers,
-            activation_fn=self.activation_fn,
-            dropout_rate=self.dropout_rate,
-        )
-        # self.net = BaseDNN(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn)
-        self.net.to(self.device)
-        self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
+        ''' Implement the network and optimiser initialisation here '''
+        raise NotImplementedError()
     
     def _get_scheduler(self):
+        ''' Implement the learning rate scheduler here '''
         pass
 
     def update(self):

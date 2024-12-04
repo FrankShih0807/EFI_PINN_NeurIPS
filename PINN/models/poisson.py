@@ -121,12 +121,12 @@ class Poisson(PhysicsModel):
         plt.plot(X, y, alpha=0.8, color='b', label='True')
         plt.plot(X, preds_mean, alpha=0.8, color='g', label='Mean')
         plt.plot(model.X.clone().to('cpu').numpy() , model.y.clone().to('cpu').numpy(), 'x', label='Training data', color='orange')
-        plt.ylim(-1.5, 1.5)
         
         plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
-        plt.legend()
+        plt.legend(loc='upper left', bbox_to_anchor=(0.1, 0.95))
         plt.ylabel('u')
         plt.xlabel('x')
+        plt.ylim(-1.5, 1.5)
         
         frame_path = os.path.join(temp_dir, f"frame_{epoch}.png")
         plt.savefig(frame_path)

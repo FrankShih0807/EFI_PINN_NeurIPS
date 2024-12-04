@@ -11,3 +11,6 @@ class PoissonCallback(BaseCallback):
     
     def _on_training(self):
         
+    
+    def _on_eval(self):
+        

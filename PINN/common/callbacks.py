@@ -38,6 +38,7 @@ class BaseCallback(ABC):
         """
         self.model = model
         self.physics_model = model.physics_model
+        self.dataset = model.dataset
         self.logger = model.logger
         self.eval_buffer = EvaluationBuffer(burn=burn)
         self.epochs = self.model.epochs
