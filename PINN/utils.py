@@ -8,8 +8,11 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
-from PINN import PINN, PINN_EFI, PINN_BNN, Pretrain_EFI, PINN_EFI_Discovery, BayesianPINN
+from PINN.common.callbacks import BaseCallback
+from PINN import PINN, PINN_EFI, Pretrain_EFI, PINN_EFI_Discovery, BayesianPINN
 from PINN.models import Cooling, EuropeanCall, Nonlinear, EuropeanCallDiscovery, Poisson
+from PINN.models import PoissonCallback
+
 from torch.utils.data import DataLoader,Dataset
 
 yaml = YAML()
@@ -19,7 +22,6 @@ yaml.preserve_quotes = True
 ALGOS: Dict[str, Type[BasePINN]] = {
     "pinn": PINN,
     "pinn_efi": PINN_EFI,
-    "pinn_bnn": PINN_BNN,
     "pretrain_efi": Pretrain_EFI,
     "pinn_efi_discovery": PINN_EFI_Discovery,
     "bpinn": BayesianPINN,
@@ -32,6 +34,13 @@ MODELS: Dict[str, Type[PhysicsModel]] = {
     "european_call_discovery": EuropeanCallDiscovery,
     "poisson": Poisson,
 }
+
+CALLBACKS: Dict[str, Callable] = {
+    "poisson": PoissonCallback,
+}
+
+def get_callback(key: str) -> Callable:
+    return CALLBACKS.get(key, BaseCallback())
 
 # ACTIVATIONS: Dict[str, Callable] = {
 #     "relu": nn.ReLU(),
@@ -175,11 +184,3 @@ class Onet_dataset(Dataset):
     def __getitem__(self,idx):
         return self.y[idx],self.u[idx],self.Guy[idx]
 
-
-
-if __name__ == '__main__':
-    nested_dict = {
-        'a': 1,
-        'b': {'c': 2, 'd': {'e': 3}},
-        'f': 4
-    }

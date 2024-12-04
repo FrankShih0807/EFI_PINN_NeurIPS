@@ -2,11 +2,14 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import torch.nn.functional as F
 import seaborn as sns
 from PINN.common.grad_tool import grad
 from PINN.common.base_physics import PhysicsModel
 from PINN.common.utils import PINNDataset
 from PIL import Image
+from PINN.common.callbacks import BaseCallback
+
 
 class Poisson(PhysicsModel):
     def __init__(self, 
@@ -19,7 +22,7 @@ class Poisson(PhysicsModel):
 
     def generate_data(self, n_samples, device):
         dataset = PINNDataset(device=device)
-        X, y = self.get_solu_data()
+        X, y = self.get_sol_data()
         diff_X, diff_y = self.get_diff_data(n_samples)
         eval_X, eval_y = self.get_eval_data()
         dataset.add_data(X, y, category='solution', noise_sd=self.boundary_sd)
@@ -33,7 +36,7 @@ class Poisson(PhysicsModel):
         y = self.physics_law(X)
         return X, y
     
-    def get_solu_data(self):
+    def get_sol_data(self):
         # X = torch.tensor([self.t_start, self.t_end, -0.5, 0.5]).view(-1, 1)
         X = torch.tensor([self.t_start, self.t_end]).repeat_interleave(5).view(-1, 1)
         # X = torch.linspace(self.t_start, self.t_end, steps=5).repeat_interleave(5).reshape(-1, 1)
@@ -80,61 +83,76 @@ class Poisson(PhysicsModel):
             plt.savefig(os.path.join(save_path, 'true_solution.png'))
         plt.close()
         
-    def save_evaluation(self, model, save_path=None):
 
-        X = torch.linspace(self.t_start, self.t_end, steps=100)
-        y = self.physics_law(X)
+
+
+class PoissonCallback(BaseCallback):
+    def __init__(self):
+        super().__init__()
+    
+    def _init_callback(self) -> None:
+        self.eval_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'evaluation'], dim=0).to(self.device)
+        self.eval_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'evaluation'], dim=0).to(self.device)
         
-        preds_mean = model.eval_buffer.get_mean()
-        preds_upper, preds_lower = model.eval_buffer.get_ci()
+        self.eval_X_cpu = self.eval_X.clone().detach().cpu()
+        self.eval_y_cpu = self.eval_y.clone().detach().cpu()
+
+    
+    def _on_training(self):
+        pred_y = self.model.net(self.eval_X).detach().cpu()
+        self.eval_buffer.add(pred_y)
+        # print(len(self.eval_buffer))
         
+    
+    def _on_eval(self):
+        pred_y_mean = self.eval_buffer.get_mean()
+        ci_low, ci_high = self.eval_buffer.get_ci()
+        ci_range = (ci_high - ci_low).mean().item()
+        cr = ((ci_low <= self.eval_y_cpu.flatten()) & (self.eval_y_cpu.flatten() <= ci_high)).float().mean().item()
+        mse = F.mse_loss(pred_y_mean, self.eval_y_cpu.flatten(), reduction='mean').item()
+        
+        self.logger.record('eval/ci_range', ci_range)
+        self.logger.record('eval/coverage_rate', cr)
+        self.logger.record('eval/mse', mse)
+        
+        self.save_evaluation()
+        # self.physics_model.save_evaluation(self.model, self.save_path)
+        # self.physics_model.save_temp_frames(self.model, self.n_evals, self.save_path)
+    
+    def _on_training_end(self) -> None:
+        self.save_gif()
+        
+    def save_evaluation(self):
+        X = self.eval_X_cpu.flatten().numpy()
+        y = self.eval_y_cpu.flatten().numpy()
+        
+        preds_mean = self.eval_buffer.get_mean()
+        preds_upper, preds_lower = self.eval_buffer.get_ci()
         
         sns.set_theme()
         plt.subplots(figsize=(8, 6))
         plt.plot(X, y, alpha=0.8, color='b', label='True')
         plt.plot(X, preds_mean, alpha=0.8, color='g', label='Mean')
-        plt.plot(model.X.clone().to('cpu').numpy() , model.y.clone().to('cpu').numpy(), 'x', label='Training data', color='orange')
+        plt.plot(self.model.X.clone().cpu().numpy() , self.model.y.clone().cpu().numpy(), 'x', label='Training data', color='orange')
         
-
         plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
         plt.legend(loc='upper left', bbox_to_anchor=(0.1, 0.95))
         plt.ylabel('u')
         plt.xlabel('x')
         plt.ylim(-1.5, 1.5)
-        plt.savefig(os.path.join(save_path, 'pred_solution.png'))
-        plt.close()
+        plt.savefig(os.path.join(self.save_path, 'pred_solution.png'))
         
-        
-    def save_temp_frames(self, model, epoch, save_path=None):
-        X = torch.linspace(self.t_start, self.t_end, steps=100)
-        y = self.physics_law(X)
-        
-        preds_mean = model.eval_buffer.get_mean()
-        preds_upper, preds_lower = model.eval_buffer.get_ci()
-        
-        temp_dir = os.path.join(save_path, 'temp_frames')
+        # save temp frames
+        temp_dir = os.path.join(self.save_path, 'temp_frames')
         os.makedirs(temp_dir, exist_ok=True)
-        
-        
-        sns.set_theme()
-        plt.subplots(figsize=(8, 6))
-        plt.plot(X, y, alpha=0.8, color='b', label='True')
-        plt.plot(X, preds_mean, alpha=0.8, color='g', label='Mean')
-        plt.plot(model.X.clone().to('cpu').numpy() , model.y.clone().to('cpu').numpy(), 'x', label='Training data', color='orange')
-        
-        plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
-        plt.legend(loc='upper left', bbox_to_anchor=(0.1, 0.95))
-        plt.ylabel('u')
-        plt.xlabel('x')
-        plt.ylim(-1.5, 1.5)
-        
-        frame_path = os.path.join(temp_dir, f"frame_{epoch}.png")
+        frame_path = os.path.join(temp_dir, f"frame_{self.n_evals}.png")
         plt.savefig(frame_path)
+        
         plt.close()
-
-    def create_gif(self, save_path):
+        
+    def save_gif(self):
         frames = []
-        temp_dir = os.path.join(save_path, 'temp_frames')
+        temp_dir = os.path.join(self.save_path, 'temp_frames')
         n_frames = len(os.listdir(temp_dir))
         for epoch in range(n_frames):
             frame_path = os.path.join(temp_dir, f"frame_{epoch}.png")
@@ -144,7 +162,7 @@ class Poisson(PhysicsModel):
         # frames = [Image.open(os.path.join(temp_dir, frame)) for frame in frame_files]
         
         frames[0].save(
-            os.path.join(save_path, "training_loss.gif"),
+            os.path.join(self.save_path, "training_loss.gif"),
             save_all=True,
             append_images=frames[1:],
             duration=500,
@@ -153,28 +171,8 @@ class Poisson(PhysicsModel):
         for frame_path in os.listdir(temp_dir):
             os.remove(os.path.join(temp_dir, frame_path))
         os.rmdir(temp_dir)
-    
-    def get_pretrain_eval(self, base_model: torch.nn.Module):
-        with torch.no_grad():
-            X = torch.linspace(self.t_start, self.t_end, steps=100)
-            base_model = base_model.to(X.device)
-            preds = base_model(X.unsqueeze(1))
-
-        self.pretrain_eval = preds
-
-
-# if __name__ == "__main__":
-#     physics = Poisson()
-#     print(physics.model_params)
-    
-#     X, y = physics.X, physics.y
-    
-#     X_plot = torch.linspace(-0.7, 0.7, 100)
-#     y_plot = physics.physics_law(X_plot)
-    
-#     plt.plot(X_plot, y_plot, label='Equation')
-#     plt.plot(X, y, 'x', label='Training data')
-#     plt.legend()
-#     plt.ylabel('Value')
-#     plt.xlabel('X')
-#     plt.show()
+        
+        
+if __name__ == '__main__':
+    callback = PoissonCallback()
+    callback.on_training()

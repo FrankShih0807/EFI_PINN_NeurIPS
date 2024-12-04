@@ -241,13 +241,13 @@ class Pretrain_EFI(BasePINN):
         
         return y_loss.item(), pde_loss.item()
 
-    def train(self, epochs=10000, eval_freq=-1, burn=0.5):
+    def train(self, epochs=10000, eval_freq=-1, burn=0.5, callback=None):
         # Train BaseDNN
         base_net = self.train_base_dnn()
 
         # Plot pretraining result
         base_net.eval()
-        self.physics_model.get_pretrain_eval(base_net)
+        # self.physics_model.get_pretrain_eval(base_net)
 
         # Convert BaseDNN parameters to vector
         param_vector = parameters_to_vector(base_net.parameters()).to(self.device)
@@ -255,4 +255,4 @@ class Pretrain_EFI(BasePINN):
         # Optimize encoder network
         self.optimize_encoder(param_vector)
         
-        super().train(epochs, eval_freq, burn)
+        super().train(epochs, eval_freq, burn, callback)

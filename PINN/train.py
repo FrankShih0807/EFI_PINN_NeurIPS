@@ -2,7 +2,9 @@ import os
 import torch
 from pathlib import Path
 import random
-from PINN.utils import ALGOS, MODELS, load_yaml, save_yaml, create_output_dir, update_hyperparams, create_parser, set_random_seed
+from PINN.utils import ALGOS, MODELS, load_yaml, save_yaml, create_output_dir, update_hyperparams, create_parser, set_random_seed, get_callback
+from PINN.models.poisson import PoissonCallback
+
 
 def train():
     args = create_parser()
@@ -57,7 +59,9 @@ def train():
                       save_path=output_dir,
                       device=device
                       )
-    pinn.train(epochs=hyperparams['epochs'], eval_freq=hyperparams['eval_freq'], burn=hyperparams['burn'])
+    
+    callback = get_callback(args['model'])()
+    pinn.train(epochs=hyperparams['epochs'], eval_freq=hyperparams['eval_freq'], burn=hyperparams['burn'], callback=callback)
 
     
 

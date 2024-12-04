@@ -13,7 +13,6 @@ from PINN.common.logger import Logger, configure
 from PINN.common.buffers import EvaluationBuffer
 
 
-
 class BasePINN(object):
     def __init__(
         self,
@@ -87,11 +86,14 @@ class BasePINN(object):
         ''' Implement the network parameter update here '''
         raise NotImplementedError()
     
-    def train(self, epochs, eval_freq=-1, burn=0.5):
+    def train(self, epochs, eval_freq=-1, burn=0.5, callback=None):
+        self.epochs = epochs
         if eval_freq == -1:
             eval_freq = epochs // 10
+        self.callback = callback
+        self.callback.init_callback(self, eval_freq=eval_freq, burn=burn)
         self.eval_buffer = EvaluationBuffer(burn=burn)
-        self.burn_steps = int(epochs * burn)
+        # self.burn_steps = int(epochs * burn)
         self.n_eval = 0
 
         for ep in range(epochs):
@@ -100,8 +102,7 @@ class BasePINN(object):
             sol_loss, pde_loss = self.update()
             toc = time.time()
             
-
-            self.eval_buffer.add(self.net(self.eval_X).detach())
+            self.callback.on_training()
             
             self.logger.record('train/progress', self.progress)
             self.logger.record('train/epoch', ep+1)
@@ -109,47 +110,12 @@ class BasePINN(object):
             self.logger.record_mean('train/pde_loss', pde_loss)
             self.logger.record_mean('train/time', toc-tic)
             
-            
-
             ## 3. Loss calculation
             if (ep+1) % eval_freq == 0:
-                self.evaluate_metric()
-                self.physics_model.save_evaluation(self, self.save_path)
-                self.physics_model.save_temp_frames(self, self.n_eval, self.save_path)
-                
+                self.callback.on_eval()
                 self.logger.dump()
-                self.n_eval += 1
-        self.physics_model.create_gif(self.save_path)
+
+
+        self.callback.on_training_end()
     
     
-    def evaluate_metric(self):
-        eval_mean = self.eval_buffer.get_mean()
-        ci_lower, ci_upper = self.eval_buffer.get_ci()
-        ci_range = (ci_upper - ci_lower).mean().item()
-        cr = ((ci_lower <= self.eval_y.flatten()) & (self.eval_y.flatten() <= ci_upper)).float().detach().cpu().mean().item()
-        mse = F.mse_loss(eval_mean, self.eval_y.flatten(), reduction='mean').item()
-        
-        self.logger.record('eval/ci_range', ci_range)
-        self.logger.record('eval/coverage_rate', cr)
-        self.logger.record('eval/mse', mse)
-        
-    
-    # def summary(self):
-        
-    #     y_pred_mat = torch.stack(self.collection[self.burn_steps+1::], dim=0)
-    #     y_pred_upper = torch.quantile(y_pred_mat, 0.975, dim=0)
-    #     y_pred_lower = torch.quantile(y_pred_mat, 0.025, dim=0)
-    #     y_pred_mean = torch.mean(y_pred_mat, dim=0)
-    #     y_pred_median = torch.quantile(y_pred_mat, 0.5, dim=0)
-    #     y_covered = (y_pred_lower <= self.eval_y.clone().detach().cpu()) & (self.eval_y.clone().detach().cpu() <= y_pred_upper)
-        
-    #     summary_dict = {
-    #         'y_preds_upper': y_pred_upper,
-    #         'y_preds_lower': y_pred_lower,
-    #         'y_preds_mean': y_pred_mean,
-    #         'y_preds_median': y_pred_median,
-    #         'y_covered': y_covered,
-    #         'x_eval': self.eval_X.clone().detach().cpu().numpy(),
-    #     }
-        
-    #     return summary_dict
