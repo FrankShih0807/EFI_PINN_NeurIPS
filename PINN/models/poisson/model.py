@@ -6,6 +6,7 @@ import seaborn as sns
 from PINN.common.grad_tool import grad
 from PINN.common.base_physics import PhysicsModel
 from PINN.common.utils import PINNDataset
+from PIL import Image
 
 class Poisson(PhysicsModel):
     def __init__(self, 
@@ -77,44 +78,80 @@ class Poisson(PhysicsModel):
         plt.xlabel('x')
         if save_path is not None:
             plt.savefig(os.path.join(save_path, 'true_solution.png'))
-        # else:
-        #     plt.show()
         plt.close()
         
     def save_evaluation(self, model, save_path=None):
-        # preds_upper, preds_lower, preds_mean = model.summary()
-        pred_dict = model.summary()
-        
-        preds_upper = pred_dict['y_preds_upper'].flatten()
-        preds_lower = pred_dict['y_preds_lower'].flatten()
-        preds_mean = pred_dict['y_preds_mean'].flatten()
 
         X = torch.linspace(self.t_start, self.t_end, steps=100)
         y = self.physics_law(X)
         
-        # if save_path is None:
-        #     save_path = './evaluation_results'
+        preds_mean = model.eval_buffer.get_mean()
+        preds_upper, preds_lower = model.eval_buffer.get_ci()
         
-        # if not os.path.exists(save_path):
-        #     os.makedirs(save_path)
-        
-        # np.savez(os.path.join(save_path, 'evaluation_data.npz'), preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean)
-        np.savez(os.path.join(save_path, 'evaluation_data.npz') , **pred_dict)
         
         sns.set_theme()
         plt.plot(X, y, alpha=0.8, color='b', label='True')
         plt.plot(X, preds_mean, alpha=0.8, color='g', label='Mean')
-        try:
-            plt.plot(X, self.pretrain_eval, alpha=0.8, color='r', label='Pretrained', linestyle='--')
-        except:
-            pass
+        plt.plot(model.X.clone().to('cpu').numpy() , model.y.clone().to('cpu').numpy(), 'x', label='Training data', color='orange')
+        
+
         plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
         plt.legend()
         plt.ylabel('u')
         plt.xlabel('x')
         plt.savefig(os.path.join(save_path, 'pred_solution.png'))
         plt.close()
+        
+        
+    def save_temp_frames(self, model, epoch, save_path=None):
+        X = torch.linspace(self.t_start, self.t_end, steps=100)
+        y = self.physics_law(X)
+        
+        preds_mean = model.eval_buffer.get_mean()
+        preds_upper, preds_lower = model.eval_buffer.get_ci()
+        
+        temp_dir = os.path.join(save_path, 'temp_frames')
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        
+        sns.set_theme()
+        plt.subplots(figsize=(6, 6))
+        plt.plot(X, y, alpha=0.8, color='b', label='True')
+        plt.plot(X, preds_mean, alpha=0.8, color='g', label='Mean')
+        plt.plot(model.X.clone().to('cpu').numpy() , model.y.clone().to('cpu').numpy(), 'x', label='Training data', color='orange')
+        plt.ylim(-1.5, 1.5)
+        
+        plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
+        plt.legend()
+        plt.ylabel('u')
+        plt.xlabel('x')
+        
+        frame_path = os.path.join(temp_dir, f"frame_{epoch}.png")
+        plt.savefig(frame_path)
+        plt.close()
 
+    def create_gif(self, save_path):
+        frames = []
+        temp_dir = os.path.join(save_path, 'temp_frames')
+        n_frames = len(os.listdir(temp_dir))
+        for epoch in range(n_frames):
+            frame_path = os.path.join(temp_dir, f"frame_{epoch}.png")
+            frames.append(Image.open(frame_path))
+        # frame_files = sorted(os.listdir(temp_dir))  # Sort by file name to maintain order
+        # print(frame_files)
+        # frames = [Image.open(os.path.join(temp_dir, frame)) for frame in frame_files]
+        
+        frames[0].save(
+            os.path.join(save_path, "training_loss.gif"),
+            save_all=True,
+            append_images=frames[1:],
+            duration=500,
+            loop=0
+        )
+        for frame_path in os.listdir(temp_dir):
+            os.remove(os.path.join(temp_dir, frame_path))
+        os.rmdir(temp_dir)
+    
     def get_pretrain_eval(self, base_model: torch.nn.Module):
         with torch.no_grad():
             X = torch.linspace(self.t_start, self.t_end, steps=100)
