@@ -1,17 +1,7 @@
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 import time
-
-from collections import deque
-
-# from PINN.common.torch_layers import BaseDNN
-from PINN.common.torch_layers import DropoutDNN
 from PINN.common.logger import Logger, configure
-from PINN.common.buffers import EvaluationBuffer
-
 
 class BasePINN(object):
     def __init__(
@@ -22,7 +12,6 @@ class BasePINN(object):
         activation_fn=nn.Softplus(beta=10),
         lr=1e-3,
         lambda_pde=1,
-        dropout_rate=0.0,
         save_path=None,
         device='cpu',
         verbose=1,
@@ -35,9 +24,6 @@ class BasePINN(object):
         self.differential_operator = self.physics_model.differential_operator
         self.lambda_pde = lambda_pde
 
-        # # Dropout config
-        # self.dropout_rate = dropout_rate
-        
         # Common configs
         self.lr = lr
         self.hidden_layers = hidden_layers
@@ -51,7 +37,6 @@ class BasePINN(object):
             self.physics_model.plot_true_solution(save_path)
         except:
             print("No true solution to plot")
-        # self.physics_model.plot_true_solution(save_path)
 
         # To device
         self.X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'solution'], dim=0).to(self.device)
@@ -92,8 +77,6 @@ class BasePINN(object):
             eval_freq = epochs // 10
         self.callback = callback
         self.callback.init_callback(self, eval_freq=eval_freq, burn=burn)
-        self.eval_buffer = EvaluationBuffer(burn=burn)
-        # self.burn_steps = int(epochs * burn)
         self.n_eval = 0
 
         for ep in range(epochs):

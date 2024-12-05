@@ -7,7 +7,7 @@ cooling:
     - 20
     activation_fn: softplus(beta=10)
     lr: 1.0e-5
-    physics_loss_weight: 50.0
+    lambda_pde: 50.0
     sgld_lr: 1e-4
     lambda_y: 1.0
     lambda_theta: 0.1
@@ -24,31 +24,55 @@ european_call:
     - 20
     - 20
     - 20
-    activation_fn: softplus(beta=5)
-    lr: 1.0e-4
-    physics_loss_weight: 10.0
+    activation_fn: softplus(beta=10)
+    lr: 1.0e-5
+    lambda_pde: 10.0
     sgld_lr: 1e-4
     lambda_y: 10.0
     lambda_theta: 0.1
     encoder_kwargs:
       encoder_activation: relu
-      prior_sd: 0.5
+      prior_sd: 1.0
       sparse_threshold: 0.01
 
-poisson:
-  n_samples: 50
+
+nonlinear:
+  n_samples: 200
   epochs: 10_000
   pinn:
     hidden_layers:
-    - 20
-    - 20
-    activation_fn: tanh
+    - 15
+    - 15
+    activation_fn: softplus(beta=10)
     lr: 1.0e-4
-    physics_loss_weight: 50.0
+    lambda_pde: 0.0
     sgld_lr: 1e-4
-    lambda_y: 0.01
-    lambda_theta: 0.1
+    lambda_y: 20.0
+    lambda_theta: 0.2
     encoder_kwargs:
       encoder_activation: softplus(beta=10)
       prior_sd: 0.5
       sparse_threshold: 0.01
+poisson:
+  n_samples: 200
+  epochs: 50_000
+  eval_freq: -1
+  burn: 0.4
+  pinn:
+    hidden_layers:
+    - 30
+    - 30
+    activation_fn: tanh
+    lr: 'poly_3e-4_5.0_0.7'
+    lambda_pde: 1.0
+    sgld_lr: 'poly_1e-3_5.0_0.8'
+    lambda_y: 1.0
+    lambda_theta: 10.0
+    pretrain_epochs: 0
+    encoder_kwargs:
+      encoder_activation: leaky_relu
+      prior_sd: 1.0
+      sparse_sd: 0.001
+      sparsity: 0.5
+      sparse_threshold: 0.0
+      # sparse_threshold: 'lin_0.0_0.01'

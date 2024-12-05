@@ -59,9 +59,12 @@ def train():
                       save_path=output_dir,
                       device=device
                       )
-    
-    callback = get_callback(args['model'])()
-    pinn.train(epochs=hyperparams['epochs'], eval_freq=hyperparams['eval_freq'], burn=hyperparams['burn'], callback=callback)
+
+    pinn.train(epochs=hyperparams['epochs'], 
+               eval_freq=hyperparams['eval_freq'], 
+               burn=hyperparams['burn'], 
+               callback=get_callback(args['model'])()
+               )
 
     
 
