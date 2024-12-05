@@ -123,8 +123,10 @@ class PoissonCallback(BaseCallback):
         self.logger.record('eval/mse', mse)
         
         self.save_evaluation()
-        self.plot_latent_Z()
-        
+        try:
+            self.plot_latent_Z()
+        except:
+            pass    
         # self.physics_model.save_evaluation(self.model, self.save_path)
         # self.physics_model.save_temp_frames(self.model, self.n_evals, self.save_path)
     
