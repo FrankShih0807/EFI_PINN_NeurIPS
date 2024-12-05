@@ -39,14 +39,14 @@ class BasePINN(object):
             print("No true solution to plot")
 
         # To device
-        self.X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'solution'], dim=0).to(self.device)
-        self.y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'solution'], dim=0).to(self.device)
+        self.sol_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'solution'], dim=0).to(self.device)
+        self.sol_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'solution'], dim=0).to(self.device)
                            
         self.eval_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'evaluation'], dim=0).to(self.device)
         self.eval_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'evaluation'], dim=0).to(self.device)
         
-        self.input_dim = self.X.shape[1]
-        self.output_dim = self.y.shape[1]
+        self.input_dim = self.sol_X.shape[1]
+        self.output_dim = self.sol_y.shape[1]
         
         self.verbose = verbose
         if self.verbose == 1:

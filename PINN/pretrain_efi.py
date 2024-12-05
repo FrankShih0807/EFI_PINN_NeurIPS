@@ -49,7 +49,7 @@ class Pretrain_EFI(BasePINN):
         )
 
         # # EFI configs
-        self.n_samples = self.X.shape[0]
+        self.n_samples = self.sol_X.shape[0]
         self.mse_loss = nn.MSELoss(reduction="sum")
 
     def _pinn_init(self):

@@ -123,11 +123,29 @@ class PoissonCallback(BaseCallback):
         self.logger.record('eval/mse', mse)
         
         self.save_evaluation()
+        self.plot_latent_Z()
+        
         # self.physics_model.save_evaluation(self.model, self.save_path)
         # self.physics_model.save_temp_frames(self.model, self.n_evals, self.save_path)
     
     def _on_training_end(self) -> None:
         self.save_gif()
+        
+    def plot_latent_Z(self):
+        X = self.model.sol_X.flatten()
+        true_y = self.physics_model.physics_law(X)
+        sol_y = self.model.sol_y.flatten()
+        true_Z = sol_y - true_y
+        
+        latent_Z = torch.cat([ Z for Z in self.model.latent_Z if Z is not None], dim=0).flatten().detach().cpu().numpy()
+        plt.scatter(true_Z, latent_Z, label='Latent Z')
+        plt.xlabel('True Z')
+        plt.ylabel('Latent Z')
+        plt.xlim(-0.1, 0.1)
+        plt.ylim(-0.1, 0.1)
+        plt.savefig(os.path.join(self.save_path, 'latent_Z.png'))
+        plt.close()
+        
         
     def save_evaluation(self):
         X = self.eval_X_cpu.flatten().numpy()
@@ -140,7 +158,7 @@ class PoissonCallback(BaseCallback):
         plt.subplots(figsize=(8, 6))
         plt.plot(X, y, alpha=0.8, color='b', label='True')
         plt.plot(X, preds_mean, alpha=0.8, color='g', label='Mean')
-        plt.plot(self.model.X.clone().cpu().numpy() , self.model.y.clone().cpu().numpy(), 'x', label='Training data', color='orange')
+        plt.plot(self.model.sol_X.clone().cpu().numpy() , self.model.sol_y.clone().cpu().numpy(), 'x', label='Training data', color='orange')
         
         plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
         plt.legend(loc='upper left', bbox_to_anchor=(0.1, 0.95))
