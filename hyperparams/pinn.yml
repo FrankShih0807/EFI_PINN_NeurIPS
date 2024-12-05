@@ -25,7 +25,7 @@ european_call:
 poisson:
   epochs: 50_000
   eval_freq: -1
-  burn: 0.5
+  burn: 0.4
   pinn:
     hidden_layers:
     - 50
@@ -34,7 +34,6 @@ poisson:
     lr: 3e-4
     lambda_pde: 1.0
     dropout_rate: 0.005
-  callback:
     
 
 nonlinear:
