@@ -78,13 +78,21 @@ def create_parser():
     parser.add_argument('--device', type=str, default='auto', help='Device to run the code')
     
     parser.add_argument(
-        "-params",
         "--hyperparams",
         type=str,
         nargs="+",
         action=StoreDict,
         help="Overwrite hyperparameter (e.g. learning_rate:0.01 train_freq:10)",
     )
+    
+    parser.add_argument(
+        "--model_settings",
+        type=str,
+        nargs="+",
+        action=StoreDict,
+        help="Overwrite physics model setting",
+    )
+    
     return vars(parser.parse_args())
 
 def create_output_dir(inital_args):
@@ -125,14 +133,14 @@ def update_hyperparams(original_params, new_params):
 class StoreDict(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         result = {}
-        print(values)
+        # print(values)
         for item in values:
             key, value = item.split(":")
-            print(key, value)   
+            # print(key, value)   
             # Check if the value contains commas, indicating a list
             if "," in value:
                 split_values = value.split(",")
-                print(split_values)
+                # print(split_values)
                 result[key] = []
                 for v in split_values:
                     if '.' in v:

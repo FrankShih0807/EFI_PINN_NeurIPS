@@ -55,7 +55,6 @@ nonlinear:
       sparse_threshold: 0.01
 
 poisson:
-  n_samples: 200
   epochs: 50_000
   eval_freq: -1
   burn: 0.4

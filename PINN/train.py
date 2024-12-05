@@ -3,7 +3,6 @@ import torch
 from pathlib import Path
 import random
 from PINN.utils import ALGOS, MODELS, load_yaml, save_yaml, create_output_dir, update_hyperparams, create_parser, set_random_seed, get_callback
-from PINN.models.poisson import PoissonCallback
 
 
 def train():
@@ -21,6 +20,7 @@ def train():
 
     # Update hyperparameters with command-line arguments
     update_hyperparams(hyperparams, args['hyperparams'])
+    update_hyperparams(model_settings, args['model_settings'])
     # Set random seed
     if args['seed'] is None:
         seed = random.randint(0, 10000)
@@ -50,7 +50,7 @@ def train():
     
     set_random_seed(hyperparams['seed'])
     physics_model = MODELS[args['model']](**model_settings)
-    dataset = physics_model.generate_data(n_samples=hyperparams['n_samples'], device=device)
+    dataset = physics_model.generate_data(device=device)
 
     pinn_class = ALGOS[args['algo']]
     pinn = pinn_class(physics_model = physics_model,

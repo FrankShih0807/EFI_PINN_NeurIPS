@@ -28,6 +28,7 @@ nonlinear:
 poisson:
   t_start: -0.7
   t_end: 0.7
-  # noise_sd: 0.01
-  boundary_sd: 0.05
+  sol_sd: 0.05
   diff_sd: 0.0
+  n_sol_samples: 10
+  n_diff_samples: 200

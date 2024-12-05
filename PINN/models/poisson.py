@@ -15,17 +15,24 @@ class Poisson(PhysicsModel):
     def __init__(self, 
                  t_start=-0.7,
                  t_end=0.7, 
-                 boundary_sd=0.01,
+                 sol_sd=0.01,
                  diff_sd=0.01,
+                 n_sol_samples=10,
+                 n_diff_samples=100,
                  ):
-        super().__init__(t_start=t_start, t_end=t_end, boundary_sd=boundary_sd, diff_sd=diff_sd)
+        super().__init__(t_start=t_start, 
+                         t_end=t_end, 
+                         sol_sd=sol_sd, 
+                         diff_sd=diff_sd, 
+                         n_sol_samples=n_sol_samples, 
+                         n_diff_samples=n_diff_samples)
 
-    def generate_data(self, n_samples, device):
+    def generate_data(self, device):
         dataset = PINNDataset(device=device)
-        X, y = self.get_sol_data()
-        diff_X, diff_y = self.get_diff_data(n_samples)
+        sol_X, sol_y = self.get_sol_data()
+        diff_X, diff_y = self.get_diff_data()
         eval_X, eval_y = self.get_eval_data()
-        dataset.add_data(X, y, category='solution', noise_sd=self.boundary_sd)
+        dataset.add_data(sol_X, sol_y, category='solution', noise_sd=self.sol_sd)
         dataset.add_data(diff_X, diff_y, category='differential', noise_sd=self.diff_sd)
         dataset.add_data(eval_X, eval_y, category='evaluation', noise_sd=0)
         
@@ -38,15 +45,15 @@ class Poisson(PhysicsModel):
     
     def get_sol_data(self):
         # X = torch.tensor([self.t_start, self.t_end, -0.5, 0.5]).view(-1, 1)
-        X = torch.tensor([self.t_start, self.t_end]).repeat_interleave(5).view(-1, 1)
+        X = torch.tensor([self.t_start, self.t_end]).repeat_interleave(self.n_sol_samples).view(-1, 1)
         # X = torch.linspace(self.t_start, self.t_end, steps=5).repeat_interleave(5).reshape(-1, 1)
         # X = torch.tensor([self.t_start, self.t_end]).view(-1, 1)
         y = self.physics_law(X)
-        y += self.boundary_sd * torch.randn_like(y)
+        y += self.sol_sd * torch.randn_like(y)
         return X, y
     
-    def get_diff_data(self, n_samples, replicate=1):
-        X = torch.linspace(self.t_start, self.t_end, steps=n_samples).repeat_interleave(replicate).view(-1, 1)
+    def get_diff_data(self, replicate=1):
+        X = torch.linspace(self.t_start, self.t_end, steps=self.n_diff_samples).repeat_interleave(replicate).view(-1, 1)
         y = self.differential_function(X)
         y += self.diff_sd * torch.randn_like(y)
         return X, y

@@ -10,6 +10,14 @@ from PINN.common.utils import get_activation_fn
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from PINN.common.losses import gmm_loss
     
+    
+def initialize_weights(module):
+    if isinstance(module, nn.Linear):
+        torch.nn.init.xavier_uniform_(module.weight)  # Or use xavier_normal_
+        if module.bias is not None:
+            torch.nn.init.zeros_(module.bias)
+
+
 class BaseDNN(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_layers, activation_fn):
         super(BaseDNN, self).__init__()
@@ -149,6 +157,10 @@ class EFI_Net(nn.Module):
             sample_net.append(nn.Linear(hidden_layers[i-1], hidden_layers[i]))
         sample_net.append(nn.Linear(hidden_layers[-1], output_dim))
         
+        
+            
+            
+        
         self.n_layers = len(sample_net)
         self.n_parameters = sum([p.numel() for p in sample_net.parameters()])
         self.nn_shape = defaultdict(list)
@@ -166,7 +178,7 @@ class EFI_Net(nn.Module):
         
 
         # self.gmm = GaussianMixtureModel(prior_sd, sparse_sd)
-        self.prior_dist = dist.Normal(0, prior_sd)
+        # self.prior_dist = dist.Normal(0, prior_sd)
         
         # self.encoder = BaseDNN(input_dim=self.encoder_input_dim, output_dim=self.n_parameters, activation_fn=activation_fn)
         self.encoder = EncoderDNN(input_dim=self.encoder_input_dim, output_dim=self.n_parameters, activation_fn=self.encoder_activation, hidden_layers=encoder_hidden_layers).to(self.device)
@@ -450,12 +462,14 @@ if __name__ == '__main__':
 
     
     
-    def sparse_function(x):
-        return torch.where(x.abs() > 0.5, torch.zeros_like(x.abs()), x.abs())* 0.5 
-        
-    x = torch.randn(5)
+    net = nn.Sequential(
+        nn.Linear(1, 50),
+        nn.Tanh(),
+        nn.Linear(50, 50),
+        nn.Tanh(),
+        nn.Linear(50, 1), 
+    )
+    net.apply(initialize_weights)
     
-    
-    y = sparse_function(x)
-    print(x)
-    print(y)
+    for p in net.parameters():
+        print(p)
