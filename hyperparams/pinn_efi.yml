@@ -66,14 +66,14 @@ poisson:
     activation_fn: tanh
     lr: 'poly_3e-4_5.0_0.7'
     lambda_pde: 1.0
-    sgld_lr: 'poly_1e-3_5.0_0.8'
+    sgld_lr: 'poly_3e-4_5.0_0.9'
     lambda_y: 1.0
     lambda_theta: 10.0
     pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 16
-      - 32
+      - 64
+      - 64
       - 64
       encoder_activation: leaky_relu
       prior_sd: 1.0
