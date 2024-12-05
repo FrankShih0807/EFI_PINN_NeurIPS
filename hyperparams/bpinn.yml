@@ -1,6 +1,8 @@
 poisson:
   n_samples: 100
   epochs: 5000
+  eval_freq: -1
+  burn: 0.5
   pinn:
     hidden_layers:
     - 50
