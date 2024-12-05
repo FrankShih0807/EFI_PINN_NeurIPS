@@ -10,6 +10,7 @@ import time
 from PINN.common.base_pinn import BasePINN
 from PINN.models.poisson import Poisson
 from PINN.common.torch_layers import BayesianPINNNet
+from PINN.common.buffers import EvaluationBuffer
 
 
 class BayesianPINN(BasePINN):
@@ -147,35 +148,62 @@ class BayesianPINN(BasePINN):
 
         return summary_dict
 
-    def train(self, epochs, eval_freq=1000):
-        # self._pinn_init()
+    def train(self, epochs, eval_freq=-1, burn=0.5):
+        if eval_freq == -1:
+            eval_freq = epochs // 10
+        self.eval_buffer = EvaluationBuffer(burn=burn)
+        self.burn_steps = int(epochs * burn)
+        self.n_eval = 0
 
         eval_losses = []
         sol_losses = []
         pde_losses = []
 
-        for rd in range(int(epochs / eval_freq)):
-            self.progress = (rd+1) / int(epochs / eval_freq)
+        for ep in range(epochs):
+            self.progress = (ep+1) / epochs
             tic = time.time()
-            params_hmc = self.sample_posterior(num_samples=eval_freq)
+            params_hmc = self.sample_posterior(num_samples=1)
             toc = time.time()
-            print(f"Sampling time: {toc-tic:.2f}s")
-            print(f"Progress: {self.progress:.2f}")
 
-            self.params_hmc += params_hmc
-            self.params_init = self.params_hmc[-1].clone()
+            hamiltorch.util.update_model_params_in_place(self.net, hamiltorch.util.unflatten(self.net, params_hmc[0]))
+            self.params_init = params_hmc[0].clone()
+            self.eval_buffer.add(self.net.fnn(self.eval_X)[:-self.num_bd].detach())
 
-            hamiltorch.util.update_model_params_in_place(self.net, hamiltorch.util.unflatten(self.net, self.params_hmc[-1]))
-            eval_loss = self.mse_loss(self.net.fnn(self.eval_X)[:-self.num_bd], self.eval_y).item()
-            print(f"Eval loss: {eval_loss:.4f}")
-            eval_losses.append(eval_loss)
+            self.logger.record('train/progress', self.progress)
+            self.logger.record('train/epoch', ep+1)
+            self.logger.record('train/time', toc-tic)
+
+            if (ep+1) % eval_freq == 0:
+                self.evaluate_metric()
+                self.physics_model.save_evaluation(self, self.save_path)
+                self.physics_model.save_temp_frames(self, self.n_eval, self.save_path)
+
+                self.logger.dump()
+                self.n_eval += 1
+
+        # for rd in range(int(epochs / eval_freq)):
+        #     self.progress = (rd+1) / int(epochs / eval_freq)
+        #     tic = time.time()
+        #     params_hmc = self.sample_posterior(num_samples=eval_freq)
+        #     toc = time.time()
+        #     print(f"Sampling time: {toc-tic:.2f}s")
+        #     print(f"Progress: {self.progress:.2f}")
+
+        #     self.params_hmc += params_hmc
+        #     self.params_init = self.params_hmc[-1].clone()
+
+        #     hamiltorch.util.update_model_params_in_place(self.net, hamiltorch.util.unflatten(self.net, self.params_hmc[-1]))
+        #     eval_loss = self.mse_loss(self.net.fnn(self.eval_X)[:-self.num_bd], self.eval_y).item()
+        #     print(f"Eval loss: {eval_loss:.4f}")
+        #     eval_losses.append(eval_loss)
 
         # tic = time.time()
         # self.sample_posterior()
         # toc = time.time()
         # print(f"Sampling time: {toc-tic:.2f}s")
 
-        self.physics_model.save_evaluation(self, self.save_path)
+        # self.physics_model.save_evaluation(self, self.save_path)
+        self.physics_model.create_gif(self.save_path)
 
 
 if __name__ == "__main__":
