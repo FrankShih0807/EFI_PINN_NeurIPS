@@ -71,7 +71,7 @@ poisson:
     # lambda_theta: 'linear_10.0_100.0'
     lambda_pde: 1.0
     lambda_y: 1.0
-    lambda_theta: 10
+    lambda_theta: 10.0
     pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
