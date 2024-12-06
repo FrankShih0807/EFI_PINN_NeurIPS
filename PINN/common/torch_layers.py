@@ -24,9 +24,6 @@ class BaseDNN(nn.Module):
         # Define the initial layers
         self.input_dim = input_dim
         self.output_dim = output_dim
-        # if hidden_layers is None:
-        #     self.hidden_layers = [self.output_dim]
-        # else:
         self.hidden_layers = hidden_layers
         self.activation_fn = get_activation_fn(activation_fn)
         
@@ -458,18 +455,205 @@ class BayesianPINNNet(nn.Module):
 
         return torch.cat([pde * self.lam_diff, u_bd * self.lam_sol], dim=0)
 
-if __name__ == '__main__':
+class HyperLinear(nn.Module):
+    def __init__(self, input_dim, output_dim, z_dim):
+        """
+        Custom linear layer with weights and biases generated from a latent vector z.
+        Args:
+            input_dim (int): Number of input features.
+            output_dim (int): Number of output features.
+            z_dim (int): Dimensionality of the latent vector z.
+        """
+        super(HyperLinear, self).__init__()
+        
+        # Weight generator: maps z to a weight matrix of shape (output_dim, input_dim)
+        self.weight_gen = nn.Sequential(
+            nn.ReLU(),
+            nn.Linear(z_dim, output_dim * input_dim)
+        )
+        
+        # Bias generator: maps z to a bias vector of shape (output_dim)
+        self.bias_gen = nn.Sequential(
+            nn.Tanh(),
+            nn.Linear(z_dim, output_dim)
+        )
+
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+
+    def forward(self, x, z=None):
+        """
+        Forward pass for the custom linear layer.
+        Args:
+            x (torch.Tensor): Input tensor of shape (batch_size, input_dim).
+            z (torch.Tensor): Latent vector used to generate weights and biases.
+        Returns:
+            torch.Tensor: Output tensor of shape (batch_size, output_dim).
+        """
+        if z is None:
+            return F.linear(x, self.weight.detach(), self.bias.detach())
+        else:
+            # Generate weights and biases from z
+            self.weight = self.weight_gen(z).mean(dim=0).view(self.output_dim, self.input_dim)  # Shape: (output_dim, input_dim)
+            self.bias = self.bias_gen(z).mean(dim=0)  # Shape: (output_dim)
+
+            # Perform the linear transformation
+            # return torch.matmul(x, weight.T) + bias
+            return F.linear(x, self.weight, self.bias)
+
+
+class EmbeddingDNN(nn.Module):
+    def __init__(self, input_dim, hidden_layers, activation_fn):
+        super(EmbeddingDNN, self).__init__()
+        self.input_dim = input_dim
+        self.hidden_layers = hidden_layers
+        self.activation_fn = get_activation_fn(activation_fn)
+        
+        self.layers = nn.ModuleList()
+        self.layers.append(nn.Linear(input_dim, hidden_layers[0]))
+        # Add hidden layers
+        for i in range(1, len(hidden_layers)):
+            self.layers.append(nn.Linear(hidden_layers[i-1], hidden_layers[i]))
+
+    def forward(self, x):
+        for layer in self.layers[:-1]:
+            x = self.activation_fn(layer(x))
+        x = self.layers[-1](x)
+        return x
+
+class EFI_Net_v2(nn.Module):
+    def __init__(self, 
+                 input_dim=1, 
+                 output_dim=1, 
+                 hidden_layers=[15, 15], 
+                 activation_fn='relu', 
+                 sparse_threshold=0.01,
+                 encoder_hidden_layers=None,
+                 encoder_activation='relu',
+                 prior_sd=0.1, 
+                 sparse_sd=0.01,
+                 sparsity=1.0,
+                 device='cpu'
+                 ):
+        super(EFI_Net_v2, self).__init__()
+        
+        self.device = device
+        # EFI Net Info
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.hidden_layers = hidden_layers
+        self.activation_fn = get_activation_fn(activation_fn)
+        self.sparse_threshold = sparse_threshold
+
+        # Encoder Net Info
+        self.encoder_input_dim = self.input_dim + 2 * self.output_dim
+        self.encoder_activation = get_activation_fn(encoder_activation)
+        self.encoder = EmbeddingDNN(input_dim=self.encoder_input_dim, 
+                                    hidden_layers=encoder_hidden_layers, 
+                                    activation_fn=self.encoder_activation
+                                    ).to(self.device)
+        self.encoder_output_dim = encoder_hidden_layers[-1]
+        
+        # sparse prior settings
+        self.sparsity = sparsity
+        self.prior_sd = prior_sd
+        self.sparse_sd = sparse_sd
+        
+        sample_net = nn.ModuleList()
+        sample_net.append(nn.Linear(input_dim, hidden_layers[0]))
+        for i in range(1, len(hidden_layers)):
+            sample_net.append(nn.Linear(hidden_layers[i-1], hidden_layers[i]))
+        sample_net.append(nn.Linear(hidden_layers[-1], output_dim))
+        
+        self.layers = nn.ModuleList()
+        self.layers.append(HyperLinear(input_dim, hidden_layers[0], self.encoder_output_dim))
+        for i in range(1, len(hidden_layers)):
+            self.layers.append(HyperLinear(hidden_layers[i-1], hidden_layers[i], self.encoder_output_dim))
+        self.layers.append(HyperLinear(hidden_layers[-1], output_dim, self.encoder_output_dim))
+        
+            
+    def forward(self, x):
+        x = x.to(self.device)
+        for i in range(self.n_layers-1):
+            x = self.activation_fn(F.linear(x, self.weight_tensors[i], self.bias_tensors[i]))
+        x = F.linear(x, self.weight_tensors[-1], self.bias_tensors[-1])
+        return x
 
     
+    def theta_encode(self, X, y, Z):
+        '''Encode X, y, and Z into theta
+        Args:
+            X (tensor): explanatory variable
+            y (tensor): response variable
+            Z (tensor): noise variable
+
+        Returns:
+            tensor: flattend theta
+        '''
+        X, y, Z = X.to(self.device), y.to(self.device), Z.to(self.device)
+        
+        batch_size = X.shape[0]
+        xyz = torch.cat([X, y, Z], dim=1).to(self.device)
+        batch_theta = self.encoder(xyz)
+        theta_bar = batch_theta.mean(dim=0)
+        theta_loss = F.mse_loss(batch_theta, theta_bar.repeat(batch_size, 1), reduction='mean')
+        theta_loss += self.sparsity_loss(theta_bar)
+        self.weight_tensors, self.bias_tensors = self.split_encoder_output(theta_bar)
+        return theta_loss
+        
+    def gmm_prior_loss(self):
+        loss = 0
+        for p in self.parameters():
+            loss += gmm_loss(p, self.prior_sd, self.sparse_sd, self.sparsity).sum()
+        return loss
     
-    net = nn.Sequential(
-        nn.Linear(1, 50),
-        nn.Tanh(),
-        nn.Linear(50, 50),
-        nn.Tanh(),
-        nn.Linear(50, 1), 
-    )
-    net.apply(initialize_weights)
+    def sparsity_loss(self, theta):
+        # return torch.where(theta.abs() > self.sparse_threshold, torch.zeros_like(theta.abs()).to(self.device), theta.abs()).sum()
+        xi = 1e-5
+        if self.sparse_threshold > 0:
+            return self.sparse_threshold * (theta.pow(2) * torch.exp(-theta.pow(2) / (2 * xi))).sum()
+        else:
+            return 0
+
+
+if __name__ == '__main__':
+
+    # embedding = nn.Sequential(
+    #     nn.Linear(3, 50),
+    #     nn.Tanh(),
+    #     nn.Linear(50, 50),
+    # )
+
+    # hyperlinear = HyperLinear(20, 20, 50)
     
-    for p in net.parameters():
-        print(p)
+    # x = torch.randn(4,3)
+    # z = embedding(x)
+    
+    # print(x.shape, z.shape)
+    
+    # in_x = torch.randn(6, 20)
+    # out = hyperlinear(in_x, z)
+    # print(out.shape)
+    
+    # for p in hyperlinear.parameters():
+    #     print(p.shape)
+    x = torch.tensor([1.0, 2.0, 3.0], requires_grad=True)
+
+    # clone().detach()
+    y = x.clone().detach()
+
+    # detach().clone()
+    z = x.detach().clone()
+
+    # detach()
+    w = x.detach()
+
+    # Perform operations
+    with torch.no_grad():
+        x += 1
+    
+
+    print("Original tensor:", x)  # [1.0, 2.0, 3.0]
+    print("clone().detach():", y)  # [2.0, 3.0, 4.0] - Detached copy
+    print("detach().clone():", z)  # [2.0, 3.0, 4.0] - Detached copy
+    print("detach():", w)   
