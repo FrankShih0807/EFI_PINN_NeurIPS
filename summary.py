@@ -80,16 +80,18 @@ output_dir = "output"
 progress_df = collect_progress_data(output_dir)
 
 df = progress_df[progress_df['train/progress']==1.0]
+df["cover_all"] = (df["eval/coverage_rate"]==1)
 # print(df_cr.groupby(['model', 'algo'])['cr'].mean())
 
 # print(df_cr[df_cr['cr']<0.3])
 # print(progress_df[progress_df['train/progress']==1.0])
 # print("coverage rate")
-print(df.groupby(['model', 'algo'])[['eval/coverage_rate', 'eval/mse', 'eval/ci_range']].mean())
+print(df.groupby(['model', 'algo'])[['eval/coverage_rate', 'eval/mse', 'eval/ci_range', 'cover_all']].mean())
 # print("mse")
 # print(df.groupby(['model', 'algo'])['eval/mse'].mean())
 # print("ci range")
 # print(df.groupby(['model', 'algo'])['eval/ci_range'].mean())
 
 # print(df[df['eval/coverage_rate']<0.2][['model', 'algo', 'exp']])
+
 
