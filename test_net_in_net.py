@@ -80,3 +80,13 @@ if __name__ == '__main__':
     
     print(y1)
     print(y2)
+    
+    with torch.no_grad():
+        for p in net1.parameters():
+            p += 1
+    
+    y1 = net1(x)
+    y2 = net2(x)
+    
+    print(y1)
+    print(y2)
