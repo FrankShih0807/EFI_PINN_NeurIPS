@@ -58,17 +58,20 @@ poisson:
   n_samples: 200
   epochs: 50_000
   eval_freq: -1
-  burn: 0.4
+  burn: 0.5
   pinn:
     hidden_layers:
     - 30
     - 30
     activation_fn: tanh
     lr: 'poly_3e-4_10.0_0.7'
-    lambda_pde: 'linear_1.0_5.0'
     sgld_lr: 'poly_3e-4_10.0_0.9'
-    lambda_y: 'linear_1.0_10.0'
-    lambda_theta: 'linear_10.0_100.0'
+    # lambda_pde: 'linear_1.0_10.0'
+    # lambda_y: 'linear_1.0_10.0'
+    # lambda_theta: 'linear_10.0_100.0'
+    lambda_pde: 1.0
+    lambda_y: 1.0
+    lambda_theta: 10
     pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
