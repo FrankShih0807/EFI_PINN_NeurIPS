@@ -168,29 +168,29 @@ class BayesianPINN(BasePINN):
 
         for ep in range(epochs):
             self.progress = (ep+1) / epochs
-            tic = time.time()
-            params_hmc = self.sample_posterior(num_samples=1)
-            toc = time.time()
+            # tic = time.time()
+            # params_hmc = self.sample_posterior(num_samples=1)
+            # toc = time.time()
             
-            self.params_hmc += params_hmc
-            self.params_init = self.params_hmc[-1].clone()
-            params = hamiltorch.util.unflatten(self.net, self.params_hmc[-1])
-            hamiltorch.util.update_model_params_in_place(self.net, params)
+            # self.params_hmc += params_hmc
+            # self.params_init = self.params_hmc[-1].clone()
+            # params = hamiltorch.util.unflatten(self.net, self.params_hmc[-1])
+            # hamiltorch.util.update_model_params_in_place(self.net, params)
 
-            self.callback.on_training()
+            # self.callback.on_training()
 
-            self.logger.record('train/progress', self.progress)
-            self.logger.record('train/epoch', ep+1)
-            self.logger.record('train/time', toc-tic)
+            # self.logger.record('train/progress', self.progress)
+            # self.logger.record('train/epoch', ep+1)
+            # self.logger.record('train/time', toc-tic)
 
             if (ep+1) % eval_freq == 0:
-                # ##########
-                # params_hmc = self.sample_posterior(num_samples=eval_freq)
-                # self.params_hmc += params_hmc
-                # self.params_init = self.params_hmc[-1].clone()
-                # for i in range(eval_freq):
-                #     hamiltorch.util.update_model_params_in_place(self.net, hamiltorch.util.unflatten(self.net, params_hmc[i]))
-                #     self.callback.on_training()
+                ##########
+                params_hmc = self.sample_posterior(num_samples=eval_freq)
+                self.params_hmc += params_hmc
+                self.params_init = self.params_hmc[-1].clone()
+                for i in range(eval_freq):
+                    hamiltorch.util.update_model_params_in_place(self.net, hamiltorch.util.unflatten(self.net, params_hmc[i]))
+                    self.callback.on_training()
 
 
                 self.callback.on_eval()
