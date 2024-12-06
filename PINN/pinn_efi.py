@@ -84,6 +84,8 @@ class PINN_EFI(BasePINN):
         self.lr = get_schedule(self.lr)
         self.sgld_lr = get_schedule(self.sgld_lr)
         self.lambda_pde = get_schedule(self.lambda_pde)
+        self.lambda_y = get_schedule(self.lambda_y)
+        self.lambda_theta = get_schedule(self.lambda_theta)
         self.sparse_threshold = get_schedule(self.encoder_kwargs.get('sparse_threshold', 0.01))
         self.encoder_kwargs['sparse_threshold'] = self.sparse_threshold(0)
         
@@ -104,7 +106,7 @@ class PINN_EFI(BasePINN):
         noise_X = torch.cat([d['X'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
         noise_y = torch.cat([d['y'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
         # noise_Z = torch.cat([ Z for Z in self.latent_Z if Z is not None], dim=0)
-        noise_Z = torch.cat([ Z/d['noise_sd'] for Z, d in zip(self.latent_Z, self.dataset) if Z is not None], dim=0)
+        noise_Z = torch.cat([ Z/sd for Z, sd in zip(self.latent_Z, self.noise_sd) if Z is not None], dim=0)
         
         theta_loss = self.net.theta_encode(noise_X, noise_y, noise_Z)
         return theta_loss
@@ -194,6 +196,8 @@ class PINN_EFI(BasePINN):
         annealing_period = 0.5
         annealing_progress = self.progress / annealing_period
         lambda_pde = self.lambda_pde(annealing_progress)
+        lambda_y = self.lambda_y(annealing_progress)
+        lambda_theta = self.lambda_theta(annealing_progress)
         self.net.sparse_threshold = self.sparse_threshold(self.progress * 3 - 1)
         lr = self.lr(self.progress)
         sgld_lr = self.sgld_lr(self.progress)
@@ -208,8 +212,8 @@ class PINN_EFI(BasePINN):
         z_prior_loss = self.z_prior_loss()
         pde_loss = self.pde_loss()
         Z_loss = (
-            self.lambda_y * y_loss
-            + self.lambda_theta * theta_loss
+            lambda_y * y_loss
+            + lambda_theta * theta_loss
             + z_prior_loss + lambda_pde * pde_loss
         )
 
@@ -225,8 +229,8 @@ class PINN_EFI(BasePINN):
         pde_loss = self.pde_loss()
 
         w_loss = (
-            self.lambda_y * (y_loss + w_prior_loss)
-            + self.lambda_theta * theta_loss
+            lambda_y * (y_loss + w_prior_loss)
+            + lambda_theta * theta_loss
             + lambda_pde * pde_loss
         )
 
