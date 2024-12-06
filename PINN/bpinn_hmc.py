@@ -8,9 +8,8 @@ import seaborn as sns
 import time
 
 from PINN.common.base_pinn import BasePINN
-from PINN.models.poisson import Poisson
+from PINN.models.poisson import Poisson, PoissonCallback
 from PINN.common.torch_layers import BayesianPINNNet
-from PINN.common.buffers import EvaluationBuffer
 
 
 class BayesianPINN(BasePINN):
@@ -20,8 +19,8 @@ class BayesianPINN(BasePINN):
         dataset,
         hidden_layers=[50, 50],
         activation_fn=nn.Tanh(),
-        step_size=0.0006,
-        burn=2000,
+        step_size=0.02,
+        # burn=2000,
         num_samples=5000,
         L=6, 
         lam_diff=1.0,
@@ -30,7 +29,7 @@ class BayesianPINN(BasePINN):
         device='cpu',
     ) -> None:
         self.step_size = step_size
-        self.burn = burn
+        # self.burn = burn
         self.num_samples = num_samples
         self.L = L
         self.lam_diff = lam_diff
@@ -60,14 +59,17 @@ class BayesianPINN(BasePINN):
         
         self.X = torch.cat([diff_X, sol_X], dim=0).to(self.device)
         self.y = torch.cat([diff_y, sol_y], dim=0).to(self.device)
-        self.eval_X = torch.cat([eval_X, sol_X], dim=0).to(self.device)
+        # self.eval_X = torch.cat([eval_X, sol_X], dim=0).to(self.device)
 
         self.mse_loss = nn.MSELoss(reduction="sum")
 
     def _pinn_init(self):
-        self.net = BayesianPINNNet(self.lam_diff, self.lam_sol, self.physics_model, self.num_bd)
+        self.bnet = BayesianPINNNet(self.lam_diff, self.lam_sol, self.physics_model, self.num_bd)
+        # self.net = BayesianPINNNet(self.lam_diff, self.lam_sol, self.physics_model, self.num_bd)
+        self.net = self.bnet.fnn
         for param in self.net.parameters():
             torch.nn.init.normal_(param)
+        self.bnet.to(self.device)
         self.net.to(self.device)
         # self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         self.tau_list = []
@@ -88,29 +90,35 @@ class BayesianPINN(BasePINN):
         #     num_steps_per_sample=self.L, tau_list=self.tau_list, tau_out=1
         # )
 
+        # params_hmc = hamiltorch.sample_model(
+        #     self.net, self.X, self.y, model_loss='regression', params_init=self.params_init,
+        #     num_samples=num_samples, step_size=self.step_size, burn=0,
+        #     num_steps_per_sample=self.L, tau_list=self.tau_list, tau_out=1, verbose=False
+        # )
+
         params_hmc = hamiltorch.sample_model(
-            self.net, self.X, self.y, model_loss='regression', params_init=self.params_init,
+            self.bnet, self.X, self.y, model_loss='regression', params_init=self.params_init,
             num_samples=num_samples, step_size=self.step_size, burn=0,
             num_steps_per_sample=self.L, tau_list=self.tau_list, tau_out=1, verbose=False
         )
 
         return params_hmc
 
-    def predict(self, X):
-        # self.net.eval()
-        f_pred_list = []
-        u_pred_list = []
-        for i in range(self.num_samples - self.burn):
-            params = hamiltorch.util.unflatten(self.net, self.params_hmc[i])
-            hamiltorch.util.update_model_params_in_place(self.net, params)
-            f_pred = self.net(X)[:-self.num_bd]
-            u_pred = self.net.fnn(X)[:-self.num_bd]
-            f_pred_list.append(f_pred)
-            u_pred_list.append(u_pred)
-        f_pred = torch.stack(f_pred_list).detach().cpu()
-        u_pred = torch.stack(u_pred_list).detach().cpu()
+    # def predict(self, X):
+    #     # self.net.eval()
+    #     f_pred_list = []
+    #     u_pred_list = []
+    #     for i in range(self.num_samples - self.burn):
+    #         params = hamiltorch.util.unflatten(self.net, self.params_hmc[i])
+    #         hamiltorch.util.update_model_params_in_place(self.net, params)
+    #         f_pred = self.net(X)[:-self.num_bd]
+    #         u_pred = self.net.fnn(X)[:-self.num_bd]
+    #         f_pred_list.append(f_pred)
+    #         u_pred_list.append(u_pred)
+    #     f_pred = torch.stack(f_pred_list).detach().cpu()
+    #     u_pred = torch.stack(u_pred_list).detach().cpu()
 
-        return f_pred, u_pred
+    #     return f_pred, u_pred
 
     # def evaluate(self):
     #     y_pred, u_pred = self.predict(self.eval_X)
@@ -119,67 +127,74 @@ class BayesianPINN(BasePINN):
     #     y_up, y_low = y_mean - 2 * y_std, y_mean + 2 * y_std
     #     return y_mean, y_up, y_low
 
-    def summary(self):
-        f_pred, u_pred = self.predict(self.eval_X)
+    # def summary(self):
+    #     f_pred, u_pred = self.predict(self.eval_X)
 
-        f_pred_upper = torch.quantile(f_pred, 0.975, dim=0)
-        f_pred_lower = torch.quantile(f_pred, 0.025, dim=0)
-        f_pred_mean = torch.mean(f_pred, dim=0)
-        f_pred_median = torch.quantile(f_pred, 0.5, dim=0)
+    #     f_pred_upper = torch.quantile(f_pred, 0.975, dim=0)
+    #     f_pred_lower = torch.quantile(f_pred, 0.025, dim=0)
+    #     f_pred_mean = torch.mean(f_pred, dim=0)
+    #     f_pred_median = torch.quantile(f_pred, 0.5, dim=0)
 
-        u_pred_upper = torch.quantile(u_pred, 0.975, dim=0)
-        u_pred_lower = torch.quantile(u_pred, 0.025, dim=0)
-        u_pred_mean = torch.mean(u_pred, dim=0)
-        u_pred_median = torch.quantile(u_pred, 0.5, dim=0)
-        u_covered = (u_pred_lower <= self.eval_y.clone().detach().cpu()) & (self.eval_y.clone().detach().cpu() <= u_pred_upper)
+    #     u_pred_upper = torch.quantile(u_pred, 0.975, dim=0)
+    #     u_pred_lower = torch.quantile(u_pred, 0.025, dim=0)
+    #     u_pred_mean = torch.mean(u_pred, dim=0)
+    #     u_pred_median = torch.quantile(u_pred, 0.5, dim=0)
+    #     u_covered = (u_pred_lower <= self.eval_y.clone().detach().cpu()) & (self.eval_y.clone().detach().cpu() <= u_pred_upper)
 
-        summary_dict = {
-            'f_preds_upper': f_pred_upper,
-            'f_preds_lower': f_pred_lower,
-            'f_preds_mean': f_pred_mean,
-            'f_preds_median': f_pred_median,
-            'y_preds_upper': u_pred_upper,
-            'y_preds_lower': u_pred_lower,
-            'y_preds_mean': u_pred_mean,
-            'y_preds_median': u_pred_median,
-            'y_covered': u_covered, 
-            'x_eval': self.eval_X.clone().detach().cpu().numpy(),
-        }
+    #     summary_dict = {
+    #         'f_preds_upper': f_pred_upper,
+    #         'f_preds_lower': f_pred_lower,
+    #         'f_preds_mean': f_pred_mean,
+    #         'f_preds_median': f_pred_median,
+    #         'y_preds_upper': u_pred_upper,
+    #         'y_preds_lower': u_pred_lower,
+    #         'y_preds_mean': u_pred_mean,
+    #         'y_preds_median': u_pred_median,
+    #         'y_covered': u_covered, 
+    #         'x_eval': self.eval_X.clone().detach().cpu().numpy(),
+    #     }
 
-        return summary_dict
+    #     return summary_dict
 
-    def train(self, epochs, eval_freq=-1, burn=0.5):
+    def train(self, epochs, eval_freq=-1, burn=0.5, callback=None):
+        self.epochs = epochs
         if eval_freq == -1:
             eval_freq = epochs // 10
-        self.eval_buffer = EvaluationBuffer(burn=burn)
-        self.burn_steps = int(epochs * burn)
+        # self.eval_buffer = EvaluationBuffer(burn=burn)
+        # self.burn_steps = int(epochs * burn)
+        self.callback = callback
+        self.callback.init_callback(self, eval_freq=eval_freq, burn=burn)
         self.n_eval = 0
-
-        eval_losses = []
-        sol_losses = []
-        pde_losses = []
 
         for ep in range(epochs):
             self.progress = (ep+1) / epochs
             tic = time.time()
             params_hmc = self.sample_posterior(num_samples=1)
             toc = time.time()
+            
+            self.params_hmc += params_hmc
+            self.params_init = self.params_hmc[-1].clone()
+            params = hamiltorch.util.unflatten(self.net, self.params_hmc[-1])
+            hamiltorch.util.update_model_params_in_place(self.net, params)
 
-            hamiltorch.util.update_model_params_in_place(self.net, hamiltorch.util.unflatten(self.net, params_hmc[0]))
-            self.params_init = params_hmc[0].clone()
-            self.eval_buffer.add(self.net.fnn(self.eval_X)[:-self.num_bd].detach())
+            self.callback.on_training()
 
             self.logger.record('train/progress', self.progress)
             self.logger.record('train/epoch', ep+1)
             self.logger.record('train/time', toc-tic)
 
             if (ep+1) % eval_freq == 0:
-                self.evaluate_metric()
-                self.physics_model.save_evaluation(self, self.save_path)
-                self.physics_model.save_temp_frames(self, self.n_eval, self.save_path)
+                # ##########
+                # params_hmc = self.sample_posterior(num_samples=eval_freq)
+                # self.params_hmc += params_hmc
+                # self.params_init = self.params_hmc[-1].clone()
+                # for i in range(eval_freq):
+                #     hamiltorch.util.update_model_params_in_place(self.net, hamiltorch.util.unflatten(self.net, params_hmc[i]))
+                #     self.callback.on_training()
 
+
+                self.callback.on_eval()
                 self.logger.dump()
-                self.n_eval += 1
 
         # for rd in range(int(epochs / eval_freq)):
         #     self.progress = (rd+1) / int(epochs / eval_freq)
@@ -203,7 +218,8 @@ class BayesianPINN(BasePINN):
         # print(f"Sampling time: {toc-tic:.2f}s")
 
         # self.physics_model.save_evaluation(self, self.save_path)
-        self.physics_model.create_gif(self.save_path)
+        # self.physics_model.create_gif(self.save_path)
+        self.callback.on_training_end()
 
 
 if __name__ == "__main__":
@@ -212,23 +228,18 @@ if __name__ == "__main__":
     # np.random.seed(123)
 
     # Initialize the physics model
-    physics_model = Poisson(boundary_sd=0.05, diff_sd=0.0)
-    dataset = physics_model.generate_data(100, device='cpu')
+    physics_model = Poisson(sol_sd=0.05, diff_sd=0.0)
+    dataset = physics_model.generate_data(device='cpu')
 
     # Initialize the Bayesian PINN model
-    model = BayesianPINN(physics_model, dataset=dataset, device='cpu', step_size=0.0002, lam_diff=100.0, lam_sol=30.0, num_samples=100, burn=0)
+    model = BayesianPINN(physics_model, dataset=dataset, device='cpu', step_size=0.0002, lam_diff=100.0, lam_sol=30.0, num_samples=100)
     num_bd = model.num_bd
 
     # Perform HMC sampling
-    model.sample_posterior()
-
-    add1 = model.params_hmc.copy()
-    add2 = model.params_hmc.copy()
-
-    add = add1 + add2
-
-    print(len(add))
-    print(add[0].shape)
+    hmc_params = model.sample_posterior(num_samples=10)
+    print(len(hmc_params))
+    print(hmc_params[0].shape)
+    # model.train(epochs=5000, eval_freq=500, burn=0.5, callback=PoissonCallback())
 
     # # Evaluate the model
     # pred_dict = model.summary()
