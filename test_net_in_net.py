@@ -35,22 +35,58 @@ class TargetNetwork(nn.Module):
         x = F.linear(x, weights, biases)
         return x
 
-# Example usage
-# Define input dimensions for target and hyper networks
-input_dim = 64         # Dimension of input to TargetNetwork
-output_dim = 32        # Output dimension of the dynamically generated layer
-hyper_dim = 10         # Input dimension for HyperNetwork (context for generating weights)
+# # Example usage
+# # Define input dimensions for target and hyper networks
+# input_dim = 64         # Dimension of input to TargetNetwork
+# output_dim = 32        # Output dimension of the dynamically generated layer
+# hyper_dim = 10         # Input dimension for HyperNetwork (context for generating weights)
 
-# Initialize target network
-target_network = TargetNetwork(input_dim=input_dim, output_dim=output_dim, hyper_dim=hyper_dim)
+# # Initialize target network
+# target_network = TargetNetwork(input_dim=input_dim, output_dim=output_dim, hyper_dim=hyper_dim)
 
-# Example inputs
-target_input = torch.randn(1, input_dim)        # Input to TargetNetwork
-hyper_input = torch.randn(1, hyper_dim)         # Input to HyperNetwork
+# # Example inputs
+# target_input = torch.randn(1, input_dim)        # Input to TargetNetwork
+# hyper_input = torch.randn(1, hyper_dim)         # Input to HyperNetwork
 
-# Forward pass
-output = target_network(target_input, hyper_input)
-print("Output shape:", output.shape)  # Should be [1, output_dim]
+# # Forward pass
+# output = target_network(target_input, hyper_input)
+# print("Output shape:", output.shape)  # Should be [1, output_dim]
 
-# Backward pass to verify autograd works
-output.mean().backward()
+# # Backward pass to verify autograd works
+# output.mean().backward()
+
+if __name__ == '__main__':
+    
+    net1 = nn.Sequential(
+        nn.Linear(10, 20),
+        nn.ReLU(),
+        nn.Linear(20, 10),
+        nn.ReLU()
+    )
+    
+    class Shell(nn.Module):
+        def __init__(self, net):
+            super(Shell, self).__init__()
+            self.net = net
+        
+        def forward(self, x):
+            return self.net(x)[:5]
+        
+    net2 = Shell(net1)
+    
+    x = torch.randn(10)
+    y1 = net1(x)
+    y2 = net2(x)
+    
+    print(y1)
+    print(y2)
+    
+    with torch.no_grad():
+        for p in net1.parameters():
+            p += 1
+    
+    y1 = net1(x)
+    y2 = net2(x)
+    
+    print(y1)
+    print(y2)
