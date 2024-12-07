@@ -64,14 +64,16 @@ poisson:
     - 30
     - 30
     activation_fn: tanh
-    lr: 'poly_0.5e-5_15.0_0.7'
-    sgld_lr: 'poly_0.5e-5_15.0_0.9'
-    lambda_pde: 'linear_100.0_1000.0'
-    lambda_y: 'linear_100.0_1000.0'
-    lambda_theta: 'linear_1000.0_10000.0'
+    # lr: 'poly_0.5e-5_15.0_0.7'
+    # sgld_lr: 'poly_0.5e-5_15.0_0.9'
+    # lam: 'linear_100.0_1000.0'
     # lambda_pde: 1.0
-    # lambda_y: 1.0
     # lambda_theta: 10.0
+    lr: 'poly_1e-6_5.0_0.7'
+    sgld_lr: 'poly_1e-6_5.0_0.9'
+    lam: 1000.0
+    lambda_pde: 1.0
+    lambda_theta: 10.0
     pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:

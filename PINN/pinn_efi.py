@@ -24,7 +24,7 @@ class PINN_EFI(BasePINN):
         lr=1e-3,
         lambda_pde=10,
         sgld_lr=1e-3,
-        lambda_y=1,
+        lam=1,
         lambda_theta=1,
         pretrain_epochs=5000,
         save_path=None,
@@ -33,7 +33,7 @@ class PINN_EFI(BasePINN):
         # EFI configs
         self.encoder_kwargs = encoder_kwargs
         self.sgld_lr = sgld_lr
-        self.lambda_y = lambda_y
+        self.lam = lam
         self.lambda_theta = lambda_theta
         self.pretrain_epochs = pretrain_epochs
         
@@ -84,7 +84,7 @@ class PINN_EFI(BasePINN):
         self.lr = get_schedule(self.lr)
         self.sgld_lr = get_schedule(self.sgld_lr)
         self.lambda_pde = get_schedule(self.lambda_pde)
-        self.lambda_y = get_schedule(self.lambda_y)
+        self.lam = get_schedule(self.lam)
         self.lambda_theta = get_schedule(self.lambda_theta)
         self.sparse_threshold = get_schedule(self.encoder_kwargs.get('sparse_threshold', 0.01))
         self.encoder_kwargs['sparse_threshold'] = self.sparse_threshold(0)
@@ -193,10 +193,10 @@ class PINN_EFI(BasePINN):
 
     def update(self):
         # update training parameters
-        annealing_period = 0.5
+        annealing_period = 1.0
         annealing_progress = self.progress / annealing_period
         lambda_pde = self.lambda_pde(annealing_progress)
-        lambda_y = self.lambda_y(annealing_progress)
+        lam = self.lam(annealing_progress)
         lambda_theta = self.lambda_theta(annealing_progress)
         self.net.sparse_threshold = self.sparse_threshold(self.progress * 3 - 1)
         lr = self.lr(self.progress)
@@ -211,11 +211,7 @@ class PINN_EFI(BasePINN):
         y_loss = self.solution_loss()
         z_prior_loss = self.z_prior_loss()
         pde_loss = self.pde_loss()
-        Z_loss = (
-            lambda_y * y_loss
-            + lambda_theta * theta_loss
-            + z_prior_loss + lambda_pde * pde_loss
-        )
+        Z_loss = lam * (y_loss + lambda_theta * theta_loss + lambda_pde * pde_loss) + z_prior_loss
 
         self.sampler.zero_grad()
         Z_loss.backward()
@@ -228,11 +224,7 @@ class PINN_EFI(BasePINN):
         w_prior_loss = self.net.gmm_prior_loss() / self.n_samples
         pde_loss = self.pde_loss()
 
-        w_loss = (
-            lambda_y * (y_loss + w_prior_loss)
-            + lambda_theta * theta_loss
-            + lambda_pde * pde_loss
-        )
+        w_loss = lam * (y_loss + w_prior_loss + lambda_theta * theta_loss + lambda_pde * pde_loss)
 
         self.optimiser.zero_grad()
         w_loss.backward()
