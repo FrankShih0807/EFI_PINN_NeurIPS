@@ -1,6 +1,8 @@
 import numpy as np
 import os
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 # def remove_outliers_iqr(data, multiplier=1.5):
 #     if len(data) == 0:
@@ -58,6 +60,8 @@ def collect_progress_data(output_dir):
                     continue
                 
                 csv_file = os.path.join(exp_path, 'progress.csv')
+                if not os.path.exists(os.path.join(exp_path, 'training_loss.gif')):
+                    continue
                 if os.path.exists(csv_file):
                     try:
                         # Read the CSV file
@@ -73,26 +77,110 @@ def collect_progress_data(output_dir):
     
     # Combine all DataFrames into one
     combined_df = pd.concat(data_frames, ignore_index=True) if data_frames else pd.DataFrame()
+    combined_df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
     return combined_df
+
+
+def plot_latent_Z(output_dir):
+    """
+    Collects latent_Z.npy and true_Z.npy files from the directory structure,
+    and creates scatter plots grouped by 'model' and 'algo'.
+
+    Parameters:
+    - output_dir (str): Root directory of the structure 'output/{model}/{algo}/exp_{i}/'
+
+    Returns:
+    - None: Generates scatter plots and saves them to files.
+    """
+    # Initialize a list to collect data for scatter plots
+    all_data = []
+
+    # Walk through the directory structure
+    for model in os.listdir(output_dir):
+        model_path = os.path.join(output_dir, model)
+        if not os.path.isdir(model_path):
+            continue
+        
+        for algo in os.listdir(model_path):
+            algo_path = os.path.join(model_path, algo)
+            if not os.path.isdir(algo_path):
+                continue
+
+            for exp in os.listdir(algo_path):
+                exp_path = os.path.join(algo_path, exp)
+
+                # Skip if latent_Z.npy or true_Z.npy does not exist
+                latent_Z_path = os.path.join(exp_path, 'latent_Z.npy')
+                true_Z_path = os.path.join(exp_path, 'true_Z.npy')
+
+                if not (os.path.exists(latent_Z_path) and os.path.exists(true_Z_path)):
+                    continue
+
+                # Load the latent_Z and true_Z data
+                latent_Z = np.load(latent_Z_path)
+                true_Z = np.load(true_Z_path)
+
+                # Combine data into a DataFrame with metadata
+                df = pd.DataFrame({
+                    'latent_Z': latent_Z,
+                    'true_Z': true_Z,
+                    'model': model,
+                    'algo': algo,
+                    'exp': exp
+                })
+                all_data.append(df)
+
+    # Combine all data into a single DataFrame
+    combined_data = pd.concat(all_data, ignore_index=True)
+
+    # Create scatter plots grouped by 'model' and 'algo'
+    for (model, algo), group in combined_data.groupby(['model', 'algo']):
+        plt.figure(figsize=(8, 6))
+        sns.scatterplot(data=group, x='true_Z', y='latent_Z', alpha=0.6)
+        # Add the x=y line
+        min_val = min(group['true_Z'].min(), group['latent_Z'].min())
+        max_val = max(group['true_Z'].max(), group['latent_Z'].max())
+        plt.plot([min_val, max_val], [min_val, max_val], 'r--', label='x = y')
+        
+        plt.title(f'Model: {model} | Algo: {algo}')
+        plt.xlabel('True Z')
+        plt.ylabel('Latent Z')
+        plt.grid(True)
+
+        # Save the plot
+        output_path = os.path.join('figures/latent_Z', f'{model}_{algo}.png')
+        plt.savefig(output_path)
+        plt.close()
+
+    print(f"Scatter plots saved in figures")
+    
+    # Combine all DataFrames into one
+
 
 # Example usage
 output_dir = "output"
 progress_df = collect_progress_data(output_dir)
 
-df = progress_df[progress_df['train/progress']==1.0]
-df["cover_all"] = (df["eval/coverage_rate"]==1)
+
+df = progress_df[progress_df['progress']==1.0]
+df["cover_all"] = (df["coverage_rate"]==1)
 # print(df_cr.groupby(['model', 'algo'])['cr'].mean())
 
 # print(df_cr[df_cr['cr']<0.3])
 # print(progress_df[progress_df['train/progress']==1.0])
 # print("coverage rate")
-print(df.groupby(['model', 'algo'])[['eval/coverage_rate', 'eval/mse', 'eval/ci_range', 'cover_all']].mean())
-print(df[df['cover_all']<1])
+print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range', 'cover_all']].mean())
+
+df2 = df[df['algo']=='pinn_efi_lam1k_2']
+rows_with_nan = df2[df2.isna().any(axis=1)]
+print(rows_with_nan)
+low_cr = df2[df2['coverage_rate']<0.5]
+print(low_cr)
 # print("mse")
 # print(df.groupby(['model', 'algo'])['eval/mse'].mean())
 # print("ci range")
 # print(df.groupby(['model', 'algo'])['eval/ci_range'].mean())
 
 # print(df[df['eval/coverage_rate']<0.2][['model', 'algo', 'exp']])
-
+plot_latent_Z(output_dir)
 
