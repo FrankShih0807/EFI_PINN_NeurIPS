@@ -58,11 +58,11 @@ poisson:
   n_samples: 200
   epochs: 100_000
   eval_freq: -1
-  burn: 0.5
+  burn: 0.6
   pinn:
     hidden_layers:
-    - 30
-    - 30
+    - 50
+    - 50
     activation_fn: tanh
     lr: 'poly_5e-6_50.0_0.7'
     sgld_lr: 'poly_5e-6_50.0_0.9'

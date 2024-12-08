@@ -135,25 +135,57 @@ def plot_latent_Z(output_dir):
 
     # Create scatter plots grouped by 'model' and 'algo'
     for (model, algo), group in combined_data.groupby(['model', 'algo']):
-        plt.figure(figsize=(8, 6))
-        sns.scatterplot(data=group, x='true_Z', y='latent_Z', alpha=0.6)
-        # Add the x=y line
+    #     plt.figure(figsize=(8, 6))
+    #     sns.scatterplot(data=group, x='true_Z', y='latent_Z', alpha=0.6)
+    #     # Add the x=y line
+    #     min_val = min(group['true_Z'].min(), group['latent_Z'].min())
+    #     max_val = max(group['true_Z'].max(), group['latent_Z'].max())
+    #     plt.plot([min_val, max_val], [min_val, max_val], 'r--', label='x = y')
+        
+    #     plt.title(f'Model: {model} | Algo: {algo}')
+    #     plt.xlabel('True Z')
+    #     plt.ylabel('Latent Z')
+    #     plt.grid(True)
+
+    #     # Save the plot
+    #     output_path = os.path.join('figures/latent_Z', f'{model}_{algo}.png')
+    #     plt.savefig(output_path)
+    #     plt.close()
+
+    # print(f"Scatter plots saved in figures")
+                # Create a figure with two subplots: scatter plot and ordered comparison plot
+        fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+
+        # Scatter plot with x=y line
+        sns.scatterplot(data=group, x='true_Z', y='latent_Z', alpha=0.6, ax=axes[0])
         min_val = min(group['true_Z'].min(), group['latent_Z'].min())
         max_val = max(group['true_Z'].max(), group['latent_Z'].max())
-        plt.plot([min_val, max_val], [min_val, max_val], 'r--', label='x = y')
+        axes[0].plot([min_val, max_val], [min_val, max_val], 'r--', label='x = y')
+        axes[0].set_title(r'$Z_i$ vs $\hat{Z}_i$')
+        axes[0].set_xlabel('')
+        axes[0].set_ylabel('')
         
-        plt.title(f'Model: {model} | Algo: {algo}')
-        plt.xlabel('True Z')
-        plt.ylabel('Latent Z')
-        plt.grid(True)
+        axes[0].legend()
+        axes[0].grid(True)
 
-        # Save the plot
+        # Ordered comparison plot
+        sorted_latent_Z = np.sort(group['latent_Z'])
+        sorted_true_Z = np.sort(group['true_Z'])
+        axes[1].scatter(sorted_true_Z, sorted_latent_Z, alpha=0.6)
+        axes[1].plot([min_val, max_val], [min_val, max_val], 'r--', label='x = y')
+        axes[1].set_title(r'$Z_{(i)}$ vs $\hat{Z}_{(i)}$')
+        # axes[1].set_xlabel('Ordered True Z')
+        # axes[1].set_ylabel('Ordered Latent Z')
+        axes[1].legend()
+        axes[1].grid(True)
+
+        # Save the combined plot
         output_path = os.path.join('figures/latent_Z', f'{model}_{algo}.png')
+        plt.tight_layout()
         plt.savefig(output_path)
         plt.close()
 
-    print(f"Scatter plots saved in figures")
-    
+    print(f"Scatter and Ordered plots saved in {output_dir}")
     # Combine all DataFrames into one
 
 
