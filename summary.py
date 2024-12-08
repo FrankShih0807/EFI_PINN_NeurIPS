@@ -202,12 +202,13 @@ df["cover_all"] = (df["coverage_rate"]==1)
 # print(progress_df[progress_df['train/progress']==1.0])
 # print("coverage rate")
 print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range', 'cover_all']].mean())
+print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range', 'cover_all']].std())
 
-df2 = df[df['algo']=='pinn_efi_lam1k_2']
-rows_with_nan = df2[df2.isna().any(axis=1)]
-print(rows_with_nan)
-low_cr = df2[df2['coverage_rate']<0.5]
-print(low_cr)
+# df2 = df[df['algo']=='pinn_efi_lam1k_2']
+# rows_with_nan = df2[df2.isna().any(axis=1)]
+# print(rows_with_nan)
+# low_cr = df2[df2['coverage_rate']<0.5]
+# print(low_cr)
 # print("mse")
 # print(df.groupby(['model', 'algo'])['eval/mse'].mean())
 # print("ci range")
