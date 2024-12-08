@@ -193,14 +193,14 @@ class PINN_EFI(BasePINN):
 
     def update(self):
         # update training parameters
-        annealing_period = 1.0
+        annealing_period = 0.5
         annealing_progress = self.progress / annealing_period
         lambda_pde = self.lambda_pde(annealing_progress)
         lam = self.lam(annealing_progress)
         lambda_theta = self.lambda_theta(annealing_progress)
         self.net.sparse_threshold = self.sparse_threshold(self.progress * 3 - 1)
-        lr = self.lr(self.progress)
-        sgld_lr = self.sgld_lr(self.progress)
+        lr = self.lr(annealing_progress)
+        sgld_lr = self.sgld_lr(annealing_progress)
         self._update_lr(self.optimiser, lr)
         self._update_lr(self.sampler, sgld_lr)
         
