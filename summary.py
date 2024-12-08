@@ -195,14 +195,14 @@ progress_df = collect_progress_data(output_dir)
 
 
 df = progress_df[progress_df['progress']==1.0]
-df["cover_all"] = (df["coverage_rate"]==1)
+# df["cover_all"] = (df["coverage_rate"]==1)
 # print(df_cr.groupby(['model', 'algo'])['cr'].mean())
 
 # print(df_cr[df_cr['cr']<0.3])
 # print(progress_df[progress_df['train/progress']==1.0])
 # print("coverage rate")
-print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range', 'cover_all']].mean())
-print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range', 'cover_all']].std())
+print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].mean())
+print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].std()/10)
 
 # df2 = df[df['algo']=='pinn_efi_lam1k_2']
 # rows_with_nan = df2[df2.isna().any(axis=1)]

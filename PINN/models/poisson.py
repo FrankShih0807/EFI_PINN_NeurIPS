@@ -174,6 +174,7 @@ class PoissonCallback(BaseCallback):
         plt.ylim(-1.5, 1.5)
         plt.savefig(os.path.join(self.save_path, 'pred_solution.png'))
         
+        
         # save temp frames
         temp_dir = os.path.join(self.save_path, 'temp_frames')
         os.makedirs(temp_dir, exist_ok=True)

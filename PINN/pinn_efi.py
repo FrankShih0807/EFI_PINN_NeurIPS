@@ -224,7 +224,7 @@ class PINN_EFI(BasePINN):
         w_prior_loss = self.net.gmm_prior_loss() / self.n_samples
         pde_loss = self.pde_loss()
 
-        w_loss = lam * (y_loss + w_prior_loss + lambda_theta * theta_loss + lambda_pde * pde_loss)
+        w_loss = lam * (y_loss + lambda_theta * theta_loss + lambda_pde * pde_loss) + w_prior_loss
 
         self.optimiser.zero_grad()
         w_loss.backward()

@@ -23,9 +23,9 @@ european_call:
     lambda_pde: 10.0
 
 poisson:
-  epochs: 50_000
+  epochs: 100_000
   eval_freq: -1
-  burn: 0.4
+  burn: 0.6
   pinn:
     hidden_layers:
     - 50
@@ -35,7 +35,6 @@ poisson:
     lambda_pde: 1.0
     dropout_rate: 0.005
     
-
 nonlinear:
   epochs: 10_000
   pinn:
