@@ -28,8 +28,8 @@ poisson:
   burn: 0.6
   pinn:
     hidden_layers:
-    - 50
-    - 50
+    - 30
+    - 30
     activation_fn: tanh
     lr: 3e-4
     lambda_pde: 1.0

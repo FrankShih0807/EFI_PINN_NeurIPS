@@ -154,38 +154,43 @@ def plot_latent_Z(output_dir):
 
     # print(f"Scatter plots saved in figures")
                 # Create a figure with two subplots: scatter plot and ordered comparison plot
-        fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+        fig, axes = plt.subplots(1, 1, figsize=(8, 6))
 
         # Scatter plot with x=y line
-        sns.scatterplot(data=group, x='true_Z', y='latent_Z', alpha=0.6, ax=axes[0])
+        sns.scatterplot(data=group, x='true_Z', y='latent_Z', alpha=0.6, ax=axes)
         min_val = min(group['true_Z'].min(), group['latent_Z'].min())
         max_val = max(group['true_Z'].max(), group['latent_Z'].max())
-        axes[0].plot([min_val, max_val], [min_val, max_val], 'r--', label='x = y')
-        axes[0].set_title(r'$Z_i$ vs $\hat{Z}_i$')
-        axes[0].set_xlabel('')
-        axes[0].set_ylabel('')
+        axes.plot([min_val, max_val], [min_val, max_val], 'r--', label='x = y')
+        axes.set_title(r'$Z_i$ vs $\hat{Z}_i$')
+        axes.set_xlabel('')
+        axes.set_ylabel('')
         
-        axes[0].legend()
-        axes[0].grid(True)
-
+        axes.legend()
+        axes.grid(True)
+        output_path = os.path.join('figures/latent_Z', f'{model}_{algo}_1.png')
+        plt.tight_layout()
+        plt.savefig(output_path)
+        plt.close()
+        
+        fig, axes = plt.subplots(1, 1, figsize=(8, 6))
         # Ordered comparison plot
         sorted_latent_Z = np.sort(group['latent_Z'])
         sorted_true_Z = np.sort(group['true_Z'])
-        axes[1].scatter(sorted_true_Z, sorted_latent_Z, alpha=0.6)
-        axes[1].plot([min_val, max_val], [min_val, max_val], 'r--', label='x = y')
-        axes[1].set_title(r'$Z_{(i)}$ vs $\hat{Z}_{(i)}$')
+        axes.scatter(sorted_true_Z, sorted_latent_Z, alpha=0.6)
+        axes.plot([min_val, max_val], [min_val, max_val], 'r--', label='x = y')
+        axes.set_title(r'$Z_{(i)}$ vs $\hat{Z}_{(i)}$')
         # axes[1].set_xlabel('Ordered True Z')
         # axes[1].set_ylabel('Ordered Latent Z')
-        axes[1].legend()
-        axes[1].grid(True)
+        axes.legend()
+        axes.grid(True)
 
         # Save the combined plot
-        output_path = os.path.join('figures/latent_Z', f'{model}_{algo}.png')
+        output_path = os.path.join('figures/latent_Z', f'{model}_{algo}_2.png')
         plt.tight_layout()
         plt.savefig(output_path)
         plt.close()
 
-    print(f"Scatter and Ordered plots saved in {output_dir}")
+    # print(f"Scatter and Ordered plots saved in {output_dir}")
     # Combine all DataFrames into one
 
 

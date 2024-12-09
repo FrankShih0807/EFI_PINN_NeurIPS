@@ -221,7 +221,7 @@ class PINN_EFI(BasePINN):
         self.net.train()
         theta_loss = self.theta_loss()
         y_loss = self.solution_loss()
-        w_prior_loss = self.net.gmm_prior_loss() / self.n_samples
+        w_prior_loss = self.net.gmm_prior_loss()
         pde_loss = self.pde_loss()
 
         w_loss = lam * (y_loss + lambda_theta * theta_loss + lambda_pde * pde_loss) + w_prior_loss
