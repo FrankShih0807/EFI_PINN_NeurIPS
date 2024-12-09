@@ -41,6 +41,9 @@ class BasePINN(object):
         # To device
         self.sol_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'solution'], dim=0).to(self.device)
         self.sol_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'solution'], dim=0).to(self.device)
+
+        self.diff_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'differential'], dim=0).to(self.device)
+        self.diff_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'differential'], dim=0).to(self.device)
                            
         self.eval_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'evaluation'], dim=0).to(self.device)
         self.eval_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'evaluation'], dim=0).to(self.device)
