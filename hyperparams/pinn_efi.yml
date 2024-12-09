@@ -58,11 +58,11 @@ poisson:
   n_samples: 200
   epochs: 100_000
   eval_freq: -1
-  burn: 0.6
+  burn: 0.5
   pinn:
     hidden_layers:
-    - 50
-    - 50
+    - 30
+    - 30
     activation_fn: tanh
     lr: 'poly_5e-6_10.0_0.7'
     sgld_lr: 'poly_5e-6_10.0_0.9'
@@ -83,5 +83,5 @@ poisson:
       encoder_activation: leaky_relu
       prior_sd: 1.0
       sparse_sd: 0.001
-      sparsity: 0.5
+      sparsity: 0.1
       sparse_threshold: 0.0

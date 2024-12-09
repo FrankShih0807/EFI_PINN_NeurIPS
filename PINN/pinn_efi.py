@@ -193,7 +193,7 @@ class PINN_EFI(BasePINN):
 
     def update(self):
         # update training parameters
-        annealing_period = 0.5
+        annealing_period = 0.3
         annealing_progress = self.progress / annealing_period
         lambda_pde = self.lambda_pde(annealing_progress)
         lam = self.lam(annealing_progress)

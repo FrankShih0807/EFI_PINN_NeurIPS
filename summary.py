@@ -77,7 +77,6 @@ def collect_progress_data(output_dir):
     
     # Combine all DataFrames into one
     combined_df = pd.concat(data_frames, ignore_index=True) if data_frames else pd.DataFrame()
-    combined_df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
     return combined_df
 
 
@@ -199,19 +198,23 @@ output_dir = "output"
 progress_df = collect_progress_data(output_dir)
 
 
-df = progress_df[progress_df['progress']==1.0]
+df = progress_df[progress_df['train/progress']==1.0]
+df = df.loc[:, ~df.columns.str.startswith('train')]
+df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
+
 # df["cover_all"] = (df["coverage_rate"]==1)
 # print(df_cr.groupby(['model', 'algo'])['cr'].mean())
 
 # print(df_cr[df_cr['cr']<0.3])
 # print(progress_df[progress_df['train/progress']==1.0])
 # print("coverage rate")
+
 print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].mean())
 print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].std()/10)
 
 # df2 = df[df['algo']=='pinn_efi_lam1k_2']
-# rows_with_nan = df2[df2.isna().any(axis=1)]
-# print(rows_with_nan)
+rows_with_nan = df[df.isna().any(axis=1)]
+print(rows_with_nan)
 # low_cr = df2[df2['coverage_rate']<0.5]
 # print(low_cr)
 # print("mse")
