@@ -8,13 +8,8 @@ poisson:
     - 50
     - 50
     activation_fn: tanh
-    # lr: 1.0e-3
-    # physics_loss_weight: 1.0
-    # sigma: 0.01
-    step_size: 0.002
-    # burn: 2000
-    num_samples: 5000
+    step_size: 0.001 # set to be 0.02 * min(sigma_diff, sigma_sol)
     L: 6
-    lam_diff: 10.0
-    lam_sol: 10.0
+    sigma_diff: 0.05
+    sigma_sol: 0.05
     
