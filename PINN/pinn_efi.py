@@ -62,7 +62,7 @@ class PINN_EFI(BasePINN):
             device=self.device,
             **self.encoder_kwargs
         )
-        # self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
+        # self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr(0))
         self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr(0))
 
         # init latent noise and sampler
@@ -78,7 +78,7 @@ class PINN_EFI(BasePINN):
                 self.noise_sd.append(0)
         
         self.sampler = SGLD([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0))
-        # self.sampler = SGHMC([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr, alpha=0.1)
+        # self.sampler = SGHMC([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0), alpha=0.1)
 
     def _get_scheduler(self):
         self.lr = get_schedule(self.lr)

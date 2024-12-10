@@ -236,6 +236,11 @@ class EFI_Net(nn.Module):
         loss = 0
         for p in self.parameters():
             loss += gmm_loss(p, self.prior_sd, self.sparse_sd, self.sparsity).sum()
+        # for name, p in self.named_parameters():
+        #     if name.split('.')[-2] == '3':
+        #         loss += gmm_loss(p, self.prior_sd, self.sparse_sd, self.sparsity).sum()
+        #     else:
+        #         loss += gmm_loss(p, self.prior_sd, self.sparse_sd, 1.0).sum()
         return loss
     
     def sparsity_loss(self, theta):
