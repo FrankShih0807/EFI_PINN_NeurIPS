@@ -19,7 +19,7 @@ class BayesianPINN(BasePINN):
         dataset,
         hidden_layers=[50, 50],
         activation_fn=nn.Tanh(),
-        step_size=0.02,
+        step_size=0.0002,
         L=6, 
         sigma_diff=0.01,
         sigma_sol=0.01,
