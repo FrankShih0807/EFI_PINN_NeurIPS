@@ -442,8 +442,6 @@ class BayesianPINNNet(nn.Module):
             nn.Linear(50, 1), 
         )
 
-        # self.lam_diff = lam_diff
-        # self.lam_sol = lam_sol
         self.sigma_diff = sigma_diff
         self.sigma_sol = sigma_sol
         self.num_bd = num_bd
