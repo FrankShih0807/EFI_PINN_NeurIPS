@@ -8,7 +8,7 @@ poisson:
     - 50
     - 50
     activation_fn: tanh
-    step_size: 0.001 # set to be 0.02 * min(sigma_diff, sigma_sol)
+    step_size: 0.001 ### set to be 0.02 * min(sigma_diff, sigma_sol)
     L: 6
     sigma_diff: 0.05
     sigma_sol: 0.05

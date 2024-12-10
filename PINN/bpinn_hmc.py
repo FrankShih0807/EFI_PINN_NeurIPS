@@ -83,8 +83,6 @@ class BayesianPINN(BasePINN):
         self.epochs = epochs
         if eval_freq == -1:
             eval_freq = epochs // 10
-        # self.eval_buffer = EvaluationBuffer(burn=burn)
-        # self.burn_steps = int(epochs * burn)
         self.callback = callback
         self.callback.init_callback(self, eval_freq=eval_freq, burn=burn)
         self.n_eval = 0
