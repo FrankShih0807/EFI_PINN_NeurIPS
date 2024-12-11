@@ -21,15 +21,17 @@ def gmm_loss(input, sigma_1, sigma_0, ratio=1.0):
 
 if __name__ == '__main__':
     
-    device = "mps"
+    device = "cpu"
     input = torch.linspace(-3, 3, steps=100).to(device)
     
     loss1 = trancated_l1_loss(input, threshold=1).to("cpu").numpy()
     loss2 = k_exp_loss(input, k=2, xi=1).to("cpu").numpy()
-    loss3 = gmm_loss(input, sigma_1=1, sigma_0=0.01, ratio=0.1).to("cpu").numpy()
+    loss3 = gmm_loss(input, sigma_1=1, sigma_0=0.01, ratio=0.01).to("cpu").numpy()
     
 
     plt.plot(input.to('cpu').numpy(), loss1)
     plt.plot(input.to('cpu').numpy(), loss2)
     plt.plot(input.to('cpu').numpy(), loss3)
+    
+    # plt.plot(input.to('cpu').numpy(), np.exp(-loss3), label='density')
     plt.show()

@@ -235,6 +235,7 @@ class PINN_EFI(BasePINN):
         self.logger.record('train_param/sgld_lr', self.sampler.param_groups[0]['lr'])
         self.logger.record('train_param/lambda_pde', lambda_pde)
         self.logger.record('train_param/sparse_threshold', self.net.sparse_threshold)
+        self.logger.record('train/theta_loss', theta_loss.item())
         
         return y_loss.item(), pde_loss.item()
 

@@ -56,7 +56,7 @@ nonlinear:
 
 poisson:
   n_samples: 200
-  epochs: 100_000
+  epochs: 150_000
   eval_freq: -1
   burn: 0.5
   pinn:
@@ -68,7 +68,7 @@ poisson:
     sgld_lr: 'poly_5e-6_10.0_0.9'
     lam: 'linear_100.0_1000.0'
     lambda_pde: 1.0
-    lambda_theta: 10.0
+    lambda_theta: 1.0
     # lr: 0.5e-6
     # sgld_lr: 0.5e-6
     # lam: 1000.0
