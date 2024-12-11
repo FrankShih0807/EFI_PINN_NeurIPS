@@ -8,3 +8,4 @@ output*
 *.egg-info/
 *.ipynb
 run_scripts/
+figures/
