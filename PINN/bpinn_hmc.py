@@ -10,6 +10,7 @@ import time
 from PINN.common.base_pinn import BasePINN
 from PINN.models.poisson import Poisson, PoissonCallback
 from PINN.common.torch_layers import BayesianPINNNet
+from PINN.common.scheduler import get_schedule
 
 
 class BayesianPINN(BasePINN):
@@ -34,10 +35,10 @@ class BayesianPINN(BasePINN):
         self.dataset = dataset.copy()
 
         diff_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'differential'], dim=0)
-        diff_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'differential'], dim=0) / self.sigma_diff
+        diff_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'differential'], dim=0) / (self.sigma_diff * 2 ** 0.5)
 
         sol_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'solution'], dim=0)
-        sol_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'solution'], dim=0) / self.sigma_sol
+        sol_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'solution'], dim=0) / (self.sigma_sol * 2 ** 0.5)
 
         self.num_bd = sol_X.shape[0]
 
@@ -56,6 +57,7 @@ class BayesianPINN(BasePINN):
         self.mse_loss = nn.MSELoss(reduction="sum")
 
     def _pinn_init(self):
+        sigma_diff = self.sigma_diff()
         self.bnet = BayesianPINNNet(self.sigma_diff, self.sigma_sol, self.physics_model, self.num_bd)
         self.net = self.bnet.fnn
         for param in self.net.parameters():
@@ -69,6 +71,10 @@ class BayesianPINN(BasePINN):
 
         self.params_init = hamiltorch.util.flatten(self.net).to(self.device).clone()
         self.params_hmc = []
+
+    def _get_scheduler(self):
+        self.sigma_diff = get_schedule(self.sigma_diff)
+        self.sigma_sol = get_schedule(self.sigma_sol)
 
     def sample_posterior(self, num_samples):
         params_hmc = hamiltorch.sample_model(

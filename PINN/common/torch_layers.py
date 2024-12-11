@@ -453,7 +453,7 @@ class BayesianPINNNet(nn.Module):
         pde = self.differential_operator(self.fnn, x)
         u_bd = self.fnn(X[-self.num_bd:])
 
-        return torch.cat([pde / self.sigma_diff, u_bd / self.sigma_sol], dim=0)
+        return torch.cat([pde / (self.sigma_diff * 2 ** 0.5), u_bd / (self.sigma_sol * 2 ** 0.5)], dim=0)
 
 class HyperLinear(nn.Module):
     def __init__(self, input_dim, output_dim, z_dim):
