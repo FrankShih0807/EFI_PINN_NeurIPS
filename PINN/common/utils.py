@@ -1,10 +1,12 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import Dataset
 
 def get_activation_fn(activation):
     # Define a dictionary mapping activation names to PyTorch classes
     activation_dict = {
+        'identity': nn.Identity,
         'relu': nn.ReLU,
         'leaky_relu': nn.LeakyReLU,
         'sigmoid': nn.Sigmoid,
@@ -119,37 +121,41 @@ class PINNDataset(Dataset):
         return dataset_copy
 
 if __name__ == "__main__":
-    # Example usage
-    dataset = PINNDataset(device='mps')
+    # # Example usage
+    # dataset = PINNDataset(device='mps')
 
-    # Add solution points
-    solution_X = torch.rand(10, 2)
-    solution_y = torch.sin(solution_X[:, 0]) * torch.cos(solution_X[:, 1]).unsqueeze(1)
-    solution_noise = 0.1
-    dataset.add_data(solution_X, solution_y, category='solution', noise_indicator=solution_noise)
+    # # Add solution points
+    # solution_X = torch.rand(10, 2)
+    # solution_y = torch.sin(solution_X[:, 0]) * torch.cos(solution_X[:, 1]).unsqueeze(1)
+    # solution_noise = 0.1
+    # dataset.add_data(solution_X, solution_y, category='solution', noise_indicator=solution_noise)
 
-    # Add differential points
-    differential_X = torch.rand(20, 2)
-    differential_y = torch.cos(differential_X[:, 0]) * -torch.sin(differential_X[:, 1]).unsqueeze(1)
-    differential_noise = 0.5
-    dataset.add_data(differential_X, differential_y, category='boundary', noise_indicator=differential_noise)
+    # # Add differential points
+    # differential_X = torch.rand(20, 2)
+    # differential_y = torch.cos(differential_X[:, 0]) * -torch.sin(differential_X[:, 1]).unsqueeze(1)
+    # differential_noise = 0.5
+    # dataset.add_data(differential_X, differential_y, category='boundary', noise_indicator=differential_noise)
 
-    # Add boundary points
-    boundary_X = torch.rand(50, 2)
-    boundary_y = torch.zeros(50, 1)
-    boundary_noise = 0.3
-    dataset.add_data(boundary_X, boundary_y, category='differential', noise_indicator=boundary_noise)
+    # # Add boundary points
+    # boundary_X = torch.rand(50, 2)
+    # boundary_y = torch.zeros(50, 1)
+    # boundary_noise = 0.3
+    # dataset.add_data(boundary_X, boundary_y, category='differential', noise_indicator=boundary_noise)
 
-    # Access data
-    print("Total dataset size:", len(dataset))
-    print("Sample data point:", dataset[0]['X'])
-    # print(dataset.y_data[0])
+    # # Access data
+    # print("Total dataset size:", len(dataset))
+    # print("Sample data point:", dataset[0]['X'])
+    # # print(dataset.y_data[0])
     
-    dataset_copy = dataset.copy()
-    dataset_copy.add_data(torch.rand(10, 2), torch.rand(10, 1), category='solution', noise_indicator=0.1)
-    print(len(dataset_copy))
+    # dataset_copy = dataset.copy()
+    # dataset_copy.add_data(torch.rand(10, 2), torch.rand(10, 1), category='solution', noise_indicator=0.1)
+    # print(len(dataset_copy))
     
-    # print(dataset[2]['X'].requires_grad)
+    # # print(dataset[2]['X'].requires_grad)
     
-    for d in dataset_copy:
-        print(d['X'].requires_grad)
+    # for d in dataset_copy:
+    #     print(d['X'].requires_grad)
+    
+    activation_fn = nn.Identity()
+    activation = get_activation_fn(activation_fn)
+    print(activation(torch.tensor([-1.0, 0.0, 1.0]))) # tensor([0., 0., 1.])

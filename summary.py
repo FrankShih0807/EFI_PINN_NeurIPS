@@ -77,7 +77,6 @@ def collect_progress_data(output_dir):
     
     # Combine all DataFrames into one
     combined_df = pd.concat(data_frames, ignore_index=True) if data_frames else pd.DataFrame()
-    combined_df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
     return combined_df
 
 
@@ -194,24 +193,77 @@ def plot_latent_Z(output_dir):
     # Combine all DataFrames into one
 
 
+def plot_cr_boxplot(df):
+    plt.figure()
+    ax = sns.boxplot(data=df, x='coverage_rate', y='algo', orient = 'h',
+                     order=df['algo'],
+                            meanprops={"marker":"o",
+                        "markerfacecolor":"white", 
+                        "markeredgecolor":"black",
+                        "markersize":"8"}
+                    , boxprops={ "alpha": 0.3}
+                    , showfliers=True
+                    , showmeans=False
+                    )
+    plt.xlabel('Coverage rate', fontsize=14)
+    plt.ylabel('Algorithm', fontsize=14)   
+    plt.tight_layout()
+    x_min, x_max = 0.3, 1.0
+    x_ticks = np.arange(x_min, x_max, 0.05)
+    x_ticks_major = np.arange(x_min, x_max+0.05, 0.1)
+    
+    ax.set_xticks(x_ticks, minor=True)
+    ax.set_xticks(x_ticks_major, minor=False)
+    ax.axvline(x=0.95, color='red', linestyle='--', label='95%')
+    ax.xaxis.grid(True, which='major', linestyle='-', linewidth=1)
+    ax.xaxis.grid(True, which='minor', linestyle='--', linewidth=0.5)
+    # legend = plt.legend(fontsize=11, loc='lower right')
+    legend = plt.legend(fontsize=11, loc='upper left')
+    legend.get_title().set_text('') 
+    plt.xticks(fontsize=11)  # Adjust the fontsize as needed for the x-axis
+    plt.yticks(fontsize=11)
+    # sns.set(font_scale=1.3)
+    plt.savefig(os.path.join('figures','boxplot','cr_boxplot.png'))
+    print('cr boxplot saved')
+    plt.close()
+    
+
+def clear_dir(folder):
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            # Check if it is a file or a directory
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
 # Example usage
 output_dir = "output"
+clear_dir('figures/latent_Z')
 progress_df = collect_progress_data(output_dir)
 
 
-df = progress_df[progress_df['progress']==1.0]
+
+df = progress_df[progress_df['train/progress']==1.0]
+df = df.loc[:, ~df.columns.str.startswith('train')]
+df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
+df = df.dropna()
+plot_cr_boxplot(df)
 # df["cover_all"] = (df["coverage_rate"]==1)
 # print(df_cr.groupby(['model', 'algo'])['cr'].mean())
 
 # print(df_cr[df_cr['cr']<0.3])
 # print(progress_df[progress_df['train/progress']==1.0])
 # print("coverage rate")
+
 print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].mean())
 print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].std()/10)
 
 # df2 = df[df['algo']=='pinn_efi_lam1k_2']
-# rows_with_nan = df2[df2.isna().any(axis=1)]
-# print(rows_with_nan)
+rows_with_nan = df[df.isna().any(axis=1)]
+print(rows_with_nan)
 # low_cr = df2[df2['coverage_rate']<0.5]
 # print(low_cr)
 # print("mse")

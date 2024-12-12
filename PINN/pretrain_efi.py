@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import seaborn as sns
 from torch.nn.utils import parameters_to_vector
 from PINN.common import SGLD, SGHMC
-from PINN.common.torch_layers import EFI_Net
+from PINN.common.torch_layers import EFI_Net, EFI_Net_v2
 from PINN.common.base_pinn import BasePINN
 from PINN.common.torch_layers import BaseDNN
 from PINN.common.scheduler import get_schedule
@@ -24,7 +24,7 @@ class Pretrain_EFI(BasePINN):
         lr=1e-3,
         lambda_pde=10,
         sgld_lr=1e-3,
-        lambda_y=1,
+        lam=1,
         lambda_theta=1,
         pretrain_epochs=5000,
         save_path=None,
@@ -33,7 +33,7 @@ class Pretrain_EFI(BasePINN):
         # EFI configs
         self.encoder_kwargs = encoder_kwargs
         self.sgld_lr = sgld_lr
-        self.lambda_y = lambda_y
+        self.lam = lam
         self.lambda_theta = lambda_theta
         self.pretrain_epochs = pretrain_epochs
         
@@ -51,18 +51,19 @@ class Pretrain_EFI(BasePINN):
         # # EFI configs
         self.n_samples = self.sol_X.shape[0]
         self.mse_loss = nn.MSELoss(reduction="sum")
-
+        
     def _pinn_init(self):
         # init EFI net and optimiser
-        self.net = EFI_Net(
+        self.net = EFI_Net_v2(
             input_dim=self.input_dim,
             output_dim=self.output_dim,
+            latent_Z_dim=self.output_dim,
             hidden_layers=self.hidden_layers,
             activation_fn=self.activation_fn,
             device=self.device,
             **self.encoder_kwargs
         )
-        # self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
+        # self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr(0))
         self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr(0))
 
         # init latent noise and sampler
@@ -78,14 +79,14 @@ class Pretrain_EFI(BasePINN):
                 self.noise_sd.append(0)
         
         self.sampler = SGLD([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0))
-        # self.sampler = SGHMC([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr, alpha=0.1)
+        # self.sampler = SGHMC([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0), alpha=0.1)
 
     def _get_scheduler(self):
         self.lr = get_schedule(self.lr)
         self.sgld_lr = get_schedule(self.sgld_lr)
         self.lambda_pde = get_schedule(self.lambda_pde)
-        self.sparse_threshold = get_schedule(self.encoder_kwargs.get('sparse_threshold', 0.01))
-        self.encoder_kwargs['sparse_threshold'] = self.sparse_threshold(0)
+        self.lam = get_schedule(self.lam)
+        self.lambda_theta = get_schedule(self.lambda_theta)
         
     def _update_lr(self, optimiser, lr):
         for param_group in optimiser.param_groups:
@@ -103,9 +104,10 @@ class Pretrain_EFI(BasePINN):
     def theta_loss(self):
         noise_X = torch.cat([d['X'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
         noise_y = torch.cat([d['y'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
-        noise_Z = torch.cat([ Z for Z in self.latent_Z if Z is not None], dim=0)
+        # noise_Z = torch.cat([ Z for Z in self.latent_Z if Z is not None], dim=0)
+        noise_Z = torch.cat([ Z/sd for Z, sd in zip(self.latent_Z, self.noise_sd) if Z is not None], dim=0)
         
-        theta_loss = self.net.theta_encode(noise_X, noise_y, noise_Z)
+        theta_loss = self.net.encode_weights(noise_X, noise_y, noise_Z)
         return theta_loss
     
     def z_prior_loss(self):
@@ -162,7 +164,7 @@ class Pretrain_EFI(BasePINN):
         print('PINN pretraining done.')
         return base_net
 
-    def optimize_encoder(self, param_vector, steps=5000):
+    def optimize_encoder(self, param_vector, steps=1000):
         # optimiser = optim.Adam(self.net.parameters(), lr=3e-4)
         optimiser = optim.SGD(self.net.parameters(), lr=1e-3)
         print('Pretraining EFI...')
@@ -190,12 +192,13 @@ class Pretrain_EFI(BasePINN):
 
     def update(self):
         # update training parameters
-        annealing_period = 0.5
+        annealing_period = 0.3
         annealing_progress = self.progress / annealing_period
         lambda_pde = self.lambda_pde(annealing_progress)
-        self.net.sparse_threshold = self.sparse_threshold(self.progress * 3 - 1)
-        lr = self.lr(self.progress)
-        sgld_lr = self.sgld_lr(self.progress)
+        lam = self.lam(annealing_progress)
+        lambda_theta = self.lambda_theta(annealing_progress)
+        lr = self.lr(annealing_progress)
+        sgld_lr = self.sgld_lr(annealing_progress)
         self._update_lr(self.optimiser, lr)
         self._update_lr(self.sampler, sgld_lr)
         
@@ -206,11 +209,7 @@ class Pretrain_EFI(BasePINN):
         y_loss = self.solution_loss()
         z_prior_loss = self.z_prior_loss()
         pde_loss = self.pde_loss()
-        Z_loss = (
-            self.lambda_y * y_loss
-            + self.lambda_theta * theta_loss
-            + z_prior_loss + lambda_pde * pde_loss
-        )
+        Z_loss = lam * (y_loss + lambda_theta * theta_loss + lambda_pde * pde_loss) + z_prior_loss
 
         self.sampler.zero_grad()
         Z_loss.backward()
@@ -220,14 +219,10 @@ class Pretrain_EFI(BasePINN):
         self.net.train()
         theta_loss = self.theta_loss()
         y_loss = self.solution_loss()
-        w_prior_loss = self.net.gmm_prior_loss() / self.n_samples
+        w_prior_loss = self.net.gmm_prior_loss()
         pde_loss = self.pde_loss()
 
-        w_loss = (
-            self.lambda_y * (y_loss + w_prior_loss)
-            + self.lambda_theta * theta_loss
-            + lambda_pde * pde_loss
-        )
+        w_loss = lam * (y_loss + lambda_theta * theta_loss + lambda_pde * pde_loss) + w_prior_loss
 
         self.optimiser.zero_grad()
         w_loss.backward()
@@ -237,7 +232,7 @@ class Pretrain_EFI(BasePINN):
         self.logger.record('train_param/lr', self.optimiser.param_groups[0]['lr'])
         self.logger.record('train_param/sgld_lr', self.sampler.param_groups[0]['lr'])
         self.logger.record('train_param/lambda_pde', lambda_pde)
-        self.logger.record('train_param/sparse_threshold', self.net.sparse_threshold)
+        self.logger.record('train/theta_loss', theta_loss.item())
         
         return y_loss.item(), pde_loss.item()
 
@@ -252,6 +247,8 @@ class Pretrain_EFI(BasePINN):
         param_vector = parameters_to_vector(base_net.parameters()).to(self.device)
 
         # Optimize encoder network
-        self.optimize_encoder(param_vector)
+        # self.optimize_encoder(param_vector)
         
         super().train(epochs, eval_freq, burn, callback)
+        
+        
