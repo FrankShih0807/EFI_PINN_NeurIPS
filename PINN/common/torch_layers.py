@@ -121,7 +121,6 @@ class EFI_Net(nn.Module):
                  output_dim=1, 
                  hidden_layers=[15, 15], 
                  activation_fn='relu', 
-                 sparse_threshold=0.01,
                  encoder_hidden_layers=None,
                  encoder_activation='relu',
                  prior_sd=0.1, 
@@ -137,7 +136,6 @@ class EFI_Net(nn.Module):
         self.output_dim = output_dim
         self.hidden_layers = hidden_layers
         self.activation_fn = get_activation_fn(activation_fn)
-        self.sparse_threshold = sparse_threshold
 
         # Encoder Net Info
         self.encoder_input_dim = self.input_dim + 2 * self.output_dim
@@ -155,9 +153,6 @@ class EFI_Net(nn.Module):
         sample_net.append(nn.Linear(hidden_layers[-1], output_dim))
         
         
-            
-            
-        
         self.n_layers = len(sample_net)
         self.n_parameters = sum([p.numel() for p in sample_net.parameters()])
         self.nn_shape = defaultdict(list)
@@ -173,16 +168,7 @@ class EFI_Net(nn.Module):
                 self.nn_shape['bias'].append(value.shape)
                 self.nn_numel['bias'].append(value.numel())
         
-
-        # self.gmm = GaussianMixtureModel(prior_sd, sparse_sd)
-        # self.prior_dist = dist.Normal(0, prior_sd)
-        
-        # self.encoder = BaseDNN(input_dim=self.encoder_input_dim, output_dim=self.n_parameters, activation_fn=activation_fn)
         self.encoder = BaseDNN(input_dim=self.encoder_input_dim, hidden_layers=encoder_hidden_layers, output_dim=self.n_parameters, activation_fn=self.encoder_activation).to(self.device)
-        # for p in self.parameters():
-        #     print(p.shape)
-        # raise
-
 
     def split_encoder_output(self, theta):
         '''Split encoder output into network layer shapes
@@ -228,7 +214,6 @@ class EFI_Net(nn.Module):
         batch_theta = self.encoder(xyz)
         theta_bar = batch_theta.mean(dim=0)
         theta_loss = F.mse_loss(batch_theta, theta_bar.repeat(batch_size, 1), reduction='sum')
-        theta_loss += self.sparsity_loss(theta_bar)
         self.weight_tensors, self.bias_tensors = self.split_encoder_output(theta_bar)
         return theta_loss
         
@@ -236,20 +221,8 @@ class EFI_Net(nn.Module):
         loss = 0
         for p in self.parameters():
             loss += gmm_loss(p, self.prior_sd, self.sparse_sd, self.sparsity).sum()
-        # for name, p in self.named_parameters():
-        #     if name.split('.')[-2] == '3':
-        #         loss += gmm_loss(p, self.prior_sd, self.sparse_sd, self.sparsity).sum()
-        #     else:
-        #         loss += gmm_loss(p, self.prior_sd, self.sparse_sd, 1.0).sum()
         return loss
     
-    def sparsity_loss(self, theta):
-        # return torch.where(theta.abs() > self.sparse_threshold, torch.zeros_like(theta.abs()).to(self.device), theta.abs()).sum()
-        xi = 1e-5
-        if self.sparse_threshold > 0:
-            return self.sparse_threshold * (theta.pow(2) * torch.exp(-theta.pow(2) / (2 * xi))).sum()
-        else:
-            return 0
         
 class EFI_Discovery_Net(nn.Module):
     def __init__(self, 

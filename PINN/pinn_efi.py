@@ -86,8 +86,8 @@ class PINN_EFI(BasePINN):
         self.lambda_pde = get_schedule(self.lambda_pde)
         self.lam = get_schedule(self.lam)
         self.lambda_theta = get_schedule(self.lambda_theta)
-        self.sparse_threshold = get_schedule(self.encoder_kwargs.get('sparse_threshold', 0.01))
-        self.encoder_kwargs['sparse_threshold'] = self.sparse_threshold(0)
+        # self.sparse_threshold = get_schedule(self.encoder_kwargs.get('sparse_threshold', 0.01))
+        # self.encoder_kwargs['sparse_threshold'] = self.sparse_threshold(0)
         
     def _update_lr(self, optimiser, lr):
         for param_group in optimiser.param_groups:
@@ -198,7 +198,7 @@ class PINN_EFI(BasePINN):
         lambda_pde = self.lambda_pde(annealing_progress)
         lam = self.lam(annealing_progress)
         lambda_theta = self.lambda_theta(annealing_progress)
-        self.net.sparse_threshold = self.sparse_threshold(self.progress * 3 - 1)
+        # self.net.sparse_threshold = self.sparse_threshold(self.progress * 3 - 1)
         lr = self.lr(annealing_progress)
         sgld_lr = self.sgld_lr(annealing_progress)
         self._update_lr(self.optimiser, lr)
@@ -234,7 +234,7 @@ class PINN_EFI(BasePINN):
         self.logger.record('train_param/lr', self.optimiser.param_groups[0]['lr'])
         self.logger.record('train_param/sgld_lr', self.sampler.param_groups[0]['lr'])
         self.logger.record('train_param/lambda_pde', lambda_pde)
-        self.logger.record('train_param/sparse_threshold', self.net.sparse_threshold)
+        # self.logger.record('train_param/sparse_threshold', self.net.sparse_threshold)
         self.logger.record('train/theta_loss', theta_loss.item())
         
         return y_loss.item(), pde_loss.item()

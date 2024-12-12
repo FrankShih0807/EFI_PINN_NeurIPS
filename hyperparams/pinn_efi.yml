@@ -84,4 +84,4 @@ poisson:
       prior_sd: 1.0
       sparse_sd: 0.001
       sparsity: 0.1
-      sparse_threshold: 0.0
+      # sparse_threshold: 0.0
