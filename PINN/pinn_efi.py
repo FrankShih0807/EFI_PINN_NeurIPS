@@ -53,17 +53,7 @@ class PINN_EFI(BasePINN):
         self.mse_loss = nn.MSELoss(reduction="sum")
 
     def _pinn_init(self):
-        # init EFI net and optimiser
-        self.net = EFI_Net(
-            input_dim=self.input_dim,
-            output_dim=self.output_dim,
-            hidden_layers=self.hidden_layers,
-            activation_fn=self.activation_fn,
-            device=self.device,
-            **self.encoder_kwargs
-        )
-        # self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr(0))
-        self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr(0))
+
 
         # init latent noise and sampler
         # self.Z = (self.noise_sd * torch.randn_like(self.y)).requires_grad_().to(self.device)
@@ -76,7 +66,18 @@ class PINN_EFI(BasePINN):
             else:
                 self.latent_Z.append(None)
                 self.noise_sd.append(0)
-        
+        self.latent_Z_dim = len([ Z for Z in self.latent_Z if Z is not None])
+        # init EFI net and optimiser
+        self.net = EFI_Net(
+            input_dim=self.input_dim,
+            output_dim=self.output_dim,
+            latent_Z_dim=self.latent_Z_dim,
+            hidden_layers=self.hidden_layers,
+            activation_fn=self.activation_fn,
+            device=self.device,
+            **self.encoder_kwargs
+        )
+        self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr(0))
         self.sampler = SGLD([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0))
         # self.sampler = SGHMC([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0), alpha=0.1)
 

@@ -77,11 +77,11 @@ poisson:
     pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 64
-      - 64
-      - 64
+      - 16
+      - 16
+      - 16
       encoder_activation: leaky_relu
       prior_sd: 1.0
       sparse_sd: 0.001
-      sparsity: 0.1
+      sparsity: 1.0
       # sparse_threshold: 0.0
