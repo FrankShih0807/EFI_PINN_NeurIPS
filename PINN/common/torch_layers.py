@@ -53,7 +53,6 @@ class BaseDNN(nn.Module):
 #             # hidden_layers = [input_dim * 2, last_hidden // 4, last_hidden // 2, last_hidden]
 #         super(EncoderDNN, self).__init__(input_dim, hidden_layers, output_dim, activation_fn)
 
-    
 
 class DropoutDNN(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu, dropout_rate=0.01):
@@ -487,32 +486,28 @@ class HyperLinear(nn.Module):
             self.activation_fn,
             nn.Linear(feature_dim, output_dim)
         )
+        
+        
+    
+    def forward(self, x):
+        return F.linear(x, self.weight, self.bias)
+    
+    def encode_weight(self, latent_features):
+        theta_i = self.weight_gen(latent_features)
+        self.weight = theta_i.mean(dim=0).view(self.output_dim, self.input_dim)
+        # self.weight = self.weight_gen(latent_features).mean(dim=0).view(self.output_dim, self.input_dim)
+        self.bias = self.bias_gen(latent_features).mean(dim=0)
+        theta_loss = F.mse_loss(theta_i, theta_i.mean(dim=0).repeat(theta_i.shape[0], 1), reduction='sum')
+        return theta_loss
 
-    def forward(self, x, latent_features=None):
-        """
-        Forward pass for the custom linear layer.
-        Args:
-            x (torch.Tensor): Input tensor of shape (batch_size, input_dim).
-            z (torch.Tensor): Latent vector used to generate weights and biases.
-        Returns:
-            torch.Tensor: Output tensor of shape (batch_size, output_dim).
-        """
-        if latent_features is None:
-            return F.linear(x, self.weight.detach(), self.bias.detach())
-        else:
-            # Generate weights and biases from the latent vector
-            self.weight = self.weight_gen(latent_features).mean(dim=0).view(self.output_dim, self.input_dim)  # Shape: (output_dim, input_dim)
-            self.bias = self.bias_gen(latent_features).mean(dim=0)  # Shape: (output_dim)
-
-            # Perform the linear transformation
-            return F.linear(x, self.weight, self.bias)
 
 
 class EFI_Net_v2(nn.Module):
     def __init__(self, 
                  input_dim=1, 
                  output_dim=1, 
-                 hidden_layers=[15, 15], 
+                 latent_Z_dim=1,
+                 hidden_layers=[30, 30], 
                  activation_fn='relu', 
                  encoder_hidden_layers=[64, 64],
                  encoder_activation='relu',
@@ -527,14 +522,15 @@ class EFI_Net_v2(nn.Module):
         # EFI Net Info
         self.input_dim = input_dim
         self.output_dim = output_dim
+        self.latent_Z_dim = latent_Z_dim
         self.hidden_layers = hidden_layers
         self.activation_fn = get_activation_fn(activation_fn)
 
         # Encoder Net Info
-        self.encoder_input_dim = self.input_dim + 2 * self.output_dim
+        self.encoder_input_dim = self.input_dim + self.output_dim + self.latent_Z_dim
         self.encoder_activation = get_activation_fn(encoder_activation)
         self.feature_dim = encoder_hidden_layers[-1]
-        self.encoder = BaseDNN(input_dim=self.encoder_input_dim, hidden_layers=encoder_hidden_layers, activation_fn=self.encoder_activation).to(self.device)
+        self.feature_encoder = BaseDNN(input_dim=self.encoder_input_dim, hidden_layers=encoder_hidden_layers, activation_fn=self.encoder_activation).to(self.device)
         
         # sparse prior settings
         self.sparsity = sparsity
@@ -547,17 +543,6 @@ class EFI_Net_v2(nn.Module):
             self.layers.append(HyperLinear(hidden_layers[i-1], hidden_layers[i], self.feature_dim))
         self.layers.append(HyperLinear(hidden_layers[-1], output_dim, self.feature_dim))
         
-        # sample_net = nn.ModuleList()
-        # sample_net.append(nn.Linear(input_dim, hidden_layers[0]))
-        # for i in range(1, len(hidden_layers)):
-        #     sample_net.append(nn.Linear(hidden_layers[i-1], hidden_layers[i]))
-        # sample_net.append(nn.Linear(hidden_layers[-1], output_dim))
-        
-        # self.layers = nn.ModuleList()
-        # self.layers.append(HyperLinear(input_dim, hidden_layers[0], self.encoder_output_dim))
-        # for i in range(1, len(hidden_layers)):
-        #     self.layers.append(HyperLinear(hidden_layers[i-1], hidden_layers[i], self.encoder_output_dim))
-        # self.layers.append(HyperLinear(hidden_layers[-1], output_dim, self.encoder_output_dim))
         
             
     def forward(self, x):
@@ -569,26 +554,24 @@ class EFI_Net_v2(nn.Module):
         return x
 
     
-    def theta_encode(self, X, y, Z):
+    def encode_weights(self, X, y, Z):
         '''Encode X, y, and Z into theta
         Args:
             X (tensor): explanatory variable
             y (tensor): response variable
-            Z (tensor): noise variable
+            Z (tensor): latent noise variable
 
         Returns:
             tensor: flattend theta
         '''
         X, y, Z = X.to(self.device), y.to(self.device), Z.to(self.device)
         
-        batch_size = X.shape[0]
-        xyz = torch.cat([X, y, Z], dim=1).to(self.device)
-        batch_theta = self.encoder(xyz)
-        theta_bar = batch_theta.mean(dim=0)
-        theta_loss = F.mse_loss(batch_theta, theta_bar.repeat(batch_size, 1), reduction='mean')
-        theta_loss += self.sparsity_loss(theta_bar)
-        self.weight_tensors, self.bias_tensors = self.split_encoder_output(theta_bar)
+        feature = self.feature_encoder(torch.cat([X, y, Z], dim=1))
+        theta_loss = 0
+        for layer in self.layers:
+            theta_loss += layer.encode_weight(feature)
         return theta_loss
+
         
     def gmm_prior_loss(self):
         loss = 0
@@ -596,53 +579,56 @@ class EFI_Net_v2(nn.Module):
             loss += gmm_loss(p, self.prior_sd, self.sparse_sd, self.sparsity).sum()
         return loss
     
-    def sparsity_loss(self, theta):
-        # return torch.where(theta.abs() > self.sparse_threshold, torch.zeros_like(theta.abs()).to(self.device), theta.abs()).sum()
-        xi = 1e-5
-        if self.sparse_threshold > 0:
-            return self.sparse_threshold * (theta.pow(2) * torch.exp(-theta.pow(2) / (2 * xi))).sum()
-        else:
-            return 0
 
 
 if __name__ == '__main__':
 
-    # embedding = nn.Sequential(
-    #     nn.Linear(3, 50),
-    #     nn.Tanh(),
-    #     nn.Linear(50, 50),
-    # )
 
-    # hyperlinear = HyperLinear(20, 20, 50)
+    x = torch.randn(10, 1)
+    y = torch.randn(10, 1)
+    z = torch.randn(10, 1)
     
-    # x = torch.randn(4,3)
-    # z = embedding(x)
+    hypernet = nn.Sequential(
+        nn.Linear(3, 16),
+        nn.ReLU(),
+        nn.Linear(16, 16),
+        nn.ReLU(),
+        nn.Linear(16, 16),
+    )
     
-    # print(x.shape, z.shape)
+    feature = hypernet(torch.cat([x, y, z], dim=1))
+    print(feature.shape)
     
-    # in_x = torch.randn(6, 20)
-    # out = hyperlinear(in_x, z)
-    # print(out.shape)
+    layer = HyperLinear(30, 40, 16)
     
-    # for p in hyperlinear.parameters():
-    #     print(p.shape)
-    x = torch.tensor([1.0, 2.0, 3.0], requires_grad=True)
-
-    # clone().detach()
-    y = x.clone().detach()
-
-    # detach().clone()
-    z = x.detach().clone()
-
-    # detach()
-    w = x.detach()
-
-    # Perform operations
-    with torch.no_grad():
-        x += 1
+    theta_loss = layer.encode_weight(feature)
+    print(theta_loss)
     
-
-    print("Original tensor:", x)  # [1.0, 2.0, 3.0]
-    print("clone().detach():", y)  # [2.0, 3.0, 4.0] - Detached copy
-    print("detach().clone():", z)  # [2.0, 3.0, 4.0] - Detached copy
-    print("detach():", w)   
+    
+    # for name, p in layer.named_parameters():
+    #     print(name, p.shape)
+    
+    efi_net = EFI_Net_v2(input_dim=1, 
+                         output_dim=1, 
+                         latent_Z_dim=1, 
+                         hidden_layers=[30, 30], 
+                         activation_fn='relu', 
+                         encoder_hidden_layers=[16, 16, 16], 
+                         encoder_activation='relu', 
+                         prior_sd=0.1, 
+                         sparse_sd=0.01, 
+                         sparsity=1.0, 
+                         device='cpu'
+                         )
+    
+    theta_loss = efi_net.encode_weights(x, y, z)
+    print(theta_loss)
+    
+    y_pred = efi_net(x)
+    print(y_pred)
+    
+    gmm_loss = efi_net.gmm_prior_loss()
+    print(gmm_loss)
+    # for name, p in efi_net.named_parameters():
+    #     print(name, p.shape)
+    

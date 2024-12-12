@@ -165,7 +165,7 @@ class PINN_EFI(BasePINN):
         print('PINN pretraining done.')
         return base_net
 
-    def optimize_encoder(self, param_vector, steps=5000):
+    def optimize_encoder(self, param_vector, steps=1000):
         # optimiser = optim.Adam(self.net.parameters(), lr=3e-4)
         optimiser = optim.SGD(self.net.parameters(), lr=1e-3)
         print('Pretraining EFI...')
