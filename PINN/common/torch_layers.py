@@ -119,6 +119,7 @@ class EFI_Net(nn.Module):
     def __init__(self, 
                  input_dim=1, 
                  output_dim=1, 
+                 latent_Z_dim=1,
                  hidden_layers=[15, 15], 
                  activation_fn='relu', 
                  encoder_hidden_layers=None,
@@ -134,11 +135,12 @@ class EFI_Net(nn.Module):
         # EFI Net Info
         self.input_dim = input_dim
         self.output_dim = output_dim
+        self.latent_Z_dim = latent_Z_dim
         self.hidden_layers = hidden_layers
         self.activation_fn = get_activation_fn(activation_fn)
 
         # Encoder Net Info
-        self.encoder_input_dim = self.input_dim + 2 * self.output_dim
+        self.encoder_input_dim = self.input_dim + self.output_dim + self.latent_Z_dim
         self.encoder_activation = get_activation_fn(encoder_activation)
         
         # sparse prior settings
@@ -466,12 +468,15 @@ class HyperLinear(nn.Module):
         return F.linear(x, self.weight, self.bias)
     
     def encode_weight(self, latent_features):
-        theta_i = self.weight_gen(latent_features)
-        self.weight = theta_i.mean(dim=0).view(self.output_dim, self.input_dim)
+        weight_i = self.weight_gen(latent_features)
+        self.weight = weight_i.mean(dim=0).view(self.output_dim, self.input_dim)
         # self.weight = self.weight_gen(latent_features).mean(dim=0).view(self.output_dim, self.input_dim)
-        self.bias = self.bias_gen(latent_features).mean(dim=0)
-        theta_loss = F.mse_loss(theta_i, theta_i.mean(dim=0).repeat(theta_i.shape[0], 1), reduction='sum')
-        return theta_loss
+        bias_i = self.bias_gen(latent_features)
+        self.bias = bias_i.mean(dim=0)
+        weight_loss = F.mse_loss(weight_i, self.weight.view(1, -1).expand(weight_i.shape), reduction='sum')
+        bias_loss = F.mse_loss(bias_i, self.bias.view(1, -1).expand(bias_i.shape), reduction='sum')
+        
+        return weight_loss + bias_loss
 
 
 
