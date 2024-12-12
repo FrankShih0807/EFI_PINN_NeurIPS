@@ -75,7 +75,7 @@ def create_parser():
         default=None,  # Default is random seed
         help="Random seed for reproducibility (default: random seed)"
     )
-    parser.add_argument('--device', type=str, default='auto', help='Device to run the code')
+    parser.add_argument('--device', type=str, default='cpu', help='Device to run the code')
     
     parser.add_argument(
         "--hyperparams",

@@ -10,6 +10,7 @@ import time
 from PINN.common.base_pinn import BasePINN
 from PINN.models.poisson import Poisson, PoissonCallback
 from PINN.common.torch_layers import BayesianPINNNet
+from PINN.common.scheduler import get_schedule
 
 
 class BayesianPINN(BasePINN):
@@ -34,10 +35,12 @@ class BayesianPINN(BasePINN):
         self.dataset = dataset.copy()
 
         diff_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'differential'], dim=0)
-        diff_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'differential'], dim=0) / self.sigma_diff
+        # diff_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'differential'], dim=0) / (self.sigma_diff * 2 ** 0.5)
+        self.diff_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'differential'], dim=0)
 
         sol_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'solution'], dim=0)
-        sol_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'solution'], dim=0) / self.sigma_sol
+        # sol_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'solution'], dim=0) / (self.sigma_sol * 2 ** 0.5)
+        self.sol_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'solution'], dim=0)
 
         self.num_bd = sol_X.shape[0]
 
@@ -51,12 +54,13 @@ class BayesianPINN(BasePINN):
         )
         
         self.X = torch.cat([diff_X, sol_X], dim=0).to(self.device)
-        self.y = torch.cat([diff_y, sol_y], dim=0).to(self.device)
+        # self.y = torch.cat([diff_y, sol_y], dim=0).to(self.device)
 
         self.mse_loss = nn.MSELoss(reduction="sum")
 
     def _pinn_init(self):
-        self.bnet = BayesianPINNNet(self.sigma_diff, self.sigma_sol, self.physics_model, self.num_bd)
+        sigma_diff = self.sigma_diff(progress=0.0)
+        self.bnet = BayesianPINNNet(sigma_diff, self.sigma_sol, self.physics_model, self.num_bd)
         self.net = self.bnet.fnn
         for param in self.net.parameters():
             torch.nn.init.normal_(param)
@@ -70,10 +74,30 @@ class BayesianPINN(BasePINN):
         self.params_init = hamiltorch.util.flatten(self.net).to(self.device).clone()
         self.params_hmc = []
 
+    def _get_scheduler(self):
+        self.step_size = get_schedule(self.step_size)
+        self.sigma_diff = get_schedule(self.sigma_diff)
+
     def sample_posterior(self, num_samples):
+        # update training parameters
+        annealing_period = 0.5
+        annealing_progress = self.progress / annealing_period
+        step_size = self.step_size(annealing_progress)
+        sigma_diff = self.sigma_diff(annealing_progress)
+        # step_size = 0.02 * min(sigma_diff, self.sigma_sol)
+
+        self.bnet.sigma_diff = sigma_diff
+        self.y = torch.cat([self.diff_y / (sigma_diff * 2 ** 0.5), self.sol_y / (self.sigma_sol * 2 ** 0.5)], dim=0).to(self.device)
+
+        # params_hmc = hamiltorch.sample_model(
+        #     self.bnet, self.X, self.y, model_loss='regression', params_init=self.params_init,
+        #     num_samples=num_samples, step_size=self.step_size, burn=0,
+        #     num_steps_per_sample=self.L, tau_list=self.tau_list, tau_out=1, verbose=False
+        # )
+
         params_hmc = hamiltorch.sample_model(
             self.bnet, self.X, self.y, model_loss='regression', params_init=self.params_init,
-            num_samples=num_samples, step_size=self.step_size, burn=0,
+            num_samples=num_samples, step_size=step_size, burn=0,
             num_steps_per_sample=self.L, tau_list=self.tau_list, tau_out=1, verbose=False
         )
 

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchbnn as bnn
+# import torchbnn as bnn
 import numpy as np
 import torch.distributions as dist
 from collections import defaultdict
@@ -89,31 +89,31 @@ class DropoutDNN(nn.Module):
         return x
     
                
-class BayesianNN(nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu):
-        super(BayesianNN, self).__init__()
-        self.input_dim = input_dim
-        self.output_dim = output_dim
-        if hidden_layers is None:
-            self.hidden_layers = [self.output_dim]
-        else:
-            self.hidden_layers = hidden_layers
-        self.activation_fn = activation_fn
-        # Define layers with Bayesian Linear (weights are distributions)
-        self.layers = nn.ModuleList()
-        self.layers.append(bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=input_dim, out_features=self.hidden_layers[0]))
-        # Add hidden layers
-        for i in range(1, len(self.hidden_layers)):
-            self.layers.append(bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=self.hidden_layers[i-1], out_features=self.hidden_layers[i]))
-        # Add the output layer
-        self.layers.append(bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=self.hidden_layers[-1], out_features=self.output_dim))
+# class BayesianNN(nn.Module):
+#     def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu):
+#         super(BayesianNN, self).__init__()
+#         self.input_dim = input_dim
+#         self.output_dim = output_dim
+#         if hidden_layers is None:
+#             self.hidden_layers = [self.output_dim]
+#         else:
+#             self.hidden_layers = hidden_layers
+#         self.activation_fn = activation_fn
+#         # Define layers with Bayesian Linear (weights are distributions)
+#         self.layers = nn.ModuleList()
+#         self.layers.append(bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=input_dim, out_features=self.hidden_layers[0]))
+#         # Add hidden layers
+#         for i in range(1, len(self.hidden_layers)):
+#             self.layers.append(bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=self.hidden_layers[i-1], out_features=self.hidden_layers[i]))
+#         # Add the output layer
+#         self.layers.append(bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=self.hidden_layers[-1], out_features=self.output_dim))
 
-    def forward(self, x):
-        for layer in self.layers[:-1]:
-            x = layer(x)
-            x = self.activation_fn(x)
-        x = self.layers[-1](x)
-        return x
+#     def forward(self, x):
+#         for layer in self.layers[:-1]:
+#             x = layer(x)
+#             x = self.activation_fn(x)
+#         x = self.layers[-1](x)
+#         return x
 
 
 class EFI_Net(nn.Module):
@@ -459,7 +459,7 @@ class BayesianPINNNet(nn.Module):
         pde = self.differential_operator(self.fnn, x)
         u_bd = self.fnn(X[-self.num_bd:])
 
-        return torch.cat([pde / self.sigma_diff, u_bd / self.sigma_sol], dim=0)
+        return torch.cat([pde / (self.sigma_diff * 2 ** 0.5), u_bd / (self.sigma_sol * 2 ** 0.5)], dim=0)
 
 class HyperLinear(nn.Module):
     def __init__(self, input_dim, output_dim, feature_dim, activation_fn=nn.Identity()):
