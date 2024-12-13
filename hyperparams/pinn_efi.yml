@@ -88,7 +88,7 @@ poisson:
 
 poisson-v2:
   epochs: 150_000
-  eval_freq: -1
+  eval_freq: 1500
   burn: 0.5
   pinn:
     hidden_layers:

@@ -38,5 +38,5 @@ poisson-v2:
   t_end: 0.7
   sol_sd: 0.05
   diff_sd: 0.05
-  n_sol_samples: 10
-  n_diff_samples: 10
+  n_sol_samples: 5
+  n_diff_samples: 20
