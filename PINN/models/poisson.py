@@ -136,7 +136,7 @@ class PoissonCallback(BaseCallback):
         sol_y = self.dataset[0]['y'].flatten()
         true_Z = sol_y - true_y
         
-        latent_Z = torch.cat([ Z for Z in self.model.latent_Z if Z is not None], dim=0).flatten().detach().cpu().numpy()
+        latent_Z = self.model.latent_Z[0].flatten().detach().cpu().numpy()
         
         np.save(os.path.join(self.save_path, 'true_Z.npy'), true_Z)
         np.save(os.path.join(self.save_path, 'latent_Z.npy'), latent_Z)

@@ -29,12 +29,12 @@ class Poisson_v2(PhysicsModel):
 
     def generate_data(self, device):
         dataset = PINNDataset(device=device)
-        sol_X, sol_y = self.get_sol_data()
-        diff_X, diff_y = self.get_diff_data()
+        sol_X, sol_y, sol_true_y = self.get_sol_data()
+        diff_X, diff_y, diff_true_y = self.get_diff_data()
         eval_X, eval_y = self.get_eval_data()
-        dataset.add_data(sol_X, sol_y, category='solution', noise_sd=self.sol_sd)
-        dataset.add_data(diff_X, diff_y, category='differential', noise_sd=self.diff_sd)
-        dataset.add_data(eval_X, eval_y, category='evaluation', noise_sd=0)
+        dataset.add_data(sol_X, sol_y, sol_true_y, category='solution', noise_sd=self.sol_sd)
+        dataset.add_data(diff_X, diff_y, diff_true_y, category='differential', noise_sd=self.diff_sd)
+        dataset.add_data(eval_X, eval_y, eval_y, category='evaluation', noise_sd=0)
         
         return dataset
     
@@ -45,17 +45,15 @@ class Poisson_v2(PhysicsModel):
     
     def get_sol_data(self):
         X = torch.tensor([self.t_start, self.t_end]).repeat_interleave(self.n_sol_samples).view(-1, 1)
-
-        y = self.physics_law(X)
-        y += self.sol_sd * torch.randn_like(y)
-        return X, y
+        true_y = self.physics_law(X)
+        y = true_y + self.sol_sd * torch.randn_like(true_y)
+        return X, y, true_y
     
     def get_diff_data(self):
         X = torch.linspace(self.t_start, self.t_end, steps=16).repeat_interleave(self.n_diff_samples).view(-1, 1)
-        y = self.differential_function(X)
-        y += self.diff_sd * torch.randn_like(y)
-        return X, y
-
+        true_y = self.differential_function(X)
+        y = true_y + self.diff_sd * torch.randn_like(true_y)
+        return X, y, true_y
     
     def physics_law(self, X):
         y = torch.sin(6 * X) ** 3
@@ -67,8 +65,6 @@ class Poisson_v2(PhysicsModel):
     
     def differential_operator(self, model: torch.nn.Module, physics_X):
         u = model(physics_X)
-        # u_x = torch.autograd.grad(u, physics_X, grad_outputs=torch.ones_like(u), create_graph=True)[0]
-        # u_xx = torch.autograd.grad(u_x, physics_X, grad_outputs=torch.ones_like(u), create_graph=True)[0]
         u_x = grad(u, physics_X)[0]
         u_xx = grad(u_x, physics_X)[0]
         pde = 0.01 * u_xx
@@ -91,7 +87,7 @@ class Poisson_v2(PhysicsModel):
 
 
 
-class PoissonCallback(BaseCallback):
+class Poisson_v2Callback(BaseCallback):
     def __init__(self):
         super().__init__()
     
@@ -121,6 +117,7 @@ class PoissonCallback(BaseCallback):
         self.logger.record('eval/mse', mse)
         
         self.save_evaluation()
+        # self.plot_latent_Z()
         try:
             self.plot_latent_Z()
         except:
@@ -132,12 +129,12 @@ class PoissonCallback(BaseCallback):
         self.save_gif()
         
     def plot_latent_Z(self):
-        X = self.model.sol_X.flatten()
-        true_y = self.physics_model.physics_law(X)
-        sol_y = self.model.sol_y.flatten()
+        true_y = self.dataset[0]['true_y'].flatten()
+        sol_y = self.dataset[0]['y'].flatten()
+        sd = self.dataset[0]['noise_sd']
         true_Z = sol_y - true_y
         
-        latent_Z = torch.cat([ Z for Z in self.model.latent_Z if Z is not None], dim=0).flatten().detach().cpu().numpy()
+        latent_Z = self.model.latent_Z[0].flatten().detach().cpu().numpy()
         
         np.save(os.path.join(self.save_path, 'true_Z.npy'), true_Z)
         np.save(os.path.join(self.save_path, 'latent_Z.npy'), latent_Z)
@@ -146,11 +143,29 @@ class PoissonCallback(BaseCallback):
         plt.scatter(true_Z, latent_Z, label='Latent Z')
         plt.xlabel('True Z')
         plt.ylabel('Latent Z')
-        plt.xlim(-0.1, 0.1)
-        plt.ylim(-0.1, 0.1)
+        plt.xlim(-3*sd, 3*sd)
+        plt.ylim(-3*sd, 3*sd)
         plt.savefig(os.path.join(self.save_path, 'latent_Z.png'))
         plt.close()
         
+        true_y = self.dataset[1]['true_y'].flatten()
+        sol_y = self.dataset[1]['y'].flatten()
+        sd = self.dataset[1]['noise_sd']
+        true_Z = sol_y - true_y
+        
+        latent_Z = self.model.latent_Z[1].flatten().detach().cpu().numpy()
+        
+        np.save(os.path.join(self.save_path, 'true_Z_diff.npy'), true_Z)
+        np.save(os.path.join(self.save_path, 'latent_Z_diff.npy'), latent_Z)
+        
+        plt.subplots(figsize=(6, 6))
+        plt.scatter(true_Z, latent_Z, label='Latent Z')
+        plt.xlabel('True Z')
+        plt.ylabel('Latent Z')
+        plt.xlim(-3*sd, 3*sd)
+        plt.ylim(-3*sd, 3*sd)
+        plt.savefig(os.path.join(self.save_path, 'latent_Z_diff.png'))
+        plt.close()
         
     def save_evaluation(self):
         X = self.eval_X_cpu.flatten().numpy()
@@ -204,6 +219,3 @@ class PoissonCallback(BaseCallback):
         os.rmdir(temp_dir)
         
         
-if __name__ == '__main__':
-    callback = PoissonCallback()
-    callback.on_training()
