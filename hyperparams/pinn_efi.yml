@@ -64,6 +64,7 @@ poisson:
     - 30
     - 30
     activation_fn: tanh
+    annealing_period: 0.3
     lr: 'poly_5e-6_10.0_0.7'
     sgld_lr: 'poly_5e-6_10.0_0.9'
     lam: 'linear_100.0_1000.0'
@@ -94,17 +95,18 @@ poisson-v2:
     - 30
     - 30
     activation_fn: tanh
-    lr: 'poly_5e-6_10.0_0.7'
-    sgld_lr: 'poly_5e-6_10.0_0.9'
+    annealing_period: 0.3
+    lr: 'poly_0.5e-5_10.0_0.7'
+    sgld_lr: 'poly_0.5e-5_10.0_0.9'
     lam: 'linear_100.0_1000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
     pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 64
-      - 64
-      - 64
+      - 16
+      - 16
+      - 16
       encoder_activation: leaky_relu
       prior_sd: 1.0
       sparse_sd: 0.001
