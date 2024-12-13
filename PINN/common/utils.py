@@ -64,11 +64,12 @@ class PINNDataset(Dataset):
         # Initialize lists to store data for each category
         self.X_data = []
         self.y_data = []
+        self.true_y = []
         self.categories = []
         self.noise_sd = []
         self.device = device
 
-    def add_data(self, X, y, category, noise_sd):
+    def add_data(self, X, y, true_y, category, noise_sd):
         """
         Adds new data to the dataset.
         
@@ -81,6 +82,7 @@ class PINNDataset(Dataset):
         # Append new data to the respective lists
         self.X_data.append(X.to(self.device))
         self.y_data.append(y.to(self.device))
+        self.true_y.append(true_y.to(self.device)) 
         self.categories.append(category)
         self.noise_sd.append(noise_sd)
         
@@ -90,6 +92,7 @@ class PINNDataset(Dataset):
             # Move X and y to the specified device
             d['X'] = d['X'].to(self.device)
             d['y'] = d['y'].to(self.device)
+            d['true_y'] = d['true_y'].to(self.device)
 
             # Set requires_grad=True for differential category (e.g., category == 'differential')
             if d['category'] == 'differential':
@@ -102,6 +105,7 @@ class PINNDataset(Dataset):
         return {
             "X": self.X_data[idx],
             "y": self.y_data[idx],
+            "true_y": self.true_y[idx],
             "category": self.categories[idx],
             "noise_sd": self.noise_sd[idx]
         }
@@ -114,6 +118,7 @@ class PINNDataset(Dataset):
         # Copy data from the current dataset to the new instance
         dataset_copy.X_data = [x.clone() for x in self.X_data] 
         dataset_copy.y_data = [y.clone() for y in self.y_data] 
+        dataset_copy.true_y = [y.clone() for y in self.true_y]
         dataset_copy.categories = [c for c in self.categories] 
         dataset_copy.noise_sd = [n for n in self.noise_sd] 
         dataset_copy._prepare_data()

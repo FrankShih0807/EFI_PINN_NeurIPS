@@ -104,12 +104,27 @@ class PINN_EFI(BasePINN):
         return loss
     
     def theta_loss(self):
-        noise_X = torch.cat([d['X'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
-        noise_y = torch.cat([d['y'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
-        # noise_Z = torch.cat([ Z for Z in self.latent_Z if Z is not None], dim=0)
-        noise_Z = torch.cat([ Z/sd for Z, sd in zip(self.latent_Z, self.noise_sd) if Z is not None], dim=0)
+        # noise_X = torch.cat([d['X'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
+        # noise_y = torch.cat([d['y'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
+        # # noise_Z = torch.cat([ Z for Z in self.latent_Z if Z is not None], dim=0)
+        # noise_Z = torch.cat([ Z/sd for Z, sd in zip(self.latent_Z, self.noise_sd) if Z is not None], dim=0)
         
-        theta_loss = self.net.theta_encode(noise_X, noise_y, noise_Z)
+        # theta_loss = self.net.theta_encode(noise_X, noise_y, noise_Z)
+        
+        noise_X = []
+        noise_y = []
+        noise_Z = []
+        i = 0
+        for d, Z in zip(self.dataset, self.latent_Z):
+            if d['noise_sd'] > 0:
+                noise_X.append(d['X'])
+                noise_y.append(d['y'])
+                padded_Z = torch.zeros(d['X'].shape[0], self.latent_Z_dim, device=self.device, requires_grad=True)
+                padded_Z = padded_Z.clone()
+                padded_Z[:, i:i+1] = Z / d['noise_sd']
+                noise_Z.append(padded_Z)
+                i += 1
+        theta_loss = self.net.theta_encode(torch.cat(noise_X, dim=0), torch.cat(noise_y, dim=0), torch.cat(noise_Z, dim=0))
         return theta_loss
     
     def z_prior_loss(self):
@@ -176,8 +191,17 @@ class PINN_EFI(BasePINN):
             noise_X = torch.cat([d['X'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
             noise_y = torch.cat([d['y'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
             # noise_Z = torch.cat([ torch.randn_like(Z) * sd for Z, sd in zip(self.latent_Z, self.noise_sd) if sd > 0], dim=0)
-            noise_Z = torch.cat([ Z for Z, sd in zip(self.latent_Z, self.noise_sd) if sd > 0], dim=0)
-            
+            # noise_Z = torch.cat([ Z for Z, sd in zip(self.latent_Z, self.noise_sd) if sd > 0], dim=0)
+            noise_Z = []
+            i = 0
+            for d, Z in zip(self.dataset, self.latent_Z):
+                if d['noise_sd'] > 0:
+                    padded_Z = torch.zeros(d['X'].shape[0], self.latent_Z_dim, device=self.device, requires_grad=True)
+                    padded_Z = padded_Z.clone()
+                    padded_Z[:, i:i+1] = Z / d['noise_sd']
+                    noise_Z.append(padded_Z)
+                    i += 1
+            noise_Z = torch.cat(noise_Z, dim=0)
             batch_size = noise_X.shape[0]
 
             encoder_output = self.net.encoder(torch.cat([noise_X, noise_y, noise_Z], dim=1))

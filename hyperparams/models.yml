@@ -32,3 +32,11 @@ poisson:
   diff_sd: 0.0
   n_sol_samples: 10
   n_diff_samples: 200
+  
+poisson-v2:
+  t_start: -0.7
+  t_end: 0.7
+  sol_sd: 0.01
+  diff_sd: 0.01
+  n_sol_samples: 10
+  n_diff_samples: 10

@@ -538,9 +538,6 @@ class EFI_Net_v2(nn.Module):
             X (tensor): explanatory variable
             y (tensor): response variable
             Z (tensor): latent noise variable
-
-        Returns:
-            tensor: flattend theta
         '''
         X, y, Z = X.to(self.device), y.to(self.device), Z.to(self.device)
         

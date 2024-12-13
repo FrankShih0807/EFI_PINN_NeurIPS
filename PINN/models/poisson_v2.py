@@ -11,14 +11,14 @@ from PIL import Image
 from PINN.common.callbacks import BaseCallback
 
 
-class Poisson(PhysicsModel):
+class Poisson_v2(PhysicsModel):
     def __init__(self, 
                  t_start=-0.7,
                  t_end=0.7, 
                  sol_sd=0.01,
                  diff_sd=0.01,
                  n_sol_samples=10,
-                 n_diff_samples=100,
+                 n_diff_samples=10,
                  ):
         super().__init__(t_start=t_start, 
                          t_end=t_end, 
@@ -29,12 +29,12 @@ class Poisson(PhysicsModel):
 
     def generate_data(self, device):
         dataset = PINNDataset(device=device)
-        sol_X, sol_y, sol_true_y = self.get_sol_data()
-        diff_X, diff_y, diff_true_y = self.get_diff_data()
+        sol_X, sol_y = self.get_sol_data()
+        diff_X, diff_y = self.get_diff_data()
         eval_X, eval_y = self.get_eval_data()
-        dataset.add_data(sol_X, sol_y, sol_true_y, category='solution', noise_sd=self.sol_sd)
-        dataset.add_data(diff_X, diff_y, diff_true_y, category='differential', noise_sd=self.diff_sd)
-        dataset.add_data(eval_X, eval_y, eval_y, category='evaluation', noise_sd=0)
+        dataset.add_data(sol_X, sol_y, category='solution', noise_sd=self.sol_sd)
+        dataset.add_data(diff_X, diff_y, category='differential', noise_sd=self.diff_sd)
+        dataset.add_data(eval_X, eval_y, category='evaluation', noise_sd=0)
         
         return dataset
     
@@ -45,15 +45,16 @@ class Poisson(PhysicsModel):
     
     def get_sol_data(self):
         X = torch.tensor([self.t_start, self.t_end]).repeat_interleave(self.n_sol_samples).view(-1, 1)
-        true_y = self.physics_law(X)
-        y = true_y + self.sol_sd * torch.randn_like(true_y)
-        return X, y, true_y
+
+        y = self.physics_law(X)
+        y += self.sol_sd * torch.randn_like(y)
+        return X, y
     
-    def get_diff_data(self, replicate=1):
-        X = torch.linspace(self.t_start, self.t_end, steps=self.n_diff_samples).repeat_interleave(replicate).view(-1, 1)
-        true_y = self.differential_function(X)
-        y = true_y + self.diff_sd * torch.randn_like(true_y)
-        return X, y, true_y
+    def get_diff_data(self):
+        X = torch.linspace(self.t_start, self.t_end, steps=16).repeat_interleave(self.n_diff_samples).view(-1, 1)
+        y = self.differential_function(X)
+        y += self.diff_sd * torch.randn_like(y)
+        return X, y
 
     
     def physics_law(self, X):
@@ -131,9 +132,9 @@ class PoissonCallback(BaseCallback):
         self.save_gif()
         
     def plot_latent_Z(self):
-        # X = self.model.sol_X.flatten()
-        true_y = self.dataset[0]['true_y'].flatten()
-        sol_y = self.dataset[0]['y'].flatten()
+        X = self.model.sol_X.flatten()
+        true_y = self.physics_model.physics_law(X)
+        sol_y = self.model.sol_y.flatten()
         true_Z = sol_y - true_y
         
         latent_Z = torch.cat([ Z for Z in self.model.latent_Z if Z is not None], dim=0).flatten().detach().cpu().numpy()
