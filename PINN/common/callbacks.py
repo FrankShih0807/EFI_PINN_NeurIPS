@@ -24,6 +24,7 @@ class BaseCallback(ABC):
         RL model and the training environment for convenience.
         """
         self.model = model
+        self.dataset = model.dataset
         self.physics_model = model.physics_model
         self.dataset = model.dataset
         self.logger = model.logger
