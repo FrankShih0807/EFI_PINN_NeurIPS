@@ -168,8 +168,8 @@ class PINN_EFI(BasePINN):
         base_net.train()
         for ep in range(self.pretrain_epochs):
             optimiser.zero_grad()
-            output = base_net(self.X)
-            sol_loss = self.mse_loss(output, self.y)
+            output = base_net(self.sol_X)
+            sol_loss = self.mse_loss(output, self.sol_y)
             pde_loss = self.pretrain_pde_loss(base_net)
             l2_loss = 0
             for param in base_net.parameters():
