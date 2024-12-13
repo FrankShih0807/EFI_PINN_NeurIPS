@@ -44,7 +44,8 @@ class Poisson_v2(PhysicsModel):
         return X, y
     
     def get_sol_data(self):
-        X = torch.tensor([self.t_start, self.t_end]).repeat_interleave(self.n_sol_samples).view(-1, 1)
+        # X = torch.tensor([self.t_start, self.t_end]).repeat_interleave(self.n_sol_samples).view(-1, 1)
+        X = torch.linspace(self.t_start, self.t_end, steps=16).repeat_interleave(self.n_sol_samples).view(-1, 1)
         true_y = self.physics_law(X)
         y = true_y + self.sol_sd * torch.randn_like(true_y)
         return X, y, true_y
@@ -193,7 +194,6 @@ class Poisson_v2Callback(BaseCallback):
         os.makedirs(temp_dir, exist_ok=True)
         frame_path = os.path.join(temp_dir, f"frame_{self.n_evals}.png")
         plt.savefig(frame_path)
-        
         plt.close()
         
     def save_gif(self):

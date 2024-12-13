@@ -21,12 +21,13 @@ class PINN_EFI(BasePINN):
         hidden_layers=[15, 15],
         activation_fn=nn.Softplus(beta=10),
         encoder_kwargs=dict(),
+        annealing_period=0.3,
         lr=1e-3,
-        lambda_pde=10,
         sgld_lr=1e-3,
         lam=1,
+        lambda_pde=1,
         lambda_theta=1,
-        pretrain_epochs=5000,
+        pretrain_epochs=0,
         save_path=None,
         device="cpu",
     ) -> None:
@@ -48,6 +49,7 @@ class PINN_EFI(BasePINN):
             device=device,
         )
 
+        self.annealing_period = annealing_period
         # # EFI configs
         self.n_samples = self.sol_X.shape[0]
         self.mse_loss = nn.MSELoss(reduction="sum")
@@ -218,8 +220,7 @@ class PINN_EFI(BasePINN):
 
     def update(self):
         # update training parameters
-        annealing_period = 0.3
-        annealing_progress = self.progress / annealing_period
+        annealing_progress = self.progress / self.annealing_period
         lambda_pde = self.lambda_pde(annealing_progress)
         lam = self.lam(annealing_progress)
         lambda_theta = self.lambda_theta(annealing_progress)
