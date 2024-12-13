@@ -14,4 +14,20 @@ poisson:
     # sigma_diff: 0.05
     sigma_diff: 'log_0.5_0.005'
     sigma_sol: 0.05
-    
+
+poisson-v2:
+  n_samples: 100
+  epochs: 10000
+  eval_freq: -1
+  burn: 0.4
+  pinn:
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: tanh
+    # step_size: 0.001 ### set to be 0.02 * min(sigma_diff, sigma_sol)
+    step_size: 0.001
+    L: 6
+    # sigma_diff: 0.05
+    sigma_diff: 0.05
+    sigma_sol: 0.05
