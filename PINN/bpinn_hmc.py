@@ -80,7 +80,7 @@ class BayesianPINN(BasePINN):
 
     def sample_posterior(self, num_samples):
         # update training parameters
-        annealing_period = 0.5
+        annealing_period = 0.3
         annealing_progress = self.progress / annealing_period
         step_size = self.step_size(annealing_progress)
         sigma_diff = self.sigma_diff(annealing_progress)
