@@ -261,6 +261,7 @@ plot_cr_boxplot(df)
 print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].mean())
 print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].std()/10)
 
+print(df[(df['mse']>0.005) & (df['model']=='poisson-v2')])
 # df2 = df[df['algo']=='pinn_efi_lam1k_2']
 rows_with_nan = df[df.isna().any(axis=1)]
 print(rows_with_nan)

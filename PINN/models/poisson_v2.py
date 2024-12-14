@@ -17,15 +17,20 @@ class Poisson_v2(PhysicsModel):
                  t_end=0.7, 
                  sol_sd=0.01,
                  diff_sd=0.01,
-                 n_sol_samples=10,
-                 n_diff_samples=10,
+                 n_sol_sensors=10,
+                 n_sol_replicates=10,
+                 n_diff_sensors=10,
+                 n_diff_replicates=10
                  ):
         super().__init__(t_start=t_start, 
                          t_end=t_end, 
                          sol_sd=sol_sd, 
                          diff_sd=diff_sd, 
-                         n_sol_samples=n_sol_samples, 
-                         n_diff_samples=n_diff_samples)
+                         n_sol_sensor=n_sol_sensors,
+                         n_sol_replicates=n_sol_replicates,
+                         n_diff_sensors=n_diff_sensors,
+                         n_diff_replicates=n_diff_replicates
+                         )
 
     def generate_data(self, device):
         dataset = PINNDataset(device=device)
@@ -45,13 +50,13 @@ class Poisson_v2(PhysicsModel):
     
     def get_sol_data(self):
         # X = torch.tensor([self.t_start, self.t_end]).repeat_interleave(self.n_sol_samples).view(-1, 1)
-        X = torch.linspace(self.t_start, self.t_end, steps=16).repeat_interleave(self.n_sol_samples).view(-1, 1)
+        X = torch.linspace(self.t_start, self.t_end, steps=self.n_sol_sensor).repeat_interleave(self.n_sol_replicates).view(-1, 1)
         true_y = self.physics_law(X)
         y = true_y + self.sol_sd * torch.randn_like(true_y)
         return X, y, true_y
     
     def get_diff_data(self):
-        X = torch.linspace(self.t_start, self.t_end, steps=16).repeat_interleave(self.n_diff_samples).view(-1, 1)
+        X = torch.linspace(self.t_start, self.t_end, steps=self.n_diff_sensors).repeat_interleave(self.n_diff_replicates).view(-1, 1)
         true_y = self.differential_function(X)
         y = true_y + self.diff_sd * torch.randn_like(true_y)
         return X, y, true_y
