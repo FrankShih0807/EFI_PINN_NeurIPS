@@ -44,16 +44,6 @@ class BaseDNN(nn.Module):
         return x
     
 
-# class EncoderDNN(BaseDNN):
-#     def __init__(self, input_dim, hidden_layers, output_dim=None, activation_fn='relu'):
-#         if hidden_layers is None:
-#             last_hidden = 2 ** int(np.log2(output_dim))
-#             # hidden_layers = [last_hidden//4, last_hidden//2 , last_hidden]
-#             hidden_layers = [last_hidden//2 , last_hidden]
-#             # hidden_layers = [input_dim * 2, last_hidden // 4, last_hidden // 2, last_hidden]
-#         super(EncoderDNN, self).__init__(input_dim, hidden_layers, output_dim, activation_fn)
-
-
 class DropoutDNN(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu, dropout_rate=0.01):
         super(DropoutDNN, self).__init__()
@@ -87,32 +77,6 @@ class DropoutDNN(nn.Module):
         x = self.layers[-1](x)  # Output layer without activation
         return x
     
-               
-# class BayesianNN(nn.Module):
-#     def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu):
-#         super(BayesianNN, self).__init__()
-#         self.input_dim = input_dim
-#         self.output_dim = output_dim
-#         if hidden_layers is None:
-#             self.hidden_layers = [self.output_dim]
-#         else:
-#             self.hidden_layers = hidden_layers
-#         self.activation_fn = activation_fn
-#         # Define layers with Bayesian Linear (weights are distributions)
-#         self.layers = nn.ModuleList()
-#         self.layers.append(bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=input_dim, out_features=self.hidden_layers[0]))
-#         # Add hidden layers
-#         for i in range(1, len(self.hidden_layers)):
-#             self.layers.append(bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=self.hidden_layers[i-1], out_features=self.hidden_layers[i]))
-#         # Add the output layer
-#         self.layers.append(bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=self.hidden_layers[-1], out_features=self.output_dim))
-
-#     def forward(self, x):
-#         for layer in self.layers[:-1]:
-#             x = layer(x)
-#             x = self.activation_fn(x)
-#         x = self.layers[-1](x)
-#         return x
 
 
 class EFI_Net(nn.Module):
@@ -340,41 +304,7 @@ class EFI_Discovery_Net(nn.Module):
         for p in self.parameters():
             log_prior += self.gmm.log_prob(p.flatten(), sparsity).sum()
         return log_prior
-    
-    # def sparsity_loss(self, theta):
-    #     xi = 0.01
-    #     a = 1
-    #     return torch.where(theta.abs() > a * xi, torch.zeros_like(theta.abs()), theta.abs()).sum()
 
-# class EFI_Encoder(nn.Module):
-#     def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu):
-#         super(EFI_Encoder, self).__init__()
-#         # Define the initial layers
-#         self.input_dim = input_dim
-#         self.output_dim = output_dim
-#         if hidden_layers is None:
-#             self.hidden_layers = [self.output_dim]
-#         else:
-#             self.hidden_layers = hidden_layers
-#         self.activation_fn = activation_fn
-        
-#         self.layers = nn.ModuleList()
-#         self.layers.append(nn.Linear(input_dim, self.hidden_layers[0]))
-#         # Add hidden layers
-#         for i in range(1, len(self.hidden_layers)):
-#             self.layers.append(nn.Linear(self.hidden_layers[i-1], self.hidden_layers[i]))
-#         # Add the output layer
-#         self.layers.append(nn.Linear(self.hidden_layers[-1], output_dim))
-
-#     def forward(self, x):
-#         for layer in self.layers[:-1]:
-#             x = layer(x)
-#             x = self.activation_fn(x)
-#         x = self.layers[-1](x)
-#         return x    
-
-    
-    
 # class MLP(nn.Module):
 #     def __init__(self,in_features : int, out_features: int, hidden_features: int,num_hidden_layers: int) -> None:
 #         super().__init__()
