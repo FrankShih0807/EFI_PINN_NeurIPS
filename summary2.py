@@ -241,7 +241,7 @@ def clear_dir(folder):
             print('Failed to delete %s. Reason: %s' % (file_path, e))
 # Example usage
 output_dir = "output"
-clear_dir('figures/latent_Z')
+# clear_dir('figures/latent_Z')
 progress_df = collect_progress_data(output_dir)
 
 
@@ -250,7 +250,7 @@ df = progress_df[progress_df['train/progress']==1.0]
 df = df.loc[:, ~df.columns.str.startswith('train')]
 df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
 df = df.dropna()
-plot_cr_boxplot(df)
+# plot_cr_boxplot(df)
 # df["cover_all"] = (df["coverage_rate"]==1)
 # print(df_cr.groupby(['model', 'algo'])['cr'].mean())
 
@@ -295,5 +295,5 @@ print(rows_with_nan)
 # print(df.groupby(['model', 'algo'])['eval/ci_range'].mean())
 
 # print(df[df['eval/coverage_rate']<0.2][['model', 'algo', 'exp']])
-plot_latent_Z(output_dir)
+# plot_latent_Z(output_dir)
 
