@@ -24,7 +24,8 @@ class PoissonNonlinear(PhysicsModel):
                  n_sol_replicates=10,
                  n_diff_sensors=10,
                  n_diff_replicates=10,
-                 k = 0.7
+                 k = 0.7,
+                 is_param_estimation=False,
                  ):
         super().__init__(t_start=t_start, 
                          t_end=t_end, 
@@ -34,7 +35,8 @@ class PoissonNonlinear(PhysicsModel):
                          n_sol_replicates=n_sol_replicates,
                          n_diff_sensors=n_diff_sensors,
                          n_diff_replicates=n_diff_replicates,
-                         k=k
+                         k=k,
+                         is_param_estimation=is_param_estimation
                          )
 
     def generate_data(self, device):
