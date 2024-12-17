@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 import seaborn as sns
 from PINN.common import SGLD
-from PINN.common.torch_layers import EFI_Discovery_Net
+from PINN.common.torch_layers import EFI_Net_PE
 from PINN.common.base_pinn import BasePINN
 
 
@@ -34,7 +34,7 @@ class PINN_EFI_Discovery(BasePINN):
     
     def _pinn_init(self):
         # init EFI net and optimiser
-        self.net = EFI_Discovery_Net(input_dim=self.input_dim, output_dim=self.output_dim, variable_dim=1, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn)
+        self.net = EFI_Net_PE(input_dim=self.input_dim, output_dim=self.output_dim, variable_dim=1, hidden_layers=self.hidden_layers, activation_fn=self.activation_fn)
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         
         # init latent noise and sampler
