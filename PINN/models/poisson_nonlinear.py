@@ -10,8 +10,11 @@ from PINN.common.utils import PINNDataset
 from PIL import Image
 from PINN.common.callbacks import BaseCallback
 
+'''
+PoissonNonlinear: Poisson with parameter estimation 
+'''
 
-class Poisson(PhysicsModel):
+class PoissonNonlinear(PhysicsModel):
     def __init__(self, 
                  t_start=-0.7,
                  t_end=0.7, 
@@ -20,7 +23,8 @@ class Poisson(PhysicsModel):
                  n_sol_sensors=10,
                  n_sol_replicates=10,
                  n_diff_sensors=10,
-                 n_diff_replicates=10
+                 n_diff_replicates=10,
+                 k = 0.7
                  ):
         super().__init__(t_start=t_start, 
                          t_end=t_end, 
@@ -29,7 +33,8 @@ class Poisson(PhysicsModel):
                          n_sol_sensor=n_sol_sensors,
                          n_sol_replicates=n_sol_replicates,
                          n_diff_sensors=n_diff_sensors,
-                         n_diff_replicates=n_diff_replicates
+                         n_diff_replicates=n_diff_replicates,
+                         k=k
                          )
 
     def generate_data(self, device):
@@ -60,23 +65,25 @@ class Poisson(PhysicsModel):
         true_y = self.differential_function(X)
         y = true_y + self.diff_sd * torch.randn_like(true_y)
         return X, y, true_y
-
     
     def physics_law(self, X):
         y = torch.sin(6 * X) ** 3
         return y
     
     def differential_function(self, X):
-        y = -1.08 * torch.sin(6 * X) * (torch.sin(6 * X) ** 2 - 2 * torch.cos(6 * X) ** 2)
+        y = -1.08 * torch.sin(6 * X) * (torch.sin(6 * X) ** 2 - 2 * torch.cos(6 * X) ** 2) + self.k * torch.tanh(torch.sin(6 * X) ** 3)
         return y
     
-    def differential_operator(self, model: torch.nn.Module, physics_X):
+    def differential_operator(self, model: torch.nn.Module, physics_X, k=None):
+        
+        if k is None:
+            k = self.k
+            
         u = model(physics_X)
-        # u_x = torch.autograd.grad(u, physics_X, grad_outputs=torch.ones_like(u), create_graph=True)[0]
-        # u_xx = torch.autograd.grad(u_x, physics_X, grad_outputs=torch.ones_like(u), create_graph=True)[0]
         u_x = grad(u, physics_X)[0]
         u_xx = grad(u_x, physics_X)[0]
         pde = 0.01 * u_xx
+        pde += k * torch.tanh(u)
         
         return pde
 
@@ -96,7 +103,7 @@ class Poisson(PhysicsModel):
 
 
 
-class PoissonCallback(BaseCallback):
+class PoissonNonlinearCallback(BaseCallback):
     def __init__(self):
         super().__init__()
     
@@ -126,6 +133,7 @@ class PoissonCallback(BaseCallback):
         self.logger.record('eval/mse', mse)
         
         self.save_evaluation()
+        # self.plot_latent_Z()
         try:
             self.plot_latent_Z()
         except:
@@ -137,9 +145,9 @@ class PoissonCallback(BaseCallback):
         self.save_gif()
         
     def plot_latent_Z(self):
-        # X = self.model.sol_X.flatten()
         true_y = self.dataset[0]['true_y'].flatten()
         sol_y = self.dataset[0]['y'].flatten()
+        sd = self.dataset[0]['noise_sd']
         true_Z = sol_y - true_y
         
         latent_Z = self.model.latent_Z[0].flatten().detach().cpu().numpy()
@@ -151,11 +159,29 @@ class PoissonCallback(BaseCallback):
         plt.scatter(true_Z, latent_Z, label='Latent Z')
         plt.xlabel('True Z')
         plt.ylabel('Latent Z')
-        plt.xlim(-0.1, 0.1)
-        plt.ylim(-0.1, 0.1)
+        plt.xlim(-3*sd, 3*sd)
+        plt.ylim(-3*sd, 3*sd)
         plt.savefig(os.path.join(self.save_path, 'latent_Z.png'))
         plt.close()
         
+        true_y = self.dataset[1]['true_y'].flatten()
+        sol_y = self.dataset[1]['y'].flatten()
+        sd = self.dataset[1]['noise_sd']
+        true_Z = sol_y - true_y
+        
+        latent_Z = self.model.latent_Z[1].flatten().detach().cpu().numpy()
+        
+        np.save(os.path.join(self.save_path, 'true_Z_diff.npy'), true_Z)
+        np.save(os.path.join(self.save_path, 'latent_Z_diff.npy'), latent_Z)
+        
+        plt.subplots(figsize=(6, 6))
+        plt.scatter(true_Z, latent_Z, label='Latent Z')
+        plt.xlabel('True Z')
+        plt.ylabel('Latent Z')
+        plt.xlim(-3*sd, 3*sd)
+        plt.ylim(-3*sd, 3*sd)
+        plt.savefig(os.path.join(self.save_path, 'latent_Z_diff.png'))
+        plt.close()
         
     def save_evaluation(self):
         X = self.eval_X_cpu.flatten().numpy()
@@ -183,7 +209,6 @@ class PoissonCallback(BaseCallback):
         os.makedirs(temp_dir, exist_ok=True)
         frame_path = os.path.join(temp_dir, f"frame_{self.n_evals}.png")
         plt.savefig(frame_path)
-        
         plt.close()
         
     def save_gif(self):
@@ -209,6 +234,3 @@ class PoissonCallback(BaseCallback):
         os.rmdir(temp_dir)
         
         
-if __name__ == '__main__':
-    callback = PoissonCallback()
-    callback.on_training()
