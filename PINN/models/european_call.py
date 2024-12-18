@@ -10,6 +10,7 @@ import os
 from PINN.common.grad_tool import grad
 from PINN.common.base_physics import PhysicsModel
 from PINN.common.utils import PINNDataset
+from PIL import Image
 from PINN.common.callbacks import BaseCallback
 
     
@@ -285,7 +286,26 @@ class EuropeanCallCallback(BaseCallback):
         plt.close()
 
     def save_gif(self):
-        pass
+        frames = []
+        temp_dir = os.path.join(self.save_path, 'temp_frames')
+        n_frames = len(os.listdir(temp_dir))
+        for epoch in range(n_frames):
+            frame_path = os.path.join(temp_dir, f"frame_{epoch}.png")
+            frames.append(Image.open(frame_path))
+        # frame_files = sorted(os.listdir(temp_dir))  # Sort by file name to maintain order
+        # print(frame_files)
+        # frames = [Image.open(os.path.join(temp_dir, frame)) for frame in frame_files]
+        
+        frames[0].save(
+            os.path.join(self.save_path, "training_loss.gif"),
+            save_all=True,
+            append_images=frames[1:],
+            duration=500,
+            loop=0
+        )
+        for frame_path in os.listdir(temp_dir):
+            os.remove(os.path.join(temp_dir, frame_path))
+        os.rmdir(temp_dir)
 
 
 

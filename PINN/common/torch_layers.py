@@ -346,7 +346,7 @@ class BayesianPINNNet(nn.Module):
         super(BayesianPINNNet, self).__init__()
 
         self.fnn = nn.Sequential(
-            nn.Linear(1, 50),
+            nn.Linear(2, 50),
             nn.Tanh(),
             nn.Linear(50, 50),
             nn.Tanh(),
