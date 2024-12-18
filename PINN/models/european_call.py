@@ -4,11 +4,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributions as dist
+import seaborn as sns
 import os
 
 from PINN.common.grad_tool import grad
 from PINN.common.base_physics import PhysicsModel
 from PINN.common.utils import PINNDataset
+from PINN.common.callbacks import BaseCallback
 
     
         
@@ -24,7 +26,7 @@ class EuropeanCall(PhysicsModel):
         self.norm_dist = dist.Normal(0, 1)
         super().__init__(S_range=S_range, t_range=t_range, sigma=sigma, r=r, K=K, noise_sd=noise_sd)
 
-    def generate_data(self, n_samples, device):
+    def generate_data(self, n_samples = 200, device = "cpu"):
         dataset = PINNDataset(device)
         # get solution data
         price_X, price_y = self.get_price_data(n_samples)
@@ -35,10 +37,10 @@ class EuropeanCall(PhysicsModel):
         # get evaluation data
         eval_X, eval_y = self.get_eval_data()
         
-        dataset.add_data(price_X, price_y, 'solution', self.noise_sd)
-        dataset.add_data(boundary_X, boundary_y, 'solution', 0.0)
-        dataset.add_data(diff_X, diff_y, 'differential', 0.0)
-        dataset.add_data(eval_X, eval_y, 'evaluation', 0.0)
+        dataset.add_data(price_X, price_y, price_y, 'solution', self.noise_sd)
+        dataset.add_data(boundary_X, boundary_y, boundary_y, 'solution', 0.0)
+        dataset.add_data(diff_X, diff_y, diff_y, 'differential', 0.0)
+        dataset.add_data(eval_X, eval_y, eval_y, 'evaluation', 0.0)
         return dataset
     
     def get_diff_data(self, n_samples):
@@ -110,6 +112,7 @@ class EuropeanCall(PhysicsModel):
         
         return bs_pde
     
+    ##########################
     def plot(self, s_range=[0, 160], t_range=[0, 1], grid_size=100):
         s = torch.linspace(s_range[0], s_range[1], grid_size)
         t = torch.linspace(t_range[0], t_range[1], grid_size)
@@ -158,6 +161,7 @@ class EuropeanCall(PhysicsModel):
         plt.savefig(os.path.join(save_path, 'true_solution.png'))
         plt.close()
         
+    ##########################    
     def save_evaluation(self, model, save_path=None):
         # preds_upper, preds_lower, preds_mean = model.summary()
         pred_dict = model.summary()
@@ -200,7 +204,91 @@ class EuropeanCall(PhysicsModel):
         ax.legend()
         plt.savefig(os.path.join(save_path, 'slice_prediction.png'))
         plt.close()
-            
+
+class EuropeanCallCallback(BaseCallback):
+    def __init__(self):
+        super().__init__()
+
+    def _init_callback(self) -> None:
+        self.eval_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'evaluation'], dim=0).to(self.device)
+        self.eval_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'evaluation'], dim=0).to(self.device)
+        
+        self.eval_X_cpu = self.eval_X.clone().detach().cpu()
+        self.eval_y_cpu = self.eval_y.clone().detach().cpu()
+
+        self.grids = self.physics_model.grids
+
+    def _on_training(self):
+        pred_y = self.model.net(self.eval_X).detach().cpu()
+        print(pred_y)
+        raise
+        self.eval_buffer.add(pred_y)
+
+    def _on_eval(self):
+        pred_y_mean = self.eval_buffer.get_mean()
+
+        ci_low, ci_high = self.eval_buffer.get_ci()
+        ci_range = (ci_high - ci_low).mean().item()
+        cr = ((ci_low <= self.eval_y_cpu.flatten()) & (self.eval_y_cpu.flatten() <= ci_high)).float().mean().item()
+        mse = F.mse_loss(pred_y_mean, self.eval_y_cpu.flatten(), reduction='mean').item()
+        
+        self.logger.record('eval/ci_range', ci_range)
+        self.logger.record('eval/coverage_rate', cr)
+        self.logger.record('eval/mse', mse)
+        
+        self.save_evaluation()
+        try:
+            self.plot_latent_Z()
+        except:
+            pass    
+        
+    def _on_training_end(self):
+        self.save_gif()
+    
+    def plot_latent_Z(self):
+        pass
+
+    def save_evaluation(self):
+        subset_indices = torch.arange(0, self.grids * self.grids, self.grids)
+
+        S = self.eval_X_cpu[:,1].reshape(self.grids,self.grids).numpy()
+        S_eval = S[:,0]
+        # t = 1 - self.eval_X_cpu[:,0].reshape(self.grids,self.grids).numpy()
+        # t_eval = t[:,0]
+        # X = self.eval_X_cpu.flatten().numpy()
+        # y = self.eval_y_cpu.flatten().numpy()
+        # true_price = self.physics_law(S_eval, t_eval)
+        true_price = self.eval_y_cpu[subset_indices,:].flatten().numpy()
+
+        preds_mean = self.eval_buffer.get_mean()
+        preds_upper, preds_lower = self.eval_buffer.get_ci()
+
+
+        sns.set_theme()
+        plt.subplots(figsize=(8, 6))
+        plt.plot(S_eval, true_price, alpha=0.8, color='b', label='True')
+        plt.plot(S_eval, preds_mean[subset_indices], alpha=0.8, color='g', label='Mean')
+        # plt.plot(self.model.sol_X.clone().cpu().numpy() , self.model.sol_y.clone().cpu().numpy(), 'x', label='Training data', color='orange')
+
+        plt.fill_between(S_eval, preds_upper[subset_indices], preds_lower[subset_indices], alpha=0.2, color='g', label='95% CI')
+        plt.xlabel('Stock Price')
+        plt.ylabel('Option Price')
+        plt.legend(loc='upper left', bbox_to_anchor=(0.1, 0.95))
+        plt.savefig(os.path.join(self.save_path, 'slice_prediction.png'))
+
+        # save temp frames
+        temp_dir = os.path.join(self.save_path, 'temp_frames')
+        os.makedirs(temp_dir, exist_ok=True)
+        frame_path = os.path.join(temp_dir, f"frame_{self.n_evals}.png")
+        plt.savefig(frame_path)
+        
+        plt.close()
+
+    def save_gif(self):
+        pass
+
+
+
 if __name__ == "__main__":
     
     call = EuropeanCall(K=40)
