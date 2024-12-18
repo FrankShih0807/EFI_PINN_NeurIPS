@@ -22,6 +22,7 @@ class PINN_EFI(BasePINN):
         activation_fn=nn.Softplus(beta=10),
         encoder_kwargs=dict(),
         annealing_period=0.3,
+        grad_norm_max=-1,
         lr=1e-3,
         sgld_lr=1e-3,
         lam=1,
@@ -50,6 +51,7 @@ class PINN_EFI(BasePINN):
         )
 
         self.annealing_period = annealing_period
+        self.grad_norm_max = grad_norm_max
         # # EFI configs
         self.n_samples = self.sol_X.shape[0]
         self.mse_loss = nn.MSELoss(reduction="sum")
@@ -214,6 +216,7 @@ class PINN_EFI(BasePINN):
 
             optimiser.zero_grad()
             loss.backward()
+            nn.utils.clip_grad_norm_(self.net.parameters(), 100)
             optimiser.step()
         print('EFI pretraining done.')
 
@@ -241,6 +244,8 @@ class PINN_EFI(BasePINN):
 
         self.sampler.zero_grad()
         Z_loss.backward()
+        if self.grad_norm_max > 0:
+            nn.utils.clip_grad_norm_([ Z for Z in self.latent_Z if Z is not None], self.grad_norm_max)
         self.sampler.step()
 
         ## 2. DNN weights update (Optimize W)
@@ -254,6 +259,8 @@ class PINN_EFI(BasePINN):
 
         self.optimiser.zero_grad()
         w_loss.backward()
+        if self.grad_norm_max > 0:
+            nn.utils.clip_grad_norm_(self.net.parameters(), self.grad_norm_max)
         self.optimiser.step()
         
         # record training parameters
@@ -262,7 +269,8 @@ class PINN_EFI(BasePINN):
         self.logger.record('train_param/lambda_pde', lambda_pde)
         # self.logger.record('train_param/sparse_threshold', self.net.sparse_threshold)
         self.logger.record('train/theta_loss', theta_loss.item())
-        
+        # print(y_loss.item(), pde_loss.item(), theta_loss.item(), w_prior_loss.item(), z_prior_loss.item())
+        # raise
         return y_loss.item(), pde_loss.item()
 
     def train(self, epochs=10000, eval_freq=-1, burn=0.5, callback=None):

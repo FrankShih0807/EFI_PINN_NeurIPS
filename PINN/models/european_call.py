@@ -29,7 +29,7 @@ class EuropeanCall(PhysicsModel):
     def generate_data(self, n_samples = 200, device = "cpu"):
         dataset = PINNDataset(device)
         # get solution data
-        price_X, price_y = self.get_price_data(n_samples)
+        price_X, price_y, true_price_y = self.get_price_data(n_samples)
         # get boundary data
         boundary_X, boundary_y = self.get_boundary_data(n_samples)
         # get differential data
@@ -37,7 +37,7 @@ class EuropeanCall(PhysicsModel):
         # get evaluation data
         eval_X, eval_y = self.get_eval_data()
         
-        dataset.add_data(price_X, price_y, price_y, 'solution', self.noise_sd)
+        dataset.add_data(price_X, price_y, true_price_y, 'solution', self.noise_sd)
         dataset.add_data(boundary_X, boundary_y, boundary_y, 'solution', 0.0)
         dataset.add_data(diff_X, diff_y, diff_y, 'differential', 0.0)
         dataset.add_data(eval_X, eval_y, eval_y, 'evaluation', 0.0)
@@ -64,9 +64,9 @@ class EuropeanCall(PhysicsModel):
         # ts = torch.linspace(self.t_range[0], self.t_range[1], n_samples).reshape(-1, 1)
         Ss = torch.ones(n_samples, 1) * self.S_range[1]/2
         X = torch.cat([ts, Ss], dim=1)
-        y = self.physics_law(Ss, self.t_range[1] - ts)
-        y += self.noise_sd * torch.randn_like(y)
-        return X, y
+        true_y = self.physics_law(Ss, self.t_range[1] - ts)
+        y = true_y + self.noise_sd * torch.randn_like(true_y)
+        return X, y, true_y
     
     def get_boundary_data(self, n_samples):
         # Boundary condition at S = 0
@@ -220,8 +220,8 @@ class EuropeanCallCallback(BaseCallback):
 
     def _on_training(self):
         pred_y = self.model.net(self.eval_X).detach().cpu()
-        print(pred_y)
-        raise
+        # print(pred_y)
+        # raise
         self.eval_buffer.add(pred_y)
 
     def _on_eval(self):
