@@ -9,7 +9,7 @@ from PINN.common.base_physics import PhysicsModel
 from PINN.common.utils import PINNDataset
 from PIL import Image
 from PINN.common.callbacks import BaseCallback
-
+from PINN.common.buffers import EvaluationBuffer, ScalarBuffer
 '''
 PoissonNonlinear: Poisson with parameter estimation 
 '''
@@ -120,11 +120,15 @@ class PoissonNonlinearCallback(BaseCallback):
         
         self.eval_X_cpu = self.eval_X.clone().detach().cpu()
         self.eval_y_cpu = self.eval_y.clone().detach().cpu()
+        
+        if self.physics_model.is_inverse:
+            self.k_buffer = ScalarBuffer(burn=self.burn)
 
     
     def _on_training(self):
         pred_y = self.model.net(self.eval_X).detach().cpu()
         self.eval_buffer.add(pred_y)
+        self.k_buffer.add(self.model.net.pe_variables[0].item())
         # print(len(self.eval_buffer))
         
     
@@ -138,6 +142,15 @@ class PoissonNonlinearCallback(BaseCallback):
         self.logger.record('eval/ci_range', ci_range)
         self.logger.record('eval/coverage_rate', cr)
         self.logger.record('eval/mse', mse)
+        if self.physics_model.is_inverse:
+            k_mean = self.k_buffer.get_mean()
+            k_low, k_high = self.k_buffer.get_ci()
+            k_ci_range = k_high - k_low
+            k_cr = ((k_low <= self.physics_model.k) & (self.physics_model.k <= k_high))
+            
+            self.logger.record('eval/k_ci_range', k_ci_range)
+            self.logger.record('eval/k_coverage_rate', k_cr)
+            self.logger.record('eval/k_mean', k_mean)
         
         self.save_evaluation()
         # self.plot_latent_Z()

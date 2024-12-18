@@ -41,12 +41,41 @@ class EvaluationBuffer(object):
         self.ensemble_tensor = self.total_ensemble[int(self.burn*self.total_ensemble.shape[0]):]
         return self.ensemble_tensor.shape[0]
 
+class ScalarBuffer(object):
+    def __init__(self, burn:float=0.5) -> None:
+        # self.size = size
+        self.burn = burn
+        self.total_samples = []
+        self.n_ensemble = 0 
+    
+    def add(self, value):
+        self.total_samples.append(value)
+        
+    def get_ci(self, p=0.05):
+        self.effect_samples = self.total_samples[int(self.burn*len(self.total_samples)):]
+        if self.effect_samples is not None:
+            quantiles = np.quantile(self.effect_samples, [p/2, 1-p/2])
+        return quantiles[0], quantiles[1]
+    
+    def get_mean(self):
+        self.effect_samples = self.total_samples[int(self.burn*len(self.total_samples)):]
+        return np.mean(self.effect_samples)
+    
+    def __len__(self):
+        self.effect_samples = self.total_samples[int(self.burn*len(self.total_samples)):]
+        return len(self.effect_samples)
+        
+    
+    
+
 
 if __name__ == '__main__':
-    buffer = EvaluationBuffer()
+    # buffer = EvaluationBuffer()
+    buffer = ScalarBuffer()
     for i in range(500):
-        buffer.add(torch.randn(5,1))
-        print(len(buffer))
+        buffer.add(i+1)
+        # print(len(buffer))
+        print(len(buffer.total_samples))
         
         # print(buffer.ensemble_tensor.shape)
     # print(buffer.mean())
