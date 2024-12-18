@@ -1,0 +1,162 @@
+cooling:
+  n_samples: 200
+  epochs: 10_000
+  pinn:
+    hidden_layers:
+    - 20
+    - 20
+    activation_fn: softplus(beta=10)
+    lr: 1.0e-5
+    lambda_pde: 50.0
+    sgld_lr: 1e-4
+    lambda_y: 1.0
+    lambda_theta: 0.1
+    encoder_kwargs:
+      encoder_activation: softplus(beta=10)
+      prior_sd: 0.1
+      sparse_threshold: 0.01
+
+european_call:
+  n_samples: 200
+  epochs: 20_000
+  pinn:
+    hidden_layers:
+    - 20
+    - 20
+    - 20
+    activation_fn: softplus(beta=10)
+    lr: 1.0e-5
+    lambda_pde: 10.0
+    sgld_lr: 1e-4
+    lambda_y: 10.0
+    lambda_theta: 0.1
+    encoder_kwargs:
+      encoder_activation: relu
+      prior_sd: 1.0
+      sparse_threshold: 0.01
+
+
+nonlinear:
+  n_samples: 200
+  epochs: 10_000
+  pinn:
+    hidden_layers:
+    - 15
+    - 15
+    activation_fn: softplus(beta=10)
+    lr: 1.0e-4
+    lambda_pde: 0.0
+    sgld_lr: 1e-4
+    lambda_y: 20.0
+    lambda_theta: 0.2
+    encoder_kwargs:
+      encoder_activation: softplus(beta=10)
+      prior_sd: 0.5
+      sparse_threshold: 0.01
+
+poisson:
+  n_samples: 200
+  epochs: 200_000
+  eval_freq: 2000
+  burn: 0.5
+  pinn:
+    hidden_layers:
+    - 30
+    - 30
+    activation_fn: tanh
+    annealing_period: 0.3
+    lr: 'poly_5e-6_10.0_0.7'
+    sgld_lr: 'poly_5e-6_10.0_0.9'
+    lam: 'linear_100.0_1000.0'
+    lambda_pde: 1.0
+    lambda_theta: 1.0
+    pretrain_epochs: 0
+    encoder_kwargs:
+      encoder_hidden_layers:
+      - 16
+      - 16
+      - 16
+      encoder_activation: leaky_relu
+      prior_sd: 1.0
+      sparse_sd: 0.001
+      sparsity: 1.0
+
+poisson-v2:
+  epochs: 150_000
+  eval_freq: -1
+  burn: 0.5
+  pinn:
+    hidden_layers:
+    - 30
+    - 30
+    activation_fn: tanh
+    annealing_period: 0.3
+    lr: 'poly_0.5e-5_10.0_0.7'
+    sgld_lr: 'poly_0.5e-5_10.0_0.9'
+    lam: 'linear_100.0_1000.0'
+    lambda_pde: 1.0
+    lambda_theta: 1.0
+    pretrain_epochs: 2000
+    encoder_kwargs:
+      encoder_hidden_layers:
+      - 16
+      - 16
+      - 16
+      encoder_activation: leaky_relu
+      prior_sd: 1.0
+      sparse_sd: 0.001
+      sparsity: 1.0
+
+
+
+poisson-nonlinear:
+  epochs: 200_000
+  eval_freq: 1000
+  burn: 0.5
+  pinn:
+    hidden_layers:
+    - 30
+    - 30
+    activation_fn: tanh
+    annealing_period: 0.3
+    lr: 'poly_0.5e-5_10.0_0.7'
+    sgld_lr: 'poly_0.5e-5_10.0_0.9'
+    lam: 'linear_100.0_1000.0'
+    lambda_pde: 1.0
+    lambda_theta: 1.0
+    pretrain_epochs: 2000
+    encoder_kwargs:
+      encoder_hidden_layers:
+      - 16
+      - 16
+      - 16
+      encoder_activation: leaky_relu
+      prior_sd: 1.0
+      sparse_sd: 0.001
+      sparsity: 1.0
+
+poisson-inverse:
+  epochs: 200_000
+  eval_freq: 1000
+  burn: 0.5
+  pinn:
+    hidden_layers:
+    - 30
+    - 30
+    activation_fn: tanh
+    annealing_period: 0.3
+    lr: 'poly_0.5e-5_10.0_0.7'
+    sgld_lr: 'poly_0.5e-5_10.0_0.9'
+    lam: 'linear_100.0_1000.0'
+    lambda_pde: 1.0
+    lambda_theta: 1.0
+    pretrain_epochs: 2000
+    encoder_kwargs:
+      encoder_hidden_layers:
+      - 16
+      - 16
+      - 16
+      encoder_activation: leaky_relu
+      prior_sd: 1.0
+      sparse_sd: 0.001
+      sparsity: 1.0

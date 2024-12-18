@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
 from PINN.common.callbacks import BaseCallback
-from PINN import PINN, PINN_EFI, Pretrain_EFI, PINN_EFI_Discovery, BayesianPINN
+from PINN import PINN, PINN_EFI, Pretrain_EFI, PINN_EFI_Inverse, BayesianPINN
 from PINN.models import Cooling, EuropeanCall, Nonlinear, EuropeanCallDiscovery, Poisson, Poisson_v2, PoissonNonlinear
 from PINN.models import PoissonCallback, Poisson_v2Callback, PoissonNonlinearCallback, EuropeanCallCallback
 
@@ -23,7 +23,7 @@ ALGOS: Dict[str, Type[BasePINN]] = {
     "pinn": PINN,
     "pinn_efi": PINN_EFI,
     "pretrain_efi": Pretrain_EFI,
-    "pinn_efi_discovery": PINN_EFI_Discovery,
+    "pinn_efi_inverse": PINN_EFI_Inverse,
     "bpinn": BayesianPINN,
 }
 
@@ -35,6 +35,7 @@ MODELS: Dict[str, Type[PhysicsModel]] = {
     "poisson": Poisson,
     "poisson-v2": Poisson_v2,
     "poisson-nonlinear": PoissonNonlinear,
+    "poisson-inverse": PoissonNonlinear
 }
 
 CALLBACKS: Dict[str, Callable] = {
@@ -42,6 +43,7 @@ CALLBACKS: Dict[str, Callable] = {
     "poisson-v2": Poisson_v2Callback,
     "poisson-nonlinear": PoissonNonlinearCallback,
     "european_call": EuropeanCallCallback,
+    "poisson-inverse": PoissonNonlinearCallback
 }
 
 def get_callback(key: str) -> Callable:
