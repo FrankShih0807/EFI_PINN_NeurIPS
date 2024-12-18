@@ -60,7 +60,7 @@ class BayesianPINN(BasePINN):
 
     def _pinn_init(self):
         sigma_diff = self.sigma_diff(progress=0.0)
-        self.bnet = BayesianPINNNet(sigma_diff, self.sigma_sol, self.physics_model, self.num_bd)
+        self.bnet = BayesianPINNNet(sigma_diff, self.sigma_sol, self.physics_model, self.num_bd, self.input_dim, self.output_dim)
         self.net = self.bnet.fnn
         for param in self.net.parameters():
             torch.nn.init.normal_(param)

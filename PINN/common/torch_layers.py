@@ -342,15 +342,15 @@ class EFI_Net_PE(nn.Module):
 
     
 class BayesianPINNNet(nn.Module):
-    def __init__(self, sigma_diff, sigma_sol, physics_model, num_bd):
+    def __init__(self, sigma_diff, sigma_sol, physics_model, num_bd, input_dim, output_dim):
         super(BayesianPINNNet, self).__init__()
 
         self.fnn = nn.Sequential(
-            nn.Linear(2, 50),
+            nn.Linear(input_dim, 50),
             nn.Tanh(),
             nn.Linear(50, 50),
             nn.Tanh(),
-            nn.Linear(50, 1), 
+            nn.Linear(50, output_dim), 
         )
 
         self.sigma_diff = sigma_diff
