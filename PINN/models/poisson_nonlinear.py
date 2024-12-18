@@ -25,7 +25,7 @@ class PoissonNonlinear(PhysicsModel):
                  n_diff_sensors=10,
                  n_diff_replicates=10,
                  k = 0.7,
-                 is_param_estimation=False,
+                 is_inverse=False,
                  ):
         super().__init__(t_start=t_start, 
                          t_end=t_end, 
@@ -36,8 +36,12 @@ class PoissonNonlinear(PhysicsModel):
                          n_diff_sensors=n_diff_sensors,
                          n_diff_replicates=n_diff_replicates,
                          k=k,
-                         is_param_estimation=is_param_estimation
+                         is_inverse=is_inverse
                          )
+        if is_inverse:
+            self.pe_dim = 1
+        else:
+            self.pe_dim = 0
 
     def generate_data(self, device):
         dataset = PINNDataset(device=device)
@@ -76,10 +80,11 @@ class PoissonNonlinear(PhysicsModel):
         y = -1.08 * torch.sin(6 * X) * (torch.sin(6 * X) ** 2 - 2 * torch.cos(6 * X) ** 2) + self.k * torch.tanh(torch.sin(6 * X) ** 3)
         return y
     
-    def differential_operator(self, model: torch.nn.Module, physics_X, k=None):
-        
-        if k is None:
+    def differential_operator(self, model: torch.nn.Module, physics_X, pe_variables=None):
+        if pe_variables is None:
             k = self.k
+        else:
+            k = pe_variables[0]
             
         u = model(physics_X)
         u_x = grad(u, physics_X)[0]

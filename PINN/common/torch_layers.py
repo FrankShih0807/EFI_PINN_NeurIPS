@@ -197,12 +197,12 @@ class EFI_Net_PE(nn.Module):
                  latent_Z_dim=1,
                  hidden_layers=[15, 15], 
                  activation_fn='relu', 
+                 pe_dim=0,
                  encoder_hidden_layers=None,
                  encoder_activation='relu',
                  prior_sd=0.1, 
                  sparse_sd=0.01,
                  sparsity=1.0,
-                 pe_dim=0,
                  device='cpu'
                  ):
         super(EFI_Net_PE, self).__init__()
@@ -226,8 +226,8 @@ class EFI_Net_PE(nn.Module):
         
         # parameter estimation settings
         self.pe_dim = pe_dim
-        if self.pe_dim > 0:
-            self.variables = nn.Parameter(torch.randn(self.pe_dim), requires_grad=True, device=self.device)
+        # if self.pe_dim > 0:
+        #     self.pe_variables = nn.Parameter(torch.randn(self.pe_dim), requires_grad=True, device=self.device)
         
         sample_net = nn.ModuleList()
         sample_net.append(nn.Linear(input_dim, hidden_layers[0]))
@@ -262,14 +262,14 @@ class EFI_Net_PE(nn.Module):
         Returns:
             weight_tensors, bias_tensors: tensors
         '''
-        theta_weight, theta_bias = torch.split(theta, [sum(self.nn_numel['weight']), sum(self.nn_numel['bias'])] , dim=-1)
+        theta_weight, theta_bias, theta_pe = torch.split(theta, [sum(self.nn_numel['weight']), sum(self.nn_numel['bias']), self.pe_dim ] , dim=-1)
         theta_weight_split = torch.split(theta_weight, self.nn_numel['weight'], dim=-1)
         theta_bias_split = torch.split(theta_bias, self.nn_numel['bias'], dim=-1)
         
         weight_tensors = [theta_weight_split[i].view(*shape).to(self.device) for i, shape in enumerate(self.nn_shape['weight'])]
         bias_tensors = [theta_bias_split[i].view(*shape).to(self.device) for i, shape in enumerate(self.nn_shape['bias'])]
         
-        return weight_tensors, bias_tensors
+        return weight_tensors, bias_tensors, theta_pe
             
     
     def forward(self, x):
@@ -297,7 +297,7 @@ class EFI_Net_PE(nn.Module):
         batch_theta = self.encoder(xyz)
         theta_bar = batch_theta.mean(dim=0)
         theta_loss = F.mse_loss(batch_theta, theta_bar.repeat(batch_size, 1), reduction='sum')
-        self.weight_tensors, self.bias_tensors = self.split_encoder_output(theta_bar)
+        self.weight_tensors, self.bias_tensors, self.pe_variables = self.split_encoder_output(theta_bar)
         return theta_loss
         
     def gmm_prior_loss(self):
