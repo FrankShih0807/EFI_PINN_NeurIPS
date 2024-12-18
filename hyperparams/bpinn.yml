@@ -12,7 +12,7 @@ poisson:
     step_size: 'log_0.001_0.0001'
     L: 6
     # sigma_diff: 0.05
-    sigma_diff: 'log_0.5_0.005'
+    sigma_diff: 'log_0.05_0.005'
     sigma_sol: 0.05
 
 poisson-v2:
@@ -26,7 +26,7 @@ poisson-v2:
     - 50
     activation_fn: tanh
     # step_size: 0.001 ### set to be 0.02 * min(sigma_diff, sigma_sol)
-    step_size: 0.0001
+    step_size: 'log_0.001_0.0001'
     L: 6
     # sigma_diff: 0.05
     sigma_diff: 0.05
