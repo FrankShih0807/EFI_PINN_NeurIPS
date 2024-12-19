@@ -23,18 +23,30 @@ class EuropeanCall(PhysicsModel):
                  r = 0.05,
                  K = 80,
                  noise_sd=1,
+                 n_price_samples=200,
+                 n_boundary_samples=200,
+                 n_diff_samples=800,
                  ):
         self.norm_dist = dist.Normal(0, 1)
-        super().__init__(S_range=S_range, t_range=t_range, sigma=sigma, r=r, K=K, noise_sd=noise_sd)
+        super().__init__(S_range=S_range, 
+                         t_range=t_range, 
+                         sigma=sigma, 
+                         r=r, 
+                         K=K, 
+                         noise_sd=noise_sd,
+                         n_price_samples=n_price_samples,
+                         n_boundary_samples=n_boundary_samples,
+                         n_diff_samples=n_diff_samples
+                         )
 
     def generate_data(self, n_samples = 200, device = "cpu"):
         dataset = PINNDataset(device)
         # get solution data
-        price_X, price_y, true_price_y = self.get_price_data(n_samples)
+        price_X, price_y, true_price_y = self.get_price_data(self.n_price_samples)
         # get boundary data
-        boundary_X, boundary_y = self.get_boundary_data(n_samples)
+        boundary_X, boundary_y = self.get_boundary_data(self.n_boundary_samples)
         # get differential data
-        diff_X, diff_y = self.get_diff_data(4*n_samples)
+        diff_X, diff_y = self.get_diff_data(self.n_diff_samples)
         # get evaluation data
         eval_X, eval_y = self.get_eval_data()
         
@@ -60,10 +72,12 @@ class EuropeanCall(PhysicsModel):
         return eval_X, eval_y
     
     def get_price_data(self, n_samples):
-        # Option price at S = S_max/2
-        ts = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
-        # ts = torch.linspace(self.t_range[0], self.t_range[1], n_samples).reshape(-1, 1)
-        Ss = torch.ones(n_samples, 1) * self.S_range[1]/2
+        # ts = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
+        # Ss = torch.ones(n_samples, 1) * self.S_range[1]/2
+        
+        ts = torch.zeros(n_samples).reshape(-1, 1)
+        Ss = torch.linspace(self.S_range[0], self.S_range[1], n_samples).reshape(-1, 1)
+        
         X = torch.cat([ts, Ss], dim=1)
         true_y = self.physics_law(Ss, self.t_range[1] - ts)
         y = true_y + self.noise_sd * torch.randn_like(true_y)
@@ -71,14 +85,24 @@ class EuropeanCall(PhysicsModel):
     
     def get_boundary_data(self, n_samples):
         # Boundary condition at S = 0
-        t1 = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
+        # t1 = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
+        # S1 = torch.ones(n_samples, 1) * self.S_range[0]
+        # X1 = torch.cat([t1, S1], dim=1)
+        # y1 = torch.zeros(n_samples, 1)
+        
+        t1 = torch.linspace(self.t_range[0], self.t_range[1], n_samples).reshape(-1, 1)
         S1 = torch.ones(n_samples, 1) * self.S_range[0]
         X1 = torch.cat([t1, S1], dim=1)
         y1 = torch.zeros(n_samples, 1)
         
         # Boundary condition at time to maturity
+        # t2 = torch.ones(n_samples, 1) * self.t_range[1]
+        # S2 = torch.rand(n_samples, 1) * (self.S_range[1] - self.S_range[0]) + self.S_range[0]
+        # X2 = torch.cat([t2, S2], dim=1)
+        # y2 = F.relu(S2 - self.K)
+        
         t2 = torch.ones(n_samples, 1) * self.t_range[1]
-        S2 = torch.rand(n_samples, 1) * (self.S_range[1] - self.S_range[0]) + self.S_range[0]
+        S2 = torch.linspace(self.S_range[0], self.S_range[1], n_samples).reshape(-1, 1)
         X2 = torch.cat([t2, S2], dim=1)
         y2 = F.relu(S2 - self.K)
         
