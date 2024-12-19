@@ -10,6 +10,7 @@ import os
 from PINN.common.grad_tool import grad
 from PINN.common.base_physics import PhysicsModel
 from PINN.common.utils import PINNDataset
+from PIL import Image
 from PINN.common.callbacks import BaseCallback
 
     
@@ -246,7 +247,23 @@ class EuropeanCallCallback(BaseCallback):
         self.save_gif()
     
     def plot_latent_Z(self):
-        pass
+        true_y = self.dataset[0]['true_y'].flatten()
+        sol_y = self.dataset[0]['y'].flatten()
+        true_Z = sol_y - true_y
+        
+        latent_Z = self.model.latent_Z[0].flatten().detach().cpu().numpy()
+        
+        np.save(os.path.join(self.save_path, 'true_Z.npy'), true_Z)
+        np.save(os.path.join(self.save_path, 'latent_Z.npy'), latent_Z)
+        
+        plt.subplots(figsize=(6, 6))
+        plt.scatter(true_Z, latent_Z, label='Latent Z')
+        plt.xlabel('True Z')
+        plt.ylabel('Latent Z')
+        plt.xlim(-2.0, 2.0)
+        plt.ylim(-2.0, 2.0)
+        plt.savefig(os.path.join(self.save_path, 'latent_Z.png'))
+        plt.close()
 
     def save_evaluation(self):
         subset_indices = torch.arange(0, self.grids * self.grids, self.grids)
@@ -285,7 +302,26 @@ class EuropeanCallCallback(BaseCallback):
         plt.close()
 
     def save_gif(self):
-        pass
+        frames = []
+        temp_dir = os.path.join(self.save_path, 'temp_frames')
+        n_frames = len(os.listdir(temp_dir))
+        for epoch in range(n_frames):
+            frame_path = os.path.join(temp_dir, f"frame_{epoch}.png")
+            frames.append(Image.open(frame_path))
+        # frame_files = sorted(os.listdir(temp_dir))  # Sort by file name to maintain order
+        # print(frame_files)
+        # frames = [Image.open(os.path.join(temp_dir, frame)) for frame in frame_files]
+        
+        frames[0].save(
+            os.path.join(self.save_path, "training_loss.gif"),
+            save_all=True,
+            append_images=frames[1:],
+            duration=500,
+            loop=0
+        )
+        for frame_path in os.listdir(temp_dir):
+            os.remove(os.path.join(temp_dir, frame_path))
+        os.rmdir(temp_dir)
 
 
 
