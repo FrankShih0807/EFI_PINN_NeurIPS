@@ -365,6 +365,26 @@ class BayesianPINNNet(nn.Module):
         u_bd = self.fnn(X[-self.num_bd:])
 
         return torch.cat([pde / (self.sigma_diff * 2 ** 0.5), u_bd / (self.sigma_sol * 2 ** 0.5)], dim=0)
+    
+class BayesianNet(nn.Module):
+    def __init__(self, hidden_layers, activation_fn=torch.tanh):
+        super(BayesianNet, self).__init__()
+        self.hidden_layers = hidden_layers
+        # self.layer_list = []
+        self.activation_fn = activation_fn
+        self.pe_variables = nn.Parameter(torch.randn(1), requires_grad=True)
+
+        self.l1 = nn.Linear(1, hidden_layers[0])
+        self.l2 = nn.Linear(hidden_layers[0], hidden_layers[1])
+        self.l3 = nn.Linear(hidden_layers[1], 1)
+
+    def forward(self, x):
+        x = self.l1(x)
+        x = self.activation_fn(x)
+        x = self.l2(x)
+        x = self.activation_fn(x)
+        x = self.l3(x)
+        return x
 
 class HyperLinear(nn.Module):
     def __init__(self, input_dim, output_dim, feature_dim, activation_fn=nn.Identity()):
