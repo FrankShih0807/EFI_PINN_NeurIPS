@@ -32,6 +32,7 @@ class BaseCallback(ABC):
         self.epochs = self.model.epochs
         self.eval_freq = eval_freq
         self.device = self.model.device
+        self.burn = burn
         self.eval_buffer = EvaluationBuffer(burn=burn)
         
         self._init_callback()
