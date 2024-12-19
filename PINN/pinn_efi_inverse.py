@@ -258,6 +258,7 @@ class PINN_EFI_Inverse(BasePINN):
         # self.logger.record('train_param/sparse_threshold', self.net.sparse_threshold)
         self.logger.record('train/theta_loss', theta_loss.item())
         
+        self.pe_variables = self.net.pe_variables.detach().cpu().numpy()
         return y_loss.item(), pde_loss.item()
 
     def train(self, epochs=10000, eval_freq=-1, burn=0.5, callback=None):

@@ -14,23 +14,29 @@ from PINN.common.buffers import EvaluationBuffer, ScalarBuffer
 PoissonNonlinear: Poisson with parameter estimation 
 '''
 
-class PoissonNonlinear(PhysicsModel):
+class Poisson2D(PhysicsModel):
     def __init__(self, 
-                 t_start=-0.7,
-                 t_end=0.7, 
+                 t_start=-1.0,
+                 t_end=1.0, 
+                 boundary_sd=0.01,
                  sol_sd=0.01,
                  diff_sd=0.01,
+                 n_boundary_sensors=25,
+                 n_boundary_replicates=10,
                  n_sol_sensors=10,
                  n_sol_replicates=10,
                  n_diff_sensors=10,
                  n_diff_replicates=10,
-                 k = 0.7,
+                 k = 0.0,
                  is_inverse=False,
                  ):
         super().__init__(t_start=t_start, 
                          t_end=t_end, 
+                         boundary_sd=boundary_sd,
                          sol_sd=sol_sd, 
                          diff_sd=diff_sd, 
+                         n_boundary_sensors=n_boundary_sensors,
+                         n_boundary_replicates=n_boundary_replicates,
                          n_sol_sensor=n_sol_sensors,
                          n_sol_replicates=n_sol_replicates,
                          n_diff_sensors=n_diff_sensors,
@@ -55,9 +61,12 @@ class PoissonNonlinear(PhysicsModel):
         return dataset
     
     def get_eval_data(self):
-        X = torch.linspace(self.t_start, self.t_end, steps=100).reshape(100, -1)
-        y = self.physics_law(X)
-        return X, y
+        X1 = torch.linspace(self.t_start, self.t_end, steps=100)
+        X2 = torch.linspace(self.t_start, self.t_end, steps=100)
+        X1, X2 = torch.meshgrid(X1, X2)
+        eval_X = torch.cat([X1.reshape(-1, 1), X2.reshape(-1, 1)], dim=1)
+        eval_y = self.physics_law(eval_X)
+        return eval_X, eval_y
     
     def get_sol_data(self):
         # X = torch.tensor([self.t_start, self.t_end]).repeat_interleave(self.n_sol_samples).view(-1, 1)
@@ -73,7 +82,7 @@ class PoissonNonlinear(PhysicsModel):
         return X, y, true_y
     
     def physics_law(self, X):
-        y = torch.sin(6 * X) ** 3
+        y = torch.sin(torch.pi * X).prod(dim=1, keepdim=True)
         return y
     
     def differential_function(self, X):
@@ -129,7 +138,7 @@ class PoissonNonlinearCallback(BaseCallback):
         pred_y = self.model.net(self.eval_X).detach().cpu()
         self.eval_buffer.add(pred_y)
         if self.physics_model.is_inverse:
-            self.k_buffer.add(self.model.pe_variables[0])
+            self.k_buffer.add(self.model.net.pe_variables[0].item())
         # print(len(self.eval_buffer))
         
     
