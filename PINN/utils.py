@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
 from PINN.common.callbacks import BaseCallback
-from PINN import PINN, PINN_EFI, Pretrain_EFI, PINN_EFI_Inverse, BayesianPINN
+from PINN import PINN, PINN_EFI, Pretrain_EFI, PINN_EFI_Inverse, BayesianPINN, BayesianPINN_Inverse
 from PINN.models import Cooling, EuropeanCall, Nonlinear, EuropeanCallDiscovery, Poisson, Poisson_v2, PoissonNonlinear
 from PINN.models import PoissonCallback, Poisson_v2Callback, PoissonNonlinearCallback, EuropeanCallCallback
 
@@ -25,6 +25,7 @@ ALGOS: Dict[str, Type[BasePINN]] = {
     "pretrain_efi": Pretrain_EFI,
     "pinn_efi_inverse": PINN_EFI_Inverse,
     "bpinn": BayesianPINN,
+    "bpinn_inverse": BayesianPINN_Inverse, 
 }
 
 MODELS: Dict[str, Type[PhysicsModel]] = {
