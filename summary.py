@@ -325,7 +325,7 @@ progress_df = collect_progress_data(output_dir)
 df = progress_df[progress_df['train/progress']==1.0]
 df = df.loc[:, ~df.columns.str.startswith('train')]
 df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
-df = df.dropna()
+# df = df.dropna()
 plot_cr_boxplot(df)
 # df["cover_all"] = (df["coverage_rate"]==1)
 # print(df_cr.groupby(['model', 'algo'])['cr'].mean())
@@ -338,10 +338,11 @@ print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].mean()
 print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].std()/10)
 print(df.groupby(['model', 'algo']).size())
 
-print(df[(df['mse']>0.001) & (df['algo']=='pinn_efi_size30_narrow')])
-# df2 = df[df['algo']=='pinn_efi_lam1k_2']
+# print(df[(df['mse']>0.001) & (df['algo']=='efi_size30_3')])
+print(df[(df['mse']>0.001) & (df['model']=='poisson-nonlinear') & (df['algo']=='efi_size50')])
+
 rows_with_nan = df[df.isna().any(axis=1)]
-print(rows_with_nan)
+# print(rows_with_nan)
 # low_cr = df2[df2['coverage_rate']<0.5]
 # print(low_cr)
 # print("mse")

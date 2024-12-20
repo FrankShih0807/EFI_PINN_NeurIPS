@@ -95,7 +95,7 @@ poisson:
       sparsity: 1.0
 
 poisson-v2:
-  epochs: 150_000
+  epochs: 200_000
   eval_freq: -1
   burn: 0.5
   pinn:
