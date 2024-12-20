@@ -132,14 +132,18 @@ class PINN_EFI_Inverse(BasePINN):
         return loss
     
     def pde_loss(self):
+        if self.pe_dim == 0:
+            pe_variables = None
+        else:
+            pe_variables = self.net.pe_variables
         loss = 0
         for i, d in enumerate(self.dataset):
             if d['category'] == 'differential':
                 if d['noise_sd'] > 0:
-                    diff_o = self.differential_operator(self.net, d['X'], self.net.pe_variables) + self.latent_Z[i]
+                    diff_o = self.differential_operator(self.net, d['X'], pe_variables) + self.latent_Z[i]
                     loss += self.mse_loss(diff_o, d['y'])
                 else:
-                    diff_o = self.differential_operator(self.net, d['X'], self.net.pe_variables)
+                    diff_o = self.differential_operator(self.net, d['X'], pe_variables)
                     loss += self.mse_loss(diff_o, d['y'])
         return loss
     

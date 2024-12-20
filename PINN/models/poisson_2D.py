@@ -37,7 +37,7 @@ class Poisson2D(PhysicsModel):
                          diff_sd=diff_sd, 
                          n_boundary_sensors=n_boundary_sensors,
                          n_boundary_replicates=n_boundary_replicates,
-                         n_sol_sensor=n_sol_sensors,
+                         n_sol_sensors=n_sol_sensors,
                          n_sol_replicates=n_sol_replicates,
                          n_diff_sensors=n_diff_sensors,
                          n_diff_replicates=n_diff_replicates,
@@ -51,11 +51,16 @@ class Poisson2D(PhysicsModel):
 
     def generate_data(self, device):
         dataset = PINNDataset(device=device)
-        sol_X, sol_y, sol_true_y = self.get_sol_data()
-        diff_X, diff_y, diff_true_y = self.get_diff_data()
+        if self.n_boundary_sensors > 0:
+            bd_X, bd_y, bd_true_y = self.get_boundary_data()
+            dataset.add_data(bd_X, bd_y, bd_true_y, category='solution', noise_sd=self.boundary_sd)
+        if self.n_sol_sensors > 0:
+            sol_X, sol_y, sol_true_y = self.get_sol_data()
+            dataset.add_data(sol_X, sol_y, sol_true_y, category='solution', noise_sd=self.sol_sd)
+        if self.n_diff_sensors > 0:
+            diff_X, diff_y, diff_true_y = self.get_diff_data()
+            dataset.add_data(diff_X, diff_y, diff_true_y, category='differential', noise_sd=self.diff_sd)
         eval_X, eval_y = self.get_eval_data()
-        dataset.add_data(sol_X, sol_y, sol_true_y, category='solution', noise_sd=self.sol_sd)
-        dataset.add_data(diff_X, diff_y, diff_true_y, category='differential', noise_sd=self.diff_sd)
         dataset.add_data(eval_X, eval_y, eval_y, category='evaluation', noise_sd=0)
         
         return dataset
@@ -68,15 +73,45 @@ class Poisson2D(PhysicsModel):
         eval_y = self.physics_law(eval_X)
         return eval_X, eval_y
     
+    def get_boundary_data(self):
+        
+        X1_up = torch.linspace(self.t_start, self.t_end, steps=self.n_boundary_sensors+1)[:self.n_boundary_sensors]
+        X2_up = torch.linspace(self.t_end, self.t_end, steps=self.n_boundary_sensors+1)[:self.n_boundary_sensors]
+        X_up = torch.cat([X1_up.reshape(-1, 1), X2_up.reshape(-1, 1)], dim=1)
+        
+        X1_down = torch.linspace(self.t_start, self.t_end, steps=self.n_boundary_sensors+1)[1:]
+        X2_down = torch.linspace(self.t_start, self.t_start, steps=self.n_boundary_sensors+1)[1:]
+        X_down = torch.cat([X1_down.reshape(-1, 1), X2_down.reshape(-1, 1)], dim=1)
+        
+        X1_left = torch.linspace(self.t_start, self.t_start, steps=self.n_boundary_sensors+1)[:self.n_boundary_sensors]
+        X2_left = torch.linspace(self.t_start, self.t_end, steps=self.n_boundary_sensors+1)[:self.n_boundary_sensors]
+        X_left = torch.cat([X1_left.reshape(-1, 1), X2_left.reshape(-1, 1)], dim=1)
+        
+        X1_right = torch.linspace(self.t_end, self.t_end, steps=self.n_boundary_sensors+1)[1:]
+        X2_right = torch.linspace(self.t_start, self.t_end, steps=self.n_boundary_sensors+1)[1:]
+        X_right = torch.cat([X1_right.reshape(-1, 1), X2_right.reshape(-1, 1)], dim=1)
+        
+        boundary_X = torch.cat([X_up, X_down, X_left, X_right], dim=0).repeat_interleave(self.n_boundary_replicates, dim=0)
+        true_boundary_y = self.physics_law(boundary_X)
+        boundary_y = true_boundary_y + self.boundary_sd * torch.randn_like(true_boundary_y)
+
+        return boundary_X, boundary_y, true_boundary_y
+    
     def get_sol_data(self):
-        # X = torch.tensor([self.t_start, self.t_end]).repeat_interleave(self.n_sol_samples).view(-1, 1)
-        X = torch.linspace(self.t_start, self.t_end, steps=self.n_sol_sensor).repeat_interleave(self.n_sol_replicates).view(-1, 1)
+        X1 = torch.rand(self.n_sol_sensors, 1) * (self.t_end - self.t_start) + self.t_start
+        X2 = torch.rand(self.n_sol_sensors, 1) * (self.t_end - self.t_start) + self.t_start
+        X = torch.cat([X1, X2], dim=1).repeat_interleave(self.n_sol_replicates, dim=0)
+        
         true_y = self.physics_law(X)
         y = true_y + self.sol_sd * torch.randn_like(true_y)
         return X, y, true_y
+
     
     def get_diff_data(self):
-        X = torch.linspace(self.t_start, self.t_end, steps=self.n_diff_sensors).repeat_interleave(self.n_diff_replicates).view(-1, 1)
+        X1 = torch.rand(self.n_diff_sensors, 1) * (self.t_end - self.t_start) + self.t_start
+        X2 = torch.rand(self.n_diff_sensors, 1) * (self.t_end - self.t_start) + self.t_start
+        X = torch.cat([X1, X2], dim=1).repeat_interleave(self.n_diff_replicates, dim=0)
+
         true_y = self.differential_function(X)
         y = true_y + self.diff_sd * torch.randn_like(true_y)
         return X, y, true_y
@@ -86,7 +121,7 @@ class Poisson2D(PhysicsModel):
         return y
     
     def differential_function(self, X):
-        y = -1.08 * torch.sin(6 * X) * (torch.sin(6 * X) ** 2 - 2 * torch.cos(6 * X) ** 2) + self.k * torch.tanh(torch.sin(6 * X) ** 3)
+        y = - 0.01 * torch.pi ** 2 * (torch.sin(torch.pi * X).prod(dim=1, keepdim=True)) + self.k * (torch.sin(torch.pi * X).prod(dim=1, keepdim=True)) ** 2
         return y
     
     def differential_operator(self, model: torch.nn.Module, physics_X, pe_variables=None):
@@ -96,30 +131,48 @@ class Poisson2D(PhysicsModel):
             k = pe_variables[0]
             
         u = model(physics_X)
-        u_x = grad(u, physics_X)[0]
-        u_xx = grad(u_x, physics_X)[0]
-        pde = 0.01 * u_xx
-        pde += k * torch.tanh(u)
+        grads = grad(u, physics_X)[0]
+        dudx1 = grads[:, 0].view(-1, 1)
+        dudx2 = grads[:, 1].view(-1, 1)
+        u_x1x1 = grad(dudx1, physics_X)[0][:, 0].view(-1, 1)
+        u_x2x2 = grad(dudx2, physics_X)[0][:, 1].view(-1, 1)
         
+        # u_x = grad(u, physics_X)[0]
+        # u_xx = grad(u_x, physics_X)[0]
+        pde = 0.01 * u_x1x1 + 0.01 * u_x2x2 + k * u ** 2
         return pde
 
     def plot_true_solution(self, save_path=None):
-        X = torch.linspace(self.t_start, self.t_end, steps=100)
-        y = self.physics_law(X)
+        grids = 100
+        X1 = torch.linspace(self.t_start, self.t_end, steps=grids)
+        X2 = torch.linspace(self.t_start, self.t_end, steps=grids)
+        X1, X2 = torch.meshgrid(X1, X2, indexing='ij')
+        y = self.physics_law(torch.cat([X1.reshape(-1, 1), X2.reshape(-1, 1)], dim=1))
+        y_reshaped = y.reshape(grids, grids)
         
-        sns.set_theme()
-        plt.plot(X, y, label='Equation')
-        plt.legend()
-        plt.ylabel('u')
-        plt.xlabel('x')
-        if save_path is not None:
+        # sns.set_theme()
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        surface = ax.plot_surface(X1, X2, y.reshape(grids, grids), cmap='plasma')
+        ax.contourf(X1, X2, y_reshaped, zdir='z', offset=y_reshaped.min()-0.5, cmap='plasma', alpha=0.7)
+        
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_zlabel('u')
+        ax.set_xticks([-1, -0.5, 0, 0.5, 1])
+        ax.set_yticks([-1, -0.5, 0, 0.5, 1])
+        ax.set_zticks([-1, -0.5, 0, 0.5, 1])
+        ax.view_init(elev=20, azim=-120)
+        fig.colorbar(surface, ax=ax, shrink=0.5, aspect=10)
+        plt.tight_layout()
+        if save_path:
             plt.savefig(os.path.join(save_path, 'true_solution.png'))
-        plt.close()
-        
+        else:
+            plt.show()
 
 
 
-class PoissonNonlinearCallback(BaseCallback):
+class Poisson2DCallback(BaseCallback):
     def __init__(self):
         super().__init__()
     
@@ -173,6 +226,7 @@ class PoissonNonlinearCallback(BaseCallback):
     
     def _on_training_end(self) -> None:
         self.save_gif()
+        pass
         
     def plot_latent_Z(self):
         true_y = self.dataset[0]['true_y'].flatten()
@@ -214,24 +268,55 @@ class PoissonNonlinearCallback(BaseCallback):
         plt.close()
         
     def save_evaluation(self):
-        X = self.eval_X_cpu.flatten().numpy()
-        y = self.eval_y_cpu.flatten().numpy()
+
+        
+        X = self.eval_X_cpu.numpy()
+        # y = self.eval_y_cpu.numpy()
+        grids = 100
         
         preds_mean = self.eval_buffer.get_mean()
-        preds_upper, preds_lower = self.eval_buffer.get_ci()
+        # preds_upper, preds_lower = self.eval_buffer.get_ci()
+
+        X1 = X[:, 0].reshape(grids, grids)
+        X2 = X[:, 1].reshape(grids, grids)
+        # X1, X2 = torch.meshgrid(X1, X2, indexing='ij')
+        # y = self.physics_law(torch.cat([X1.reshape(-1, 1), X2.reshape(-1, 1)], dim=1))
+        y_reshaped = preds_mean.reshape(grids, grids)
+        # print(X1.shape, X2.shape, y_reshaped.shape)
+        # raise
         
-        sns.set_theme()
-        plt.subplots(figsize=(8, 6))
-        plt.plot(X, y, alpha=0.8, color='b', label='True')
-        plt.plot(X, preds_mean, alpha=0.8, color='g', label='Mean')
-        plt.plot(self.model.sol_X.clone().cpu().numpy() , self.model.sol_y.clone().cpu().numpy(), 'x', label='Training data', color='orange')
+        # sns.set_theme()
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        surface = ax.plot_surface(X1, X2, y_reshaped, cmap='plasma')
+        ax.contourf(X1, X2, y_reshaped, zdir='z', offset=-1.5, cmap='plasma', alpha=0.7)
         
-        plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
-        plt.legend(loc='upper left', bbox_to_anchor=(0.1, 0.95))
-        plt.ylabel('u')
-        plt.xlabel('x')
-        plt.ylim(-1.5, 1.5)
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_zlabel('u')
+        ax.set_xticks([-1, -0.5, 0, 0.5, 1])
+        ax.set_yticks([-1, -0.5, 0, 0.5, 1])
+        ax.set_zticks([-1, -0.5, 0, 0.5, 1])
+        ax.view_init(elev=20, azim=-120)
+        fig.colorbar(surface, ax=ax, shrink=0.5, aspect=10)
+        plt.tight_layout()
         plt.savefig(os.path.join(self.save_path, 'pred_solution.png'))
+        
+        
+            
+            
+        # sns.set_theme()
+        # plt.subplots(figsize=(8, 6))
+        # plt.plot(X, y, alpha=0.8, color='b', label='True')
+        # plt.plot(X, preds_mean, alpha=0.8, color='g', label='Mean')
+        # plt.plot(self.model.sol_X.clone().cpu().numpy() , self.model.sol_y.clone().cpu().numpy(), 'x', label='Training data', color='orange')
+        
+        # plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
+        # plt.legend(loc='upper left', bbox_to_anchor=(0.1, 0.95))
+        # plt.ylabel('u')
+        # plt.xlabel('x')
+        # plt.ylim(-1.5, 1.5)
+        # plt.savefig(os.path.join(self.save_path, 'pred_solution.png'))
         
         
         # save temp frames
@@ -264,3 +349,10 @@ class PoissonNonlinearCallback(BaseCallback):
         os.rmdir(temp_dir)
         
         
+if __name__ == '__main__':
+    # buffer = EvaluationBuffer()
+    poisson = Poisson2D(is_inverse=False, n_boundary_replicates=2, n_boundary_sensors=10)
+
+
+    poisson.plot_true_solution()
+    

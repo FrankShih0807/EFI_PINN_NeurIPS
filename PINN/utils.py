@@ -10,8 +10,8 @@ from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
 from PINN.common.callbacks import BaseCallback
 from PINN import PINN, PINN_EFI, Pretrain_EFI, PINN_EFI_Inverse, BayesianPINN, BayesianPINN_Inverse
-from PINN.models import Cooling, EuropeanCall, Nonlinear, EuropeanCallDiscovery, Poisson, Poisson_v2, PoissonNonlinear
-from PINN.models import PoissonCallback, Poisson_v2Callback, PoissonNonlinearCallback, EuropeanCallCallback
+from PINN.models import Cooling, EuropeanCall, Nonlinear, EuropeanCallDiscovery, Poisson, Poisson_v2, PoissonNonlinear, Poisson2D
+from PINN.models import PoissonCallback, Poisson_v2Callback, PoissonNonlinearCallback, EuropeanCallCallback, Poisson2DCallback
 
 from torch.utils.data import DataLoader,Dataset
 
@@ -36,7 +36,8 @@ MODELS: Dict[str, Type[PhysicsModel]] = {
     "poisson": Poisson,
     "poisson-v2": Poisson_v2,
     "poisson-nonlinear": PoissonNonlinear,
-    "poisson-inverse": PoissonNonlinear
+    "poisson-inverse": PoissonNonlinear,
+    "poisson-2d": Poisson2D
 }
 
 CALLBACKS: Dict[str, Callable] = {
@@ -44,7 +45,8 @@ CALLBACKS: Dict[str, Callable] = {
     "poisson-v2": Poisson_v2Callback,
     "poisson-nonlinear": PoissonNonlinearCallback,
     "european_call": EuropeanCallCallback,
-    "poisson-inverse": PoissonNonlinearCallback
+    "poisson-inverse": PoissonNonlinearCallback,
+    "poisson-2d": Poisson2DCallback
 }
 
 def get_callback(key: str) -> Callable:
