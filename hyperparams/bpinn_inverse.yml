@@ -1,0 +1,68 @@
+poisson:
+  n_samples: 100
+  epochs: 10000
+  eval_freq: -1
+  burn: 0.4
+  pinn:
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: tanh
+    # step_size: 0.001 ### set to be 0.02 * min(sigma_diff, sigma_sol)
+    step_size: 'log_0.001_0.0001'
+    L: 6
+    # sigma_diff: 0.05
+    sigma_diff: 'log_0.05_0.005'
+    sigma_sol: 0.05
+
+poisson-v2:
+  n_samples: 100
+  epochs: 10000
+  eval_freq: -1
+  burn: 0.4
+  pinn:
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: tanh
+    # step_size: 0.001 ### set to be 0.02 * min(sigma_diff, sigma_sol)
+    step_size: 'log_0.001_0.0001'
+    L: 6
+    # sigma_diff: 0.05
+    sigma_diff: 0.05
+    sigma_sol: 0.05
+
+poisson-inverse:
+  n_samples: 100
+  epochs: 10000
+  eval_freq: -1
+  burn: 0.4
+  pinn:
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: tanh
+    # step_size: 0.001 ### set to be 0.02 * min(sigma_diff, sigma_sol)
+    step_size: 0.001
+    L: 6
+    # sigma_diff: 0.05
+    sigma_diff: 1.0
+    sigma_sol: 1.0
+
+european_call:
+  n_samples: 200
+  epochs: 10000
+  eval_freq: -1
+  burn: 0.4
+  pinn:
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: tanh
+    # annealing_period: 0.3
+    # grad_norm_max: 100.0
+    step_size: 'log_0.001_0.0001'
+    L: 6
+    # sigma_diff: 0.05
+    sigma_diff: 'log_0.05_0.005'
+    sigma_sol: 1.0
