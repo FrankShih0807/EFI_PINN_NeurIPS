@@ -325,6 +325,7 @@ progress_df = collect_progress_data(output_dir)
 df = progress_df[progress_df['train/progress']==1.0]
 df = df.loc[:, ~df.columns.str.startswith('train')]
 df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
+df = df[['model', 'algo', 'mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_coverage_rate', 'k_ci_range']]
 # df = df.dropna()
 plot_cr_boxplot(df)
 # df["cover_all"] = (df["coverage_rate"]==1)
@@ -334,12 +335,20 @@ plot_cr_boxplot(df)
 # print(progress_df[progress_df['train/progress']==1.0])
 # print("coverage rate")
 
-print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].mean())
-print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].std()/10)
+print(df.groupby(['model', 'algo']).mean())
+print(df.groupby(['model', 'algo']).std()/10)
+
+with open('metric.txt', 'w') as file:
+    file.write('Mean\n')
+    file.write(df.groupby(['model', 'algo']).mean().to_string())
+    file.write('\n')
+    file.write('Standard error\n')
+    file.write((df.groupby(['model', 'algo']).std()/10).to_string())
+    
 print(df.groupby(['model', 'algo']).size())
 
 # print(df[(df['mse']>0.001) & (df['algo']=='efi_size30_3')])
-print(df[(df['mse']>0.001) & (df['model']=='poisson-nonlinear') & (df['algo']=='efi_size50')])
+print(df[(df['mse']>0.001) & (df['model']=='poisson-inverse') & (df['algo']=='efi_size30_test3')])
 
 rows_with_nan = df[df.isna().any(axis=1)]
 # print(rows_with_nan)
