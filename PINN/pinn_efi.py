@@ -244,7 +244,7 @@ class PINN_EFI(BasePINN):
 
         self.sampler.zero_grad()
         Z_loss.backward()
-        if self.grad_norm_max > 0:
+        if self.grad_norm_max > 0 and self.progress < self.annealing_period:
             nn.utils.clip_grad_norm_([ Z for Z in self.latent_Z if Z is not None], self.grad_norm_max)
         self.sampler.step()
 
@@ -259,7 +259,7 @@ class PINN_EFI(BasePINN):
 
         self.optimiser.zero_grad()
         w_loss.backward()
-        if self.grad_norm_max > 0:
+        if self.grad_norm_max > 0 and self.progress < self.annealing_period:
             nn.utils.clip_grad_norm_(self.net.parameters(), self.grad_norm_max)
         self.optimiser.step()
         

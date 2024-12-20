@@ -52,7 +52,7 @@ poisson-nonlinear:
   sol_sd: 0.05
   diff_sd: 0.05
   n_sol_sensors: 4
-  n_sol_replicates: 5
+  n_sol_replicates: 10
   n_diff_sensors: 40
   n_diff_replicates: 10
   k: 0.7
