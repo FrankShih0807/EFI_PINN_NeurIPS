@@ -98,9 +98,12 @@ class Poisson2D(PhysicsModel):
         return boundary_X, boundary_y, true_boundary_y
     
     def get_sol_data(self):
-        X1 = torch.rand(self.n_sol_sensors, 1) * (self.t_end - self.t_start) + self.t_start
-        X2 = torch.rand(self.n_sol_sensors, 1) * (self.t_end - self.t_start) + self.t_start
-        X = torch.cat([X1, X2], dim=1).repeat_interleave(self.n_sol_replicates, dim=0)
+        # X1 = torch.rand(self.n_sol_sensors, 1) * (self.t_end - self.t_start) + self.t_start
+        # X2 = torch.rand(self.n_sol_sensors, 1) * (self.t_end - self.t_start) + self.t_start
+        X1 = torch.linspace(self.t_start, self.t_end, steps=self.n_sol_sensors)
+        X2 = torch.linspace(self.t_start, self.t_end, steps=self.n_sol_sensors)
+        X1, X2 = torch.meshgrid(X1, X2)
+        X = torch.cat([X1.reshape(-1, 1), X2.reshape(-1, 1)], dim=1).repeat_interleave(self.n_sol_replicates, dim=0)
         
         true_y = self.physics_law(X)
         y = true_y + self.sol_sd * torch.randn_like(true_y)
@@ -108,9 +111,13 @@ class Poisson2D(PhysicsModel):
 
     
     def get_diff_data(self):
-        X1 = torch.rand(self.n_diff_sensors, 1) * (self.t_end - self.t_start) + self.t_start
-        X2 = torch.rand(self.n_diff_sensors, 1) * (self.t_end - self.t_start) + self.t_start
-        X = torch.cat([X1, X2], dim=1).repeat_interleave(self.n_diff_replicates, dim=0)
+        # X1 = torch.rand(self.n_diff_sensors, 1) * (self.t_end - self.t_start) + self.t_start
+        # X2 = torch.rand(self.n_diff_sensors, 1) * (self.t_end - self.t_start) + self.t_start
+        # X = torch.cat([X1, X2], dim=1).repeat_interleave(self.n_diff_replicates, dim=0)
+        X1 = torch.linspace(self.t_start, self.t_end, steps=self.n_diff_sensors)
+        X2 = torch.linspace(self.t_start, self.t_end, steps=self.n_diff_sensors)
+        X1, X2 = torch.meshgrid(X1, X2)
+        X = torch.cat([X1.reshape(-1, 1), X2.reshape(-1, 1)], dim=1).repeat_interleave(self.n_diff_replicates, dim=0)
 
         true_y = self.differential_function(X)
         y = true_y + self.diff_sd * torch.randn_like(true_y)
