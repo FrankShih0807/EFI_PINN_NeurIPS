@@ -21,7 +21,10 @@ poisson-inverse   efi_size30_test1              0.038827       0.611429  0.25416
                   efi_size30_test2              0.050340       0.503600  0.183936  0.783006            0.39    0.128634
                   efi_size30_test3              0.003031       0.926406  0.211936  0.669010             0.5    0.061299
 poisson-nonlinear efi_size30                    0.000499       0.955900  0.094008       NaN             NaN         NaN
+                  efi_size30_test               0.000502       0.957900  0.098931       NaN             NaN         NaN
+                  efi_size30_test3              0.000463       0.915800  0.076101       NaN             NaN         NaN
                   efi_size50                    0.000989       0.938866  0.107904       NaN             NaN         NaN
+                  efi_size50_test               0.010553       0.895000  0.105391       NaN             NaN         NaN
 poisson-v2        efi_size30                    0.000248       0.947100  0.065076       NaN             NaN         NaN
                   efi_size50                    0.000294       0.942400  0.068855       NaN             NaN         NaN
                   pinn_efi_size30_test          0.000462       0.909100  0.075923       NaN             NaN         NaN
@@ -49,7 +52,10 @@ poisson-inverse   efi_size30_test1              0.004742       0.033285  0.01628
                   efi_size30_test2              0.008031       0.034126  0.010844  0.027884         0.049021    0.009856
                   efi_size30_test3              0.000333       0.010519  0.005890  0.004504         0.050395    0.004430
 poisson-nonlinear efi_size30                    0.000034       0.008687  0.000860       NaN              NaN         NaN
+                  efi_size30_test               0.000041       0.009294  0.001690       NaN              NaN         NaN
+                  efi_size30_test3              0.000033       0.010396  0.000910       NaN              NaN         NaN
                   efi_size50                    0.000238       0.011722  0.003542       NaN              NaN         NaN
+                  efi_size50_test               0.007329       0.019146  0.004601       NaN              NaN         NaN
 poisson-v2        efi_size30                    0.000018       0.009837  0.000534       NaN              NaN         NaN
                   efi_size50                    0.000022       0.009621  0.000605       NaN              NaN         NaN
                   pinn_efi_size30_test          0.000034       0.012815  0.000505       NaN              NaN         NaN
