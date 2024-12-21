@@ -108,12 +108,6 @@ class PINN_EFI(BasePINN):
         return loss
     
     def theta_loss(self):
-        # noise_X = torch.cat([d['X'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
-        # noise_y = torch.cat([d['y'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
-        # # noise_Z = torch.cat([ Z for Z in self.latent_Z if Z is not None], dim=0)
-        # noise_Z = torch.cat([ Z/sd for Z, sd in zip(self.latent_Z, self.noise_sd) if Z is not None], dim=0)
-        
-        # theta_loss = self.net.theta_encode(noise_X, noise_y, noise_Z)
         
         noise_X = []
         noise_y = []

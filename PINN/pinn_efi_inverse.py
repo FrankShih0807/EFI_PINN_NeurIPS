@@ -19,6 +19,7 @@ class PINN_EFI_Inverse(BasePINN):
         activation_fn=nn.Softplus(beta=10),
         encoder_kwargs=dict(),
         annealing_period=0.3,
+        grad_norm_max=-1,
         lr=1e-3,
         sgld_lr=1e-3,
         lam=1,
@@ -49,6 +50,7 @@ class PINN_EFI_Inverse(BasePINN):
         # parameter estimation configs
         
         self.annealing_period = annealing_period
+        self.grad_norm_max = grad_norm_max
         # # EFI configs
         self.n_samples = self.sol_X.shape[0]
         self.mse_loss = nn.MSELoss(reduction="sum")
@@ -240,6 +242,8 @@ class PINN_EFI_Inverse(BasePINN):
 
         self.sampler.zero_grad()
         Z_loss.backward()
+        if self.grad_norm_max > 0 and self.progress < self.annealing_period:
+            nn.utils.clip_grad_norm_([ Z for Z in self.latent_Z if Z is not None], self.grad_norm_max)
         self.sampler.step()
 
         ## 2. DNN weights update (Optimize W)
@@ -253,6 +257,8 @@ class PINN_EFI_Inverse(BasePINN):
 
         self.optimiser.zero_grad()
         w_loss.backward()
+        if self.grad_norm_max > 0 and self.progress < self.annealing_period:
+            nn.utils.clip_grad_norm_(self.net.parameters(), self.grad_norm_max)
         self.optimiser.step()
         
         # record training parameters
