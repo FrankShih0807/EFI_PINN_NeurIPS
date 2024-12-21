@@ -97,7 +97,7 @@ class BayesianPINN_Inverse(BasePINN):
         u = fmodel[0](x_f, params=params_unflattened[0])
         u_x = gradients(u,x_f)[0]
         u_xx = gradients(u_x,x_f)[0]
-        pred_f = 0.01*u_xx + torch.exp(params_single[0])*torch.tanh(u)
+        pred_f = 0.01*u_xx + params_single[0]*torch.tanh(u)
         y_f = data['y_f']
         ll = ll - 0.5 * tau_likes[1] * ((pred_f - y_f) ** 2).sum(0)
         output = [pred_u,pred_f]
