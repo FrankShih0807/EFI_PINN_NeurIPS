@@ -108,12 +108,6 @@ class PINN_EFI(BasePINN):
         return loss
     
     def theta_loss(self):
-        # noise_X = torch.cat([d['X'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
-        # noise_y = torch.cat([d['y'] for d in self.dataset if d['noise_sd'] > 0], dim=0)
-        # # noise_Z = torch.cat([ Z for Z in self.latent_Z if Z is not None], dim=0)
-        # noise_Z = torch.cat([ Z/sd for Z, sd in zip(self.latent_Z, self.noise_sd) if Z is not None], dim=0)
-        
-        # theta_loss = self.net.theta_encode(noise_X, noise_y, noise_Z)
         
         noise_X = []
         noise_y = []
@@ -244,7 +238,7 @@ class PINN_EFI(BasePINN):
 
         self.sampler.zero_grad()
         Z_loss.backward()
-        if self.grad_norm_max > 0:
+        if self.grad_norm_max > 0 and self.progress < self.annealing_period:
             nn.utils.clip_grad_norm_([ Z for Z in self.latent_Z if Z is not None], self.grad_norm_max)
         self.sampler.step()
 
@@ -259,7 +253,7 @@ class PINN_EFI(BasePINN):
 
         self.optimiser.zero_grad()
         w_loss.backward()
-        if self.grad_norm_max > 0:
+        if self.grad_norm_max > 0 and self.progress < self.annealing_period:
             nn.utils.clip_grad_norm_(self.net.parameters(), self.grad_norm_max)
         self.optimiser.step()
         

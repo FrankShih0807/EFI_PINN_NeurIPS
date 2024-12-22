@@ -6,4 +6,4 @@ from PINN.models.european_call_discovery import EuropeanCallDiscovery
 from PINN.models.poisson import Poisson, PoissonCallback
 from PINN.models.poisson_v2 import Poisson_v2, Poisson_v2Callback
 from PINN.models.poisson_nonlinear import PoissonNonlinear, PoissonNonlinearCallback
-from PINN.models.poisson_2D import Poisson2D, Poisson2DCallback
+from PINN.models.poisson_2d import Poisson2D, Poisson2DCallback
