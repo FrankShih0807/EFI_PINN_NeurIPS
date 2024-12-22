@@ -52,7 +52,7 @@ poisson-nonlinear:
 
 european_call:
   n_samples: 200
-  epochs: 10000
+  epochs: 20000
   eval_freq: -1
   burn: 0.4
   pinn:
@@ -63,9 +63,9 @@ european_call:
     # annealing_period: 0.3
     # grad_norm_max: 100.0
     # step_size: 'log_0.0001_0.00001'
-    step_size: 2.0e-6
+    step_size: 1.0e-5
     L: 10
-    sigma_diff: 0.1
+    sigma_diff: 1.0
     # sigma_diff: 'log_0.5_0.05'
     sigma_sol: 1.0
     pretrain_epochs: 20000
