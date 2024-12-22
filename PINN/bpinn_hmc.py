@@ -24,6 +24,7 @@ class BayesianPINN(BasePINN):
         L=6, 
         sigma_diff=0.01,
         sigma_sol=0.01,
+        pretrain_epochs=0,
         save_path=None,
         device='cpu',
     ) -> None:
@@ -31,6 +32,7 @@ class BayesianPINN(BasePINN):
         self.L = L
         self.sigma_diff = sigma_diff
         self.sigma_sol = sigma_sol
+        self.pretrain_epochs = pretrain_epochs
 
         self.dataset = dataset.copy()
 
@@ -78,6 +80,27 @@ class BayesianPINN(BasePINN):
         self.step_size = get_schedule(self.step_size)
         self.sigma_diff = get_schedule(self.sigma_diff)
 
+    def pretrain_net(self):
+        print('Pretraining Bayesian PINN...')
+        optimiser = optim.Adam(self.net.parameters(), lr=5.0e-4)
+        sigma_diff = self.sigma_diff(progress=0.0)
+        self.net.train()
+        for ep in range(self.pretrain_epochs):
+            optimiser.zero_grad()
+            output = self.bnet(self.X)
+            pde_loss = self.mse_loss(output[:-self.num_bd] * (sigma_diff * 2 ** 0.5), self.diff_y)
+            sol_loss = self.mse_loss(output[-self.num_bd:] * (self.sigma_sol * 2 ** 0.5), self.sol_y)
+            l2_loss = 0
+            for param in self.net.parameters():
+                l2_loss += torch.sum(param**2)
+            loss = sol_loss + pde_loss + l2_loss * 1e-5
+            loss.backward()
+            optimiser.step()
+            if (ep+1) % 1000 == 0:
+                print(f"Epoch {ep+1}/{self.pretrain_epochs}, sol_loss: {sol_loss.item():.2f}, pde_loss: {pde_loss.item():.2f}")
+        self.params_init = hamiltorch.util.flatten(self.net).to(self.device).clone()
+        print('Bayesian PINN pretraining done.')
+
     def sample_posterior(self, num_samples):
         # update training parameters
         annealing_period = 0.3
@@ -104,6 +127,10 @@ class BayesianPINN(BasePINN):
         return params_hmc
 
     def train(self, epochs, eval_freq=-1, burn=0.5, callback=None):
+
+        if self.pretrain_epochs > 0:
+            self.pretrain_net()
+
         self.epochs = epochs
         if eval_freq == -1:
             eval_freq = epochs // 10
