@@ -155,7 +155,14 @@ class PINN_EFI_Inverse(BasePINN):
             if d['category'] == 'differential':
                 loss += F.mse_loss(self.differential_operator(net, d['X']), d['y'])
         return loss
-
+    
+    def pretrain_solution_loss(self, net):
+        loss = 0
+        for i, d in enumerate(self.dataset):
+            if d['category'] == 'solution':
+                loss += F.mse_loss(net(d['X']), d['y'])
+        return loss
+    
     def train_base_dnn(self):
         print('Pretraining PINN...')
         base_net = BaseDNN(
@@ -168,13 +175,12 @@ class PINN_EFI_Inverse(BasePINN):
         base_net.train()
         for ep in range(self.pretrain_epochs):
             optimiser.zero_grad()
-            output = base_net(self.sol_X)
-            sol_loss = self.mse_loss(output, self.sol_y)
+            sol_loss = self.pretrain_solution_loss(base_net)
             pde_loss = self.pretrain_pde_loss(base_net)
-            l2_loss = 0
-            for param in base_net.parameters():
-                l2_loss += torch.sum(param**2)
-            loss = sol_loss + pde_loss + l2_loss * 1e-5
+            # l2_loss = 0
+            # for param in base_net.parameters():
+            #     l2_loss += torch.sum(param**2)
+            loss = sol_loss + pde_loss
             loss.backward()
             optimiser.step()
             if (ep+1) % 1000 == 0:
@@ -183,7 +189,7 @@ class PINN_EFI_Inverse(BasePINN):
         print('PINN pretraining done.')
         return base_net
 
-    def optimize_encoder(self, param_vector, steps=1000):
+    def optimize_encoder(self, param_vector, steps=5000):
         # optimiser = optim.Adam(self.net.parameters(), lr=3e-4)
         optimiser = optim.SGD(self.net.parameters(), lr=1e-3)
         print('Pretraining EFI...')
