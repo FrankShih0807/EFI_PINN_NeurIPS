@@ -144,7 +144,7 @@ poisson-inverse:
     - 30
     - 30
     activation_fn: tanh
-    annealing_period: 0.2
+    annealing_period: 0.3
     grad_norm_max: -1.0
     lr: 'poly_0.5e-5_10.0_0.7'
     sgld_lr: 'poly_0.5e-5_10.0_0.9'
@@ -176,7 +176,7 @@ poisson-2d:
     grad_norm_max: 1000.0
     lr: 'poly_0.2e-5_10.0_0.7'
     sgld_lr: 'poly_0.2e-5_10.0_0.9'
-    lam: 'linear_100.0_1000.0'
+    lam: 'linear_50.0_500.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
     pretrain_epochs: 0
