@@ -174,7 +174,7 @@ class BayesianPINN_Inverse(BasePINN):
 
             if (ep+1) % eval_freq == 0:
 
-                print(self.pe_variables)
+                # print(self.pe_variables)
 
                 self.callback.on_eval()
                 self.logger.dump()
