@@ -74,8 +74,9 @@ class BayesianPINN_Inverse(BasePINN):
             self.tau_list.append(1.0)
         self.tau_list = torch.tensor(self.tau_list).to(self.device)
 
-        self.params_init = hamiltorch.util.flatten(self.net).to(self.device).clone()
-        self.params_init = torch.cat([torch.zeros(self.pe_dim), self.params_init])
+        self.net_params_init = hamiltorch.util.flatten(self.net).to(self.device).clone()
+        self.pe_variables = torch.zeros(self.pe_dim)
+        self.params_init = torch.cat([self.pe_variables, self.net_params_init])
 
         # print(self.params_init.shape)
         # raise
@@ -96,7 +97,7 @@ class BayesianPINN_Inverse(BasePINN):
         u = fmodel[0](x_f, params=params_unflattened[0])
         u_x = gradients(u,x_f)[0]
         u_xx = gradients(u_x,x_f)[0]
-        pred_f = 0.01*u_xx + torch.exp(params_single[0])*torch.tanh(u)
+        pred_f = 0.01*u_xx + params_single[0]*torch.tanh(u)
         y_f = data['y_f']
         ll = ll - 0.5 * tau_likes[1] * ((pred_f - y_f) ** 2).sum(0)
         output = [pred_u,pred_f]
@@ -154,6 +155,7 @@ class BayesianPINN_Inverse(BasePINN):
             # raise
 
             self.params_hmc += params_hmc
+            self.pe_variables = self.params_hmc[-1][:self.pe_dim].clone()
             self.params_init = self.params_hmc[-1].clone()
 
             # print(self.params_hmc[-1].shape)
@@ -171,6 +173,9 @@ class BayesianPINN_Inverse(BasePINN):
             self.logger.record('train/time', toc-tic)
 
             if (ep+1) % eval_freq == 0:
+
+                # print(self.pe_variables)
+
                 self.callback.on_eval()
                 self.logger.dump()
 

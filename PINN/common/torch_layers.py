@@ -342,15 +342,15 @@ class EFI_Net_PE(nn.Module):
 
     
 class BayesianPINNNet(nn.Module):
-    def __init__(self, sigma_diff, sigma_sol, physics_model, num_bd, input_dim, output_dim):
+    def __init__(self, sigma_diff, sigma_sol, physics_model, num_bd, input_dim, output_dim, hidden_layers):
         super(BayesianPINNNet, self).__init__()
 
         self.fnn = nn.Sequential(
-            nn.Linear(input_dim, 50),
+            nn.Linear(input_dim, hidden_layers[0]),
             nn.Tanh(),
-            nn.Linear(50, 50),
+            nn.Linear(hidden_layers[0], hidden_layers[1]),
             nn.Tanh(),
-            nn.Linear(50, output_dim), 
+            nn.Linear(hidden_layers[1], output_dim), 
         )
 
         self.sigma_diff = sigma_diff
@@ -372,7 +372,7 @@ class BayesianNet(nn.Module):
         self.hidden_layers = hidden_layers
         # self.layer_list = []
         self.activation_fn = activation_fn
-        self.pe_variables = nn.Parameter(torch.randn(1), requires_grad=True)
+        # self.pe_variables = nn.Parameter(torch.randn(1), requires_grad=True)
 
         self.l1 = nn.Linear(1, hidden_layers[0])
         self.l2 = nn.Linear(hidden_layers[0], hidden_layers[1])

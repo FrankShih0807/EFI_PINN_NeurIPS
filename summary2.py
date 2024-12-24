@@ -249,7 +249,7 @@ progress_df = collect_progress_data(output_dir)
 df = progress_df[progress_df['train/progress']==1.0]
 df = df.loc[:, ~df.columns.str.startswith('train')]
 df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
-df = df.dropna()
+# df = df.dropna()
 # plot_cr_boxplot(df)
 # df["cover_all"] = (df["coverage_rate"]==1)
 # print(df_cr.groupby(['model', 'algo'])['cr'].mean())
@@ -278,8 +278,11 @@ for info in abnormal_indices_info:
     print(f"Global index: {info[0]}, Group: {info[1]}, In-group index: {info[2]}")
 
 # Calculate and print the mean and std of the filtered dataframe
-print(filtered_df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].mean())
-print(filtered_df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].std()/10)
+# print(filtered_df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].mean())
+# print(filtered_df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].std()/10)
+
+print(filtered_df.groupby(['model', 'algo'])[['mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_ci_range', 'k_coverage_rate']].mean())
+print(filtered_df.groupby(['model', 'algo'])[['mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_ci_range', 'k_coverage_rate']].std()/10)
 
 # print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].mean())
 # print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].std()/10)
