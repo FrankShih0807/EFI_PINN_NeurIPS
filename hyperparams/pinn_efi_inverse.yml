@@ -147,11 +147,13 @@ poisson-inverse:
     annealing_period: 0.3
     grad_norm_max: -1.0
     lr: 'poly_0.5e-5_10.0_0.7'
+    sgd_momentum: 'linear_0.9_0.0'
     sgld_lr: 'poly_0.5e-5_10.0_0.9'
-    lam: 'linear_50.0_500.0'
+    sgld_alpha: 'linear_0.1_1.0'
+    lam: 'linear_100.0_1000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
-    pretrain_epochs: 5000
+    pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
       - 16
@@ -164,7 +166,7 @@ poisson-inverse:
 
 
 poisson-2d:
-  epochs: 200_000
+  epochs: 100_000
   eval_freq: 1000
   burn: 0.5
   pinn:
@@ -175,15 +177,17 @@ poisson-2d:
     annealing_period: 0.3
     grad_norm_max: -1.0
     lr: 'poly_0.5e-5_10.0_0.7'
+    sgd_momentum: 'linear_0.9_0.0'
     sgld_lr: 'poly_0.5e-5_10.0_0.9'
-    lam: 'linear_50.0_500.0'
+    sgld_alpha: 'linear_0.1_1.0'
+    lam: 'linear_100.0_1000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
-    pretrain_epochs: 5000
+    pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
       - 64
-      - 64
+      - 128
       - 64
       encoder_activation: leaky_relu
       prior_sd: 1.0
