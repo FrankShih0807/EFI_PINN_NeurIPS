@@ -325,6 +325,8 @@ progress_df = collect_progress_data(output_dir)
 df = progress_df[progress_df['train/progress']==1.0]
 df = df.loc[:, ~df.columns.str.startswith('train')]
 df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
+print(df[(df['mse']>0.001) & (df['model']=='poisson-inverse') ])
+
 df = df[['model', 'algo', 'mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_coverage_rate', 'k_ci_range']]
 # df = df.dropna()
 plot_cr_boxplot(df)
@@ -348,7 +350,6 @@ with open('metric.txt', 'w') as file:
 print(df.groupby(['model', 'algo']).size())
 
 # print(df[(df['mse']>0.001) & (df['algo']=='efi_size30_3')])
-print(df[(df['mse']>0.001) & (df['model']=='poisson-inverse') & (df['algo']=='efi_size30_test3')])
 
 rows_with_nan = df[df.isna().any(axis=1)]
 # print(rows_with_nan)

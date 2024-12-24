@@ -42,6 +42,7 @@ class PINN(BasePINN):
         )
         self.net.to(self.device)
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
+        # self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr)
         
     def pde_loss(self):
         loss = 0

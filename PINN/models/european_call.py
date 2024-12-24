@@ -354,15 +354,21 @@ if __name__ == "__main__":
     call = EuropeanCall(K=40)
     
     # call.plot()
-
+        # get solution data
+    price_X, price_y, true_price_y = call.get_price_data(call.n_price_samples)
+    # get boundary data
+    boundary_X, boundary_y = call.get_boundary_data(call.n_boundary_samples)
+    # get differential data
+    diff_X, diff_y = call.get_diff_data(call.n_diff_samples)
     
-    bvp_x1, bvp_y1, bvp_x2,bvp_y2 = call.get_bvp_data(200)
-    ivp_x1,ivp_y1 = call.get_ivp_data(200)
-    diff_x1 = call.get_diff_data(800)
-    plt.scatter(bvp_x1[:,0],bvp_x1[:,1], label= "BVP 1", color = "red",marker="o")
-    plt.scatter(bvp_x2[:,0],bvp_x2[:,1], label= "BVP 2", color = "green",marker="x")
-    plt.scatter(ivp_x1[:,0],ivp_x1[:,1], label= "IVP", color = "blue")
-    plt.scatter(diff_x1[:,0],diff_x1[:,1], label= "PDE sample", color = "grey", alpha = 0.3)
+    plt.scatter(price_X[:,0], price_X[:,1], label= "Price", color = "red")
+    plt.scatter(boundary_X[:,0],boundary_X[:,1], label= "Boundary", color = "green")
+    plt.scatter(diff_X[:,0],diff_X[:,1], label= "Differential", color = "blue")
+    
+    # plt.scatter(bvp_x1[:,0],bvp_x1[:,1], label= "BVP 1", color = "red",marker="o")
+    # plt.scatter(bvp_x2[:,0],bvp_x2[:,1], label= "BVP 2", color = "green",marker="x")
+    # plt.scatter(ivp_x1[:,0],ivp_x1[:,1], label= "IVP", color = "blue")
+    # plt.scatter(diff_x1[:,0],diff_x1[:,1], label= "PDE sample", color = "grey", alpha = 0.3)
     plt.xlabel("time to expiry, ")
     plt.ylabel("stock price ")
     plt.title("Data Sampling for European Call")

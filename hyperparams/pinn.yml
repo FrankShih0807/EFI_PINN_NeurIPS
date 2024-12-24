@@ -11,8 +11,9 @@ cooling:
 
 
 european_call:
-  n_samples: 200
-  epochs: 20_000
+  epochs: 200_000
+  eval_freq: 1000
+  burn: 0.5 
   pinn:
     hidden_layers:
     - 20
@@ -25,7 +26,7 @@ european_call:
 poisson:
   epochs: 100_000
   eval_freq: -1
-  burn: 0.6
+  burn: 0.5
   pinn:
     hidden_layers:
     - 30
@@ -44,3 +45,17 @@ nonlinear:
     activation_fn: tanh
     lr: 1.0e-3
     lambda_pde: 0.0
+
+poisson-2d:
+  epochs: 200_000
+  eval_freq: 1000
+  burn: 0.5
+  pinn:
+    hidden_layers:
+    - 30
+    - 30
+    activation_fn: tanh
+    lr: 3e-4
+    lambda_pde: 1.0
+    dropout_rate: 0.0
+
