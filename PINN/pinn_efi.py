@@ -151,7 +151,14 @@ class PINN_EFI(BasePINN):
             if d['category'] == 'differential':
                 loss += F.mse_loss(self.differential_operator(net, d['X']), d['y'])
         return loss
-
+    
+    def pretrain_solution_loss(self, net):
+        loss = 0
+        for i, d in enumerate(self.dataset):
+            if d['category'] == 'solution':
+                loss += F.mse_loss(net(d['X']), d['y'])
+        return loss
+    
     def train_base_dnn(self):
         print('Pretraining PINN...')
         base_net = BaseDNN(
@@ -164,13 +171,14 @@ class PINN_EFI(BasePINN):
         base_net.train()
         for ep in range(self.pretrain_epochs):
             optimiser.zero_grad()
-            output = base_net(self.sol_X)
-            sol_loss = self.mse_loss(output, self.sol_y)
+            # output = base_net(self.sol_X)
+            sol_loss = self.pretrain_solution_loss(base_net)
             pde_loss = self.pretrain_pde_loss(base_net)
-            l2_loss = 0
-            for param in base_net.parameters():
-                l2_loss += torch.sum(param**2)
-            loss = sol_loss + pde_loss + l2_loss * 1e-5
+            # l2_loss = 0
+            # for param in base_net.parameters():
+            #     l2_loss += torch.sum(param**2)
+            # loss = sol_loss + pde_loss + l2_loss * 1e-5
+            loss = sol_loss + pde_loss 
             loss.backward()
             optimiser.step()
             if (ep+1) % 1000 == 0:
@@ -179,9 +187,9 @@ class PINN_EFI(BasePINN):
         print('PINN pretraining done.')
         return base_net
 
-    def optimize_encoder(self, param_vector, steps=1000):
+    def optimize_encoder(self, param_vector, steps=5000):
         # optimiser = optim.Adam(self.net.parameters(), lr=3e-4)
-        optimiser = optim.SGD(self.net.parameters(), lr=1e-3)
+        optimiser = optim.SGD(self.net.parameters(), lr=3e-4)
         print('Pretraining EFI...')
         for _ in range(steps):
             self.net.train()
@@ -203,10 +211,10 @@ class PINN_EFI(BasePINN):
             batch_size = noise_X.shape[0]
 
             encoder_output = self.net.encoder(torch.cat([noise_X, noise_y, noise_Z], dim=1))
-            # loss = F.mse_loss(encoder_output, param_vector.repeat(batch_size, 1), reduction="sum")
-            loss = F.mse_loss(encoder_output, param_vector.repeat(batch_size, 1), reduction="sum") / batch_size
-            w_prior_loss = self.net.gmm_prior_loss() /batch_size
-            loss += w_prior_loss
+            loss = F.mse_loss(encoder_output, param_vector.repeat(batch_size, 1), reduction="mean")
+            # loss = F.mse_loss(encoder_output, param_vector.repeat(batch_size, 1), reduction="sum") / batch_size
+            # w_prior_loss = self.net.gmm_prior_loss() /batch_size
+            # loss += w_prior_loss
 
             optimiser.zero_grad()
             loss.backward()
@@ -238,6 +246,11 @@ class PINN_EFI(BasePINN):
 
         self.sampler.zero_grad()
         Z_loss.backward()
+        
+        # for p in self.net.parameters():
+        #     print(p.shape)
+        #     print(p.grad.abs().max())
+        # raise
         if self.grad_norm_max > 0 and self.progress < self.annealing_period:
             nn.utils.clip_grad_norm_([ Z for Z in self.latent_Z if Z is not None], self.grad_norm_max)
         self.sampler.step()
