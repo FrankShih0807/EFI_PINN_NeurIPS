@@ -146,12 +146,12 @@ poisson-inverse:
     activation_fn: tanh
     annealing_period: 0.3
     grad_norm_max: -1.0
-    lr: 'poly_0.5e-5_10.0_0.7'
-    sgld_lr: 'poly_0.5e-5_10.0_0.9'
-    lam: 'linear_50.0_500.0'
+    lr: 'poly_0.25e-5_10.0_0.7'
+    sgld_lr: 'poly_0.25e-5_10.0_0.9'
+    lam: 'linear_200.0_2000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
-    pretrain_epochs: 0
+    pretrain_epochs: 5000
     encoder_kwargs:
       encoder_hidden_layers:
       - 16
@@ -174,8 +174,8 @@ poisson-2d:
     activation_fn: tanh
     annealing_period: 0.3
     grad_norm_max: -1.0
-    lr: 'poly_0.5e-5_10.0_0.7'
-    sgld_lr: 'poly_0.5e-5_10.0_0.9'
+    lr: 'poly_0.25e-5_10.0_0.7'
+    sgld_lr: 'poly_0.25e-5_10.0_0.9'
     lam: 'linear_50.0_500.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
