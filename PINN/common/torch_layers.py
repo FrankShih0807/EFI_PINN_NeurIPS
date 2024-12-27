@@ -184,7 +184,7 @@ class EFI_Net(nn.Module):
         return theta_loss
         
     def gmm_prior_loss(self):
-        if self.prior_sd == 0:
+        if self.prior_sd <= 0.0:
             return 0
         else:
             loss = 0
