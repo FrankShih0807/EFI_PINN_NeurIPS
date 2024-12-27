@@ -141,8 +141,8 @@ poisson-inverse:
   burn: 0.5
   pinn:
     hidden_layers:
-    - 30
-    - 30
+    - 50
+    - 50
     activation_fn: tanh
     annealing_period: 0.3
     grad_norm_max: -1.0
@@ -156,8 +156,8 @@ poisson-inverse:
     pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 16
-      - 16
+      - 128
+      - 128
       - 16
       encoder_activation: leaky_relu
       prior_sd: 5.0
