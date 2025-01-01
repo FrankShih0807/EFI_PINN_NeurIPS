@@ -23,9 +23,11 @@ class EuropeanCall(PhysicsModel):
                  r = 0.05,
                  K = 80,
                  noise_sd=1,
-                 n_price_samples=200,
-                 n_boundary_samples=200,
-                 n_diff_samples=800,
+                 n_price_sensors=5,
+                 n_price_replicates=10,
+                 n_boundary_samples=50,
+                 n_diff_samples=400,
+                 is_inverse=False,
                  ):
         self.norm_dist = dist.Normal(0, 1)
         super().__init__(S_range=S_range, 
@@ -34,19 +36,25 @@ class EuropeanCall(PhysicsModel):
                          r=r, 
                          K=K, 
                          noise_sd=noise_sd,
-                         n_price_samples=n_price_samples,
+                         n_price_sensors=n_price_sensors,
+                         n_price_replicates=n_price_replicates,
                          n_boundary_samples=n_boundary_samples,
-                         n_diff_samples=n_diff_samples
+                         n_diff_samples=n_diff_samples,
+                         is_inverse=is_inverse
                          )
+        if is_inverse:
+            self.pe_dim = 1
+        else:
+            self.pe_dim = 0
 
-    def generate_data(self, n_samples = 200, device = "cpu"):
+    def generate_data(self, device):
         dataset = PINNDataset(device)
         # get solution data
-        price_X, price_y, true_price_y = self.get_price_data(self.n_price_samples)
+        price_X, price_y, true_price_y = self.get_price_data()
         # get boundary data
-        boundary_X, boundary_y = self.get_boundary_data(self.n_boundary_samples)
+        boundary_X, boundary_y = self.get_boundary_data()
         # get differential data
-        diff_X, diff_y = self.get_diff_data(self.n_diff_samples)
+        diff_X, diff_y = self.get_diff_data()
         # get evaluation data
         eval_X, eval_y = self.get_eval_data()
         
@@ -56,11 +64,11 @@ class EuropeanCall(PhysicsModel):
         dataset.add_data(eval_X, eval_y, eval_y, 'evaluation', 0.0)
         return dataset
     
-    def get_diff_data(self, n_samples):
-        ts = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
-        Ss = torch.rand(n_samples, 1) * (self.S_range[1] - self.S_range[0]) + self.S_range[0]
+    def get_diff_data(self):
+        ts = torch.rand(self.n_diff_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
+        Ss = torch.rand(self.n_diff_samples, 1) * (self.S_range[1] - self.S_range[0]) + self.S_range[0]
         X = torch.cat([ts, Ss], dim=1)
-        y = torch.zeros(n_samples, 1)
+        y = torch.zeros(self.n_diff_samples, 1)
         return X, y
     
     def get_eval_data(self):
@@ -71,38 +79,31 @@ class EuropeanCall(PhysicsModel):
         eval_y = self.physics_law(S, self.t_range[1] - T).reshape(-1, 1)
         return eval_X, eval_y
     
-    def get_price_data(self, n_samples):
+    def get_price_data(self):
         # ts = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
         # Ss = torch.ones(n_samples, 1) * self.S_range[1]/2
         
-        ts = torch.zeros(n_samples).reshape(-1, 1)
-        Ss = torch.linspace(self.S_range[0], self.S_range[1], n_samples).reshape(-1, 1)
+        # ts = torch.zeros(n_samples).reshape(-1, 1)
+        Ss = torch.linspace(self.S_range[0], self.S_range[1], self.n_price_sensors + 1)[1::].repeat_interleave(self.n_price_replicates).reshape(-1, 1)
+        ts = torch.zeros_like(Ss)
         
         X = torch.cat([ts, Ss], dim=1)
         true_y = self.physics_law(Ss, self.t_range[1] - ts)
         y = true_y + self.noise_sd * torch.randn_like(true_y)
         return X, y, true_y
     
-    def get_boundary_data(self, n_samples):
+    def get_boundary_data(self):
         # Boundary condition at S = 0
-        # t1 = torch.rand(n_samples, 1) * (self.t_range[1] - self.t_range[0]) + self.t_range[0]
-        # S1 = torch.ones(n_samples, 1) * self.S_range[0]
-        # X1 = torch.cat([t1, S1], dim=1)
-        # y1 = torch.zeros(n_samples, 1)
         
-        t1 = torch.linspace(self.t_range[0], self.t_range[1], n_samples).reshape(-1, 1)
-        S1 = torch.ones(n_samples, 1) * self.S_range[0]
+        t1 = torch.linspace(self.t_range[0], self.t_range[1], self.n_boundary_samples).reshape(-1, 1)
+        S1 = torch.ones(self.n_boundary_samples, 1) * self.S_range[0]
         X1 = torch.cat([t1, S1], dim=1)
-        y1 = torch.zeros(n_samples, 1)
+        y1 = torch.zeros(self.n_boundary_samples, 1)
         
         # Boundary condition at time to maturity
-        # t2 = torch.ones(n_samples, 1) * self.t_range[1]
-        # S2 = torch.rand(n_samples, 1) * (self.S_range[1] - self.S_range[0]) + self.S_range[0]
-        # X2 = torch.cat([t2, S2], dim=1)
-        # y2 = F.relu(S2 - self.K)
         
-        t2 = torch.ones(n_samples, 1) * self.t_range[1]
-        S2 = torch.linspace(self.S_range[0], self.S_range[1], n_samples).reshape(-1, 1)
+        t2 = torch.ones(self.n_boundary_samples, 1) * self.t_range[1]
+        S2 = torch.linspace(self.S_range[0], self.S_range[1], self.n_boundary_samples).reshape(-1, 1)
         X2 = torch.cat([t2, S2], dim=1)
         y2 = F.relu(S2 - self.K)
         
@@ -120,12 +121,17 @@ class EuropeanCall(PhysicsModel):
         V = s * Nd1 - self.K * torch.exp(-self.r * (t2m)) * Nd2
         return V
 
-    def differential_operator(self, model: torch.nn.Module, physics_X):
+    def differential_operator(self, model: torch.nn.Module, physics_X, pe_variables=None):
         ''' Compute the Black-Scholes loss
         Args:
             model (torch.nn.Module): torch network model
         '''
         # self.physics_X = self.get_diff_data(800).requires_grad_(True)
+        if pe_variables is None:
+            r = self.r
+        else:
+            r = pe_variables[0]
+        
         y_pred = model(physics_X)
         grads = grad(y_pred, physics_X)[0]
         dVdt = grads[:, 0].view(-1, 1)
@@ -133,7 +139,7 @@ class EuropeanCall(PhysicsModel):
         grads2nd = grad(dVdS, physics_X)[0]
         d2VdS2 = grads2nd[:, 1].view(-1, 1)
         S1 = physics_X[:, 1].view(-1, 1)
-        bs_pde = dVdt + 0.5 * self.sigma**2 * S1**2 * d2VdS2 + self.r * S1 * dVdS - self.r * y_pred
+        bs_pde = dVdt + 0.5 * self.sigma**2 * S1**2 * d2VdS2 + r * S1 * dVdS - r * y_pred
         
         return bs_pde
     
@@ -355,13 +361,13 @@ if __name__ == "__main__":
     
     # call.plot()
         # get solution data
-    price_X, price_y, true_price_y = call.get_price_data(call.n_price_samples)
+    price_X, price_y, true_price_y = call.get_price_data()
     # get boundary data
-    boundary_X, boundary_y = call.get_boundary_data(call.n_boundary_samples)
+    boundary_X, boundary_y = call.get_boundary_data()
     # get differential data
-    diff_X, diff_y = call.get_diff_data(call.n_diff_samples)
+    diff_X, diff_y = call.get_diff_data()
     
-    plt.scatter(price_X[:,0], price_X[:,1], label= "Price", color = "red")
+    plt.scatter(price_X[:,0], price_X[:,1], label= "Price", color = "red", marker="x")
     plt.scatter(boundary_X[:,0],boundary_X[:,1], label= "Boundary", color = "green")
     plt.scatter(diff_X[:,0],diff_X[:,1], label= "Differential", color = "blue")
     

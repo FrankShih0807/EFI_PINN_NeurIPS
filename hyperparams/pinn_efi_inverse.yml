@@ -17,23 +17,34 @@ cooling:
       sparse_threshold: 0.01
 
 european_call:
-  n_samples: 200
-  epochs: 20_000
+  epochs: 100_000
+  eval_freq: 1000
+  burn: 0.5
   pinn:
     hidden_layers:
-    - 20
-    - 20
-    - 20
-    activation_fn: softplus(beta=10)
-    lr: 1.0e-5
-    lambda_pde: 10.0
-    sgld_lr: 1e-4
-    lambda_y: 10.0
-    lambda_theta: 0.1
+    - 50
+    - 50
+    - 50
+    activation_fn: softplus(beta=5)
+    annealing_period: 0.3
+    grad_norm_max: 1.0e4
+    lr: 'poly_1e-5_10.0_0.7'
+    sgd_momentum: 'linear_0.9_0.0'
+    sgld_lr: 'poly_1e-5_10.0_0.9'
+    sgld_alpha: 'linear_1.0_1.0'
+    lam: 1.0
+    lambda_pde: 1.0
+    lambda_theta: 1.0
+    pretrain_epochs: 0
     encoder_kwargs:
-      encoder_activation: relu
+      encoder_hidden_layers:
+      - 128
+      - 128
+      - 16
+      encoder_activation: leaky_relu
       prior_sd: 1.0
-      sparse_threshold: 0.01
+      sparse_sd: 0.001
+      sparsity: 1.0
 
 
 nonlinear:
@@ -141,8 +152,8 @@ poisson-inverse:
   burn: 0.5
   pinn:
     hidden_layers:
-    - 50
-    - 50
+    - 100
+    - 100
     activation_fn: tanh
     annealing_period: 0.3
     grad_norm_max: -1.0
@@ -150,7 +161,7 @@ poisson-inverse:
     sgd_momentum: 'linear_0.9_0.0'
     sgld_lr: 'poly_0.5e-5_10.0_0.9'
     sgld_alpha: 'linear_0.1_1.0'
-    lam: 'linear_100.0_1000.0'
+    lam: 'linear_50.0_500.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
     pretrain_epochs: 0
@@ -171,25 +182,26 @@ poisson-2d:
   burn: 0.5
   pinn:
     hidden_layers:
-    - 30
-    - 30
+    - 50
+    - 50
+    - 50
     activation_fn: tanh
     annealing_period: 0.3
     grad_norm_max: -1.0
     lr: 'poly_0.25e-5_10.0_0.7'
     sgd_momentum: 'linear_0.9_0.0'
-    sgld_lr: 'poly_0.25e-5_10.0_0.9'
-    sgld_alpha: 'linear_0.1_1.0'
+    sgld_lr: 'poly_0.1e-5_10.0_0.9'
+    sgld_alpha: 'linear_1.0_1.0'
     lam: 'linear_100.0_1000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
     pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 64
-      - 128
-      - 64
+      - 256
+      - 256
+      - 32
       encoder_activation: leaky_relu
-      prior_sd: 1.0
+      prior_sd: 10.0
       sparse_sd: 0.001
       sparsity: 1.0

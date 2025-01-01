@@ -18,9 +18,10 @@ european_call:
   r: 0.05
   K: 80
   noise_sd: 1.0
-  n_price_samples: 50
+  n_price_sensors: 5
+  n_price_replicates: 10
   n_boundary_samples: 50
-  n_diff_samples: 400
+  n_diff_samples: 800
 
 
 nonlinear:

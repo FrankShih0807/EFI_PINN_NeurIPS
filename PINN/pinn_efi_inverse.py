@@ -201,7 +201,7 @@ class PINN_EFI_Inverse(BasePINN):
 
     def optimize_encoder(self, param_vector, steps=1000):
         # optimiser = optim.Adam(self.net.parameters(), lr=3e-4)
-        optimiser = optim.SGD(self.net.parameters(), lr=1e-3)
+        optimiser = optim.SGD(self.net.parameters(), lr=3e-4)
         print('Pretraining EFI...')
         param_vector =  F.pad(param_vector, (0, self.pe_dim), value=0)
         for _ in range(steps):
@@ -263,7 +263,8 @@ class PINN_EFI_Inverse(BasePINN):
         # for param in self.sampler.param_groups[0]['params']:
         #     print('latent_Z_grad', param.abs().max())
             
-        if self.grad_norm_max > 0 and self.progress < self.annealing_period:
+        # if self.grad_norm_max > 0 and self.progress < self.annealing_period:
+        if self.grad_norm_max > 0:
             nn.utils.clip_grad_norm_([ Z for Z in self.latent_Z if Z is not None], self.grad_norm_max)
         self.sampler.step()
 
@@ -275,14 +276,18 @@ class PINN_EFI_Inverse(BasePINN):
         pde_loss = self.pde_loss()
 
         w_loss = lam * (y_loss + lambda_theta * theta_loss + lambda_pde * pde_loss) + w_prior_loss
-
+        # print('theta_loss', theta_loss.item())
+        # print('y_loss', y_loss.item())
+        # print('w_prior_loss', w_prior_loss.item())
+        # print('pde_loss', pde_loss.item())
+        
         self.optimiser.zero_grad()
         w_loss.backward()
         
-        # for name, param in self.net.named_parameters():
-        #     print(name, param.abs().max())
-        # raise
-        if self.grad_norm_max > 0 and self.progress < self.annealing_period:
+        grad_norm = torch.sqrt(sum(p.grad.norm(2)**2 for p in self.net.parameters() if p.grad is not None)).item()
+            
+        # if self.grad_norm_max > 0 and self.progress < self.annealing_period:
+        if self.grad_norm_max > 0:
             nn.utils.clip_grad_norm_(self.net.parameters(), self.grad_norm_max)
         self.optimiser.step()
         
@@ -291,6 +296,7 @@ class PINN_EFI_Inverse(BasePINN):
         self.logger.record('train_param/sgd_momentum', sgd_momentum, exclude='csv')
         self.logger.record('train_param/sgld_lr', sgld_lr, exclude='csv')
         self.logger.record('train_param/sgld_alpha', sgld_alpha, exclude='csv')
+        self.logger.record('train/grad_norm', grad_norm, exclude='csv')
         # self.logger.record('train_param/lambda_pde', lambda_pde)
         
         self.logger.record('train/theta_loss', theta_loss.item())

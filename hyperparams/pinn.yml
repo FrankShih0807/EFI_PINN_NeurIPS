@@ -52,8 +52,8 @@ poisson-2d:
   burn: 0.5
   pinn:
     hidden_layers:
-    - 30
-    - 30
+    - 50
+    - 50
     activation_fn: tanh
     lr: 3e-4
     lambda_pde: 1.0
