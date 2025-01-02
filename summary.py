@@ -325,7 +325,7 @@ progress_df = collect_progress_data(output_dir)
 df = progress_df[progress_df['train/progress']==1.0]
 df = df.loc[:, ~df.columns.str.startswith('train')]
 df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
-print(df[(df['k_mean']>0.7) & (df['model']=='poisson-inverse') ])
+print(df[(df['mse']>0.01) & (df['model']=='poisson-inverse') ])
 
 df = df[['model', 'algo', 'mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_coverage_rate', 'k_ci_range']]
 # df = df.dropna()
