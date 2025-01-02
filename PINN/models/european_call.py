@@ -13,8 +13,7 @@ from PINN.common.utils import PINNDataset
 from PIL import Image
 from PINN.common.callbacks import BaseCallback
 
-    
-        
+
 class EuropeanCall(PhysicsModel):
     def __init__(self, 
                  S_range = [0, 160],
@@ -237,7 +236,7 @@ class EuropeanCallCallback(BaseCallback):
     def _init_callback(self) -> None:
         self.eval_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'evaluation'], dim=0).to(self.device)
         self.eval_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'evaluation'], dim=0).to(self.device)
-        
+
         self.eval_X_cpu = self.eval_X.clone().detach().cpu()
         self.eval_y_cpu = self.eval_y.clone().detach().cpu()
 
@@ -256,31 +255,31 @@ class EuropeanCallCallback(BaseCallback):
         ci_range = (ci_high - ci_low).mean().item()
         cr = ((ci_low <= self.eval_y_cpu.flatten()) & (self.eval_y_cpu.flatten() <= ci_high)).float().mean().item()
         mse = F.mse_loss(pred_y_mean, self.eval_y_cpu.flatten(), reduction='mean').item()
-        
+
         self.logger.record('eval/ci_range', ci_range)
         self.logger.record('eval/coverage_rate', cr)
         self.logger.record('eval/mse', mse)
-        
+
         self.save_evaluation()
         try:
             self.plot_latent_Z()
         except:
             pass    
-        
+
     def _on_training_end(self):
         self.save_gif()
         self.save_3d_plot()
-    
+
     def plot_latent_Z(self):
         true_y = self.dataset[0]['true_y'].flatten()
         sol_y = self.dataset[0]['y'].flatten()
         true_Z = sol_y - true_y
-        
+
         latent_Z = self.model.latent_Z[0].flatten().detach().cpu().numpy()
-        
+
         np.save(os.path.join(self.save_path, 'true_Z.npy'), true_Z)
         np.save(os.path.join(self.save_path, 'latent_Z.npy'), latent_Z)
-        
+
         plt.subplots(figsize=(6, 6))
         plt.scatter(true_Z, latent_Z, label='Latent Z')
         plt.xlabel('True Z')
@@ -305,7 +304,6 @@ class EuropeanCallCallback(BaseCallback):
         preds_mean = self.eval_buffer.get_mean()
         preds_upper, preds_lower = self.eval_buffer.get_ci()
 
-
         sns.set_theme()
         plt.subplots(figsize=(8, 6))
         plt.plot(S_eval, true_price, alpha=0.8, color='b', label='True')
@@ -323,7 +321,7 @@ class EuropeanCallCallback(BaseCallback):
         os.makedirs(temp_dir, exist_ok=True)
         frame_path = os.path.join(temp_dir, f"frame_{self.n_evals}.png")
         plt.savefig(frame_path)
-        
+
         plt.close()
 
     def save_3d_plot(self):
@@ -331,13 +329,10 @@ class EuropeanCallCallback(BaseCallback):
         t_grid = 1-self.eval_X_cpu[:,0].reshape(self.grids,self.grids).numpy()
 
         preds_mean = self.eval_buffer.get_mean().reshape(self.grids,self.grids).numpy()
-        
+
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d') 
-        ax.plot_surface(S_grid,
-                        t_grid, 
-                        preds_mean, 
-                        cmap='plasma')
+        ax.plot_surface(S_grid, t_grid, preds_mean, cmap='plasma')
 
         ax.set_xlabel('Stock Price')
         ax.set_ylabel('Time to Maturity')
@@ -349,26 +344,22 @@ class EuropeanCallCallback(BaseCallback):
 
     def save_gif(self):
         frames = []
-        temp_dir = os.path.join(self.save_path, 'temp_frames')
+        temp_dir = os.path.join(self.save_path, "temp_frames")
         n_frames = len(os.listdir(temp_dir))
         for epoch in range(n_frames):
             frame_path = os.path.join(temp_dir, f"frame_{epoch}.png")
             frames.append(Image.open(frame_path))
-        # frame_files = sorted(os.listdir(temp_dir))  # Sort by file name to maintain order
-        # print(frame_files)
-        # frames = [Image.open(os.path.join(temp_dir, frame)) for frame in frame_files]
-        
+
         frames[0].save(
             os.path.join(self.save_path, "training_loss.gif"),
             save_all=True,
             append_images=frames[1:],
             duration=500,
-            loop=0
+            loop=0,
         )
         for frame_path in os.listdir(temp_dir):
             os.remove(os.path.join(temp_dir, frame_path))
         os.rmdir(temp_dir)
-
 
 
 if __name__ == "__main__":
@@ -396,5 +387,3 @@ if __name__ == "__main__":
     plt.title("Data Sampling for European Call")
     plt.legend()
     plt.show()
-        
-    
