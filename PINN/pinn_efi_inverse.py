@@ -201,7 +201,7 @@ class PINN_EFI_Inverse(BasePINN):
 
     def optimize_encoder(self, param_vector, steps=1000):
         # optimiser = optim.Adam(self.net.parameters(), lr=3e-4)
-        optimiser = optim.SGD(self.net.parameters(), lr=3e-4)
+        optimiser = optim.SGD(self.net.parameters(), lr=1e-3)
         print('Pretraining EFI...')
         param_vector =  F.pad(param_vector, (0, self.pe_dim), value=0)
         for _ in range(steps):

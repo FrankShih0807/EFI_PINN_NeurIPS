@@ -250,8 +250,8 @@ class Poisson2DCallback(BaseCallback):
         plt.scatter(true_Z, latent_Z, label='Latent Z')
         plt.xlabel('True Z')
         plt.ylabel('Latent Z')
-        plt.xlim(-3*sd, 3*sd)
-        plt.ylim(-3*sd, 3*sd)
+        # plt.xlim(-3*sd, 3*sd)
+        # plt.ylim(-3*sd, 3*sd)
         plt.savefig(os.path.join(self.save_path, 'latent_Z.png'))
         plt.close()
         
@@ -269,8 +269,8 @@ class Poisson2DCallback(BaseCallback):
         plt.scatter(true_Z, latent_Z, label='Latent Z')
         plt.xlabel('True Z')
         plt.ylabel('Latent Z')
-        plt.xlim(-3*sd, 3*sd)
-        plt.ylim(-3*sd, 3*sd)
+        # plt.xlim(-3*sd, 3*sd)
+        # plt.ylim(-3*sd, 3*sd)
         plt.savefig(os.path.join(self.save_path, 'latent_Z_diff.png'))
         plt.close()
         
