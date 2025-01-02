@@ -269,6 +269,7 @@ class EuropeanCallCallback(BaseCallback):
         
     def _on_training_end(self):
         self.save_gif()
+        self.save_3d_plot()
     
     def plot_latent_Z(self):
         true_y = self.dataset[0]['true_y'].flatten()
@@ -323,6 +324,27 @@ class EuropeanCallCallback(BaseCallback):
         frame_path = os.path.join(temp_dir, f"frame_{self.n_evals}.png")
         plt.savefig(frame_path)
         
+        plt.close()
+
+    def save_3d_plot(self):
+        S_grid = self.eval_X_cpu[:,1].reshape(self.grids,self.grids).numpy()
+        t_grid = 1-self.eval_X_cpu[:,0].reshape(self.grids,self.grids).numpy()
+
+        preds_mean = self.eval_buffer.get_mean().reshape(self.grids,self.grids).numpy()
+        
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d') 
+        ax.plot_surface(S_grid,
+                        t_grid, 
+                        preds_mean, 
+                        cmap='plasma')
+
+        ax.set_xlabel('Stock Price')
+        ax.set_ylabel('Time to Maturity')
+        ax.set_zlabel('Option Price')
+        ax.view_init(elev=15, azim=-125)
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.save_path, 'pred_solution.png'))
         plt.close()
 
     def save_gif(self):
