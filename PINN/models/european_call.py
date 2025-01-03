@@ -330,6 +330,7 @@ class EuropeanCallCallback(BaseCallback):
 
         preds_mean = self.eval_buffer.get_mean().reshape(self.grids,self.grids).numpy()
 
+        sns.reset_orig()
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d') 
         ax.plot_surface(S_grid, t_grid, preds_mean, cmap='plasma')
