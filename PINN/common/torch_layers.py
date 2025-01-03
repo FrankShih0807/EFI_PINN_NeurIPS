@@ -184,10 +184,13 @@ class EFI_Net(nn.Module):
         return theta_loss
         
     def gmm_prior_loss(self):
-        loss = 0
-        for p in self.parameters():
-            loss += gmm_loss(p, self.prior_sd, self.sparse_sd, self.sparsity).sum()
-        return loss
+        if self.prior_sd <= 0.0:
+            return 0
+        else:
+            loss = 0
+            for p in self.parameters():
+                loss += gmm_loss(p, self.prior_sd, self.sparse_sd, self.sparsity).sum()
+            return loss
     
         
 class EFI_Net_PE(nn.Module):

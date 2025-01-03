@@ -21,7 +21,9 @@ class PINN_EFI_Inverse(BasePINN):
         annealing_period=0.3,
         grad_norm_max=-1,
         lr=1e-3,
+        sgd_momentum=0.0,
         sgld_lr=1e-3,
+        sgld_alpha=1.0,
         lam=1,
         lambda_pde=1,
         lambda_theta=1,
@@ -31,7 +33,9 @@ class PINN_EFI_Inverse(BasePINN):
     ) -> None:
         # EFI configs
         self.encoder_kwargs = encoder_kwargs
+        self.sgd_momentum = sgd_momentum
         self.sgld_lr = sgld_lr
+        self.sgld_alpha = sgld_alpha
         self.lam = lam
         self.lambda_theta = lambda_theta
         self.pretrain_epochs = pretrain_epochs
@@ -81,22 +85,28 @@ class PINN_EFI_Inverse(BasePINN):
             device=self.device,
             **self.encoder_kwargs
         )
-        self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr(0))
-        self.sampler = SGLD([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0))
-        # self.sampler = SGHMC([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0), alpha=0.1)
+        self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr(0), momentum=self.sgd_momentum(0))
+        # self.optimiser = optim.Adam(self.net.parameters(), lr=3e-4)
+        # self.sampler = SGLD([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0))
+        self.sampler = SGHMC([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0), alpha=self.sgld_alpha(0))
 
     def _get_scheduler(self):
         self.lr = get_schedule(self.lr)
+        self.sgd_momentum = get_schedule(self.sgd_momentum)
         self.sgld_lr = get_schedule(self.sgld_lr)
+        self.sgld_alpha = get_schedule(self.sgld_alpha)
         self.lambda_pde = get_schedule(self.lambda_pde)
         self.lam = get_schedule(self.lam)
         self.lambda_theta = get_schedule(self.lambda_theta)
+        
         # self.sparse_threshold = get_schedule(self.encoder_kwargs.get('sparse_threshold', 0.01))
         # self.encoder_kwargs['sparse_threshold'] = self.sparse_threshold(0)
         
-    def _update_lr(self, optimiser, lr):
+    def _update_optimiser_kwargs(self, optimiser, kwargs):
         for param_group in optimiser.param_groups:
-            param_group['lr'] = lr
+            for key, value in kwargs.items():
+                param_group[key] = value
+            # param_group['lr'] = lr
     
     def solution_loss(self):
         loss = 0
@@ -189,7 +199,7 @@ class PINN_EFI_Inverse(BasePINN):
         print('PINN pretraining done.')
         return base_net
 
-    def optimize_encoder(self, param_vector, steps=5000):
+    def optimize_encoder(self, param_vector, steps=1000):
         # optimiser = optim.Adam(self.net.parameters(), lr=3e-4)
         optimiser = optim.SGD(self.net.parameters(), lr=1e-3)
         print('Pretraining EFI...')
@@ -214,7 +224,7 @@ class PINN_EFI_Inverse(BasePINN):
             batch_size = noise_X.shape[0]
 
             encoder_output = self.net.encoder(torch.cat([noise_X, noise_y, noise_Z], dim=1))
-            # loss = F.mse_loss(encoder_output, param_vector.repeat(batch_size, 1), reduction="sum")
+            # loss = F.mse_loss(encoder_output, param_vector.repeat(batch_size, 1), reduction="mean")
             loss = F.mse_loss(encoder_output, param_vector.repeat(batch_size, 1), reduction="sum") / batch_size
             w_prior_loss = self.net.gmm_prior_loss() /batch_size
             loss += w_prior_loss
@@ -233,9 +243,11 @@ class PINN_EFI_Inverse(BasePINN):
         lambda_theta = self.lambda_theta(annealing_progress)
         # self.net.sparse_threshold = self.sparse_threshold(self.progress * 3 - 1)
         lr = self.lr(annealing_progress)
+        sgd_momentum = self.sgd_momentum(annealing_progress)
         sgld_lr = self.sgld_lr(annealing_progress)
-        self._update_lr(self.optimiser, lr)
-        self._update_lr(self.sampler, sgld_lr)
+        sgld_alpha = self.sgld_alpha(annealing_progress)
+        self._update_optimiser_kwargs(self.optimiser, dict(lr=lr, momentum=sgd_momentum))
+        self._update_optimiser_kwargs(self.sampler, dict(lr=sgld_lr, alpha=sgld_alpha))
         
         
         ## 1. Latent variable sampling (Sample Z)
@@ -248,7 +260,11 @@ class PINN_EFI_Inverse(BasePINN):
 
         self.sampler.zero_grad()
         Z_loss.backward()
-        if self.grad_norm_max > 0 and self.progress < self.annealing_period:
+        # for param in self.sampler.param_groups[0]['params']:
+        #     print('latent_Z_grad', param.abs().max())
+            
+        # if self.grad_norm_max > 0 and self.progress < self.annealing_period:
+        if self.grad_norm_max > 0:
             nn.utils.clip_grad_norm_([ Z for Z in self.latent_Z if Z is not None], self.grad_norm_max)
         self.sampler.step()
 
@@ -260,17 +276,29 @@ class PINN_EFI_Inverse(BasePINN):
         pde_loss = self.pde_loss()
 
         w_loss = lam * (y_loss + lambda_theta * theta_loss + lambda_pde * pde_loss) + w_prior_loss
-
+        # print('theta_loss', theta_loss.item())
+        # print('y_loss', y_loss.item())
+        # print('w_prior_loss', w_prior_loss.item())
+        # print('pde_loss', pde_loss.item())
+        
         self.optimiser.zero_grad()
         w_loss.backward()
-        if self.grad_norm_max > 0 and self.progress < self.annealing_period:
+        
+        grad_norm = torch.sqrt(sum(p.grad.norm(2)**2 for p in self.net.parameters() if p.grad is not None)).item()
+            
+        # if self.grad_norm_max > 0 and self.progress < self.annealing_period:
+        if self.grad_norm_max > 0:
             nn.utils.clip_grad_norm_(self.net.parameters(), self.grad_norm_max)
         self.optimiser.step()
         
         # record training parameters
-        self.logger.record('train_param/lr', self.optimiser.param_groups[0]['lr'])
-        self.logger.record('train_param/sgld_lr', self.sampler.param_groups[0]['lr'])
-        self.logger.record('train_param/lambda_pde', lambda_pde)
+        self.logger.record('train_param/lr', lr, exclude='csv')
+        self.logger.record('train_param/sgd_momentum', sgd_momentum, exclude='csv')
+        self.logger.record('train_param/sgld_lr', sgld_lr, exclude='csv')
+        self.logger.record('train_param/sgld_alpha', sgld_alpha, exclude='csv')
+        self.logger.record('train/grad_norm', grad_norm, exclude='csv')
+        # self.logger.record('train_param/lambda_pde', lambda_pde)
+        
         self.logger.record('train/theta_loss', theta_loss.item())
         
         self.pe_variables = self.net.pe_variables.detach().cpu().numpy()
