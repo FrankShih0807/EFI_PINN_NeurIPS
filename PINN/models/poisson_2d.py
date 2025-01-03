@@ -242,12 +242,14 @@ class Poisson2DCallback(BaseCallback):
         true_Z = sol_y - true_y
         
         latent_Z = self.model.latent_Z[0].flatten().detach().cpu().numpy()
-        
+        min_val = min(true_Z.min(), latent_Z.min())
+        max_val = max(true_Z.max(), latent_Z.max())
         np.save(os.path.join(self.save_path, 'true_Z.npy'), true_Z)
         np.save(os.path.join(self.save_path, 'latent_Z.npy'), latent_Z)
         
         plt.subplots(figsize=(6, 6))
         plt.scatter(true_Z, latent_Z, label='Latent Z')
+        plt.plot([min_val, max_val], [min_val, max_val], 'r--', label='x = y')
         plt.xlabel('True Z')
         plt.ylabel('Latent Z')
         # plt.xlim(-3*sd, 3*sd)
@@ -261,12 +263,15 @@ class Poisson2DCallback(BaseCallback):
         true_Z = sol_y - true_y
         
         latent_Z = self.model.latent_Z[1].flatten().detach().cpu().numpy()
+        min_val = min(true_Z.min(), latent_Z.min())
+        max_val = max(true_Z.max(), latent_Z.max())
         
         np.save(os.path.join(self.save_path, 'true_Z_diff.npy'), true_Z)
         np.save(os.path.join(self.save_path, 'latent_Z_diff.npy'), latent_Z)
         
         plt.subplots(figsize=(6, 6))
         plt.scatter(true_Z, latent_Z, label='Latent Z')
+        plt.plot([min_val, max_val], [min_val, max_val], 'r--', label='x = y')
         plt.xlabel('True Z')
         plt.ylabel('Latent Z')
         # plt.xlim(-3*sd, 3*sd)
