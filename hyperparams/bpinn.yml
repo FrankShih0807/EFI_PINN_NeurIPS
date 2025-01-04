@@ -83,8 +83,8 @@ european_call:
     # grad_norm_max: 100.0
     # step_size: 'log_0.0001_0.00001'
     step_size: 1.0e-5
-    L: 10
+    L: 6
     sigma_diff: 1.0
     # sigma_diff: 'log_0.5_0.05'
     sigma_sol: 1.0
-    pretrain_epochs: 20000
+    pretrain_epochs: 10000
