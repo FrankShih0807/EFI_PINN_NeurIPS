@@ -52,7 +52,7 @@ poisson-nonlinear:
 
 poisson-2d:
   n_samples: 100
-  epochs: 10000
+  epochs: 30000
   eval_freq: -1
   burn: 0.4
   pinn:
