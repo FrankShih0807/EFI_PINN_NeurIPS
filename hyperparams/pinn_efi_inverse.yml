@@ -155,11 +155,11 @@ poisson-inverse:
     - 100
     - 100
     activation_fn: tanh
-    annealing_period: 0.3
+    annealing_period: 0.2
     grad_norm_max: -1.0
-    lr: 'poly_0.5e-5_10.0_0.55'
+    lr: 'poly_0.25e-5_10.0_0.55'
     sgd_momentum: 'linear_0.9_0.0'
-    sgld_lr: 'poly_0.5e-5_10.0_0.95'
+    sgld_lr: 'poly_0.25e-5_10.0_0.95'
     sgld_alpha: 'linear_1.0_1.0'
     lam: 'linear_50.0_500.0'
     lambda_pde: 1.0
@@ -169,9 +169,9 @@ poisson-inverse:
       encoder_hidden_layers:
       - 128
       - 128
-      - 16
+      - 8
       encoder_activation: leaky_relu
-      prior_sd: 5.0
+      prior_sd: 10.0
       sparse_sd: 0.001
       sparsity: 1.0
 
