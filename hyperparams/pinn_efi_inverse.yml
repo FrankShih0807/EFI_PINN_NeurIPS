@@ -182,18 +182,17 @@ poisson-2d:
   burn: 0.5
   pinn:
     hidden_layers:
-    - 64
-    - 64
-    - 64
+    - 128
+    - 128
     activation_fn: tanh
     annealing_period: 0.3
     grad_norm_max: -1.0
-    lr: 'poly_0.5e-5_50.0_0.55'
+    lr: 'poly_0.1e-5_20.0_0.55'
     sgd_momentum: 'linear_0.9_0.0'
-    sgld_lr: 'poly_0.5e-5_50.0_0.95'
+    sgld_lr: 'poly_0.1e-5_20.0_0.95'
     sgld_alpha: 'linear_1.0_1.0'
-    lam: 'linear_50.0_1500.0'
-    lambda_pde: 0.1
+    lam: 'linear_50.0_500.0'
+    lambda_pde: 'linear_0.01_0.5'
     lambda_theta: 1.0
     pretrain_epochs: 0
     encoder_kwargs:
