@@ -14,7 +14,7 @@ def get_schedule(schedule):
             start_value, end_value = map(float, schedule.split('_')[1:])
             return log_schedule(start_value, end_value)
         else:
-            raise ValueError(f"Unknown schedule type: {schedule_type}")
+            return constant_schedule(float(schedule))
         
     elif isinstance(schedule, float):
         return constant_schedule(schedule)

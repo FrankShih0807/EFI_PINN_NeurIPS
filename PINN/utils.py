@@ -138,7 +138,18 @@ def update_hyperparams(original_params, new_params):
                 print('update {}: {}'.format(key, value))
             else:
                 raise KeyError(f"Hyperparameter '{key}' not found.")
-            
+
+default_types = {
+    'epochs': int,
+    'eval_freq': int,
+    'burn': float,
+    'activation': str,
+    'annealing_period': float,
+    'grad_norm_max': float,
+    'pretrain_epochs': int,
+    'encoder_activation': str,
+    'prior_sd': float,
+}
         
 class StoreDict(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
@@ -159,6 +170,8 @@ class StoreDict(argparse.Action):
                         result[key].append(int(v))
             # elif 'activation' in key:
             #     result[key] = value
+            elif key in default_types:
+                result[key] = default_types[key](value)
             else:
                 # Handle single values
                 result[key] = value
