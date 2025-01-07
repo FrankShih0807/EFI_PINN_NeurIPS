@@ -66,19 +66,18 @@ nonlinear:
       sparse_threshold: 0.01
 
 poisson:
+  n_samples: 200
   epochs: 200_000
-  eval_freq: -1
+  eval_freq: 2000
   burn: 0.5
   pinn:
     hidden_layers:
     - 30
     - 30
     activation_fn: tanh
-    annealing_period: 0.2
+    annealing_period: 0.3
     lr: 'poly_5e-6_10.0_0.7'
-    sgd_momentum: 'linear_0.9_0.0'
     sgld_lr: 'poly_5e-6_10.0_0.9'
-    sgld_alpha: 'linear_1.0_1.0'
     lam: 'linear_100.0_1000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
@@ -89,7 +88,7 @@ poisson:
       - 16
       - 2
       encoder_activation: leaky_relu
-      prior_sd: 10.0
+      prior_sd: 1.0
       sparse_sd: 0.001
       sparsity: 1.0
 
@@ -188,9 +187,9 @@ poisson-2d:
     activation_fn: tanh
     annealing_period: 0.2
     grad_norm_max: -1.0
-    lr: 0.25e-5
+    lr: 'poly_0.5e-5_10.0_0.55'
     sgd_momentum: 'linear_0.9_0.0'
-    sgld_lr: 0.25e-5
+    sgld_lr: 'poly_0.5e-5_10.0_0.95'
     sgld_alpha: 'linear_1.0_1.0'
     lam: 'linear_10.0_500.0'
     lambda_pde: 'linear_0.01_0.1'
