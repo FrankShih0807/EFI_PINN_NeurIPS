@@ -187,9 +187,9 @@ poisson-2d:
     activation_fn: tanh
     annealing_period: 0.2
     grad_norm_max: -1.0
-    lr: 'poly_0.5e-5_10.0_0.55'
+    lr: 0.25e-5
     sgd_momentum: 'linear_0.9_0.0'
-    sgld_lr: 'poly_0.5e-5_10.0_0.95'
+    sgld_lr: 0.25e-5
     sgld_alpha: 'linear_1.0_1.0'
     lam: 'linear_10.0_500.0'
     lambda_pde: 'linear_0.01_0.1'
@@ -197,8 +197,8 @@ poisson-2d:
     pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 128
-      - 128
+      - 32
+      - 32
       - 5
       encoder_activation: leaky_relu
       prior_sd: 10.0
