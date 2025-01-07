@@ -24,7 +24,7 @@ class PoissonNonlinear(PhysicsModel):
                  n_sol_replicates=10,
                  n_diff_sensors=10,
                  n_diff_replicates=10,
-                 k = 0.7,
+                 k = 0.0,
                  is_inverse=False,
                  ):
         super().__init__(t_start=t_start, 

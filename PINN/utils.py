@@ -33,7 +33,7 @@ MODELS: Dict[str, Type[PhysicsModel]] = {
     "european_call": EuropeanCall,
     "nonlinear": Nonlinear,
     "european_call_discovery": EuropeanCallDiscovery,
-    "poisson": Poisson,
+    "poisson": PoissonNonlinear,
     "poisson-v2": Poisson_v2,
     "poisson-nonlinear": PoissonNonlinear,
     "poisson-inverse": PoissonNonlinear,
@@ -157,11 +157,11 @@ class StoreDict(argparse.Action):
                         result[key].append(float(v))
                     else:
                         result[key].append(int(v))
-            elif 'activation' in key:
-                result[key] = value
+            # elif 'activation' in key:
+            #     result[key] = value
             else:
                 # Handle single values
-                result[key] = eval(value)
+                result[key] = value
         setattr(namespace, self.dest, result)
      
 def find_key_in_dict(d, key_to_find, new_value):

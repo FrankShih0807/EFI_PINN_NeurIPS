@@ -38,6 +38,8 @@ poisson:
   n_sol_replicates: 10
   n_diff_sensors: 200
   n_diff_replicates: 1
+  # k: 0.0
+  # is_inverse: False
 
 poisson-v2:
   t_start: -0.7
@@ -48,7 +50,8 @@ poisson-v2:
   n_sol_replicates: 10
   n_diff_sensors: 40
   n_diff_replicates: 10
-
+  # k: 0.0
+  # is_inverse: False
 
 poisson-nonlinear:
   t_start: -0.7
@@ -60,6 +63,7 @@ poisson-nonlinear:
   n_diff_sensors: 40
   n_diff_replicates: 10
   k: 0.7
+  is_inverse: False
 
 
 poisson-inverse:
