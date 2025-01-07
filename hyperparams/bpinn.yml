@@ -14,7 +14,7 @@ poisson:
     # sigma_diff: 0.05
     sigma_diff: 'log_0.05_0.005'
     sigma_sol: 0.05
-    pretrain_epochs: 1000
+    pretrain_epochs: 0
 
 poisson-v2:
   n_samples: 100
@@ -50,6 +50,25 @@ poisson-nonlinear:
     sigma_diff: 0.05
     sigma_sol: 0.05
 
+poisson-2d:
+  n_samples: 100
+  epochs: 30000
+  eval_freq: -1
+  burn: 0.4
+  pinn:
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: tanh
+    # step_size: 0.001 ### set to be 0.02 * min(sigma_diff, sigma_sol)
+    # step_size: 'log_0.001_0.0001'
+    step_size: 0.0001
+    L: 6
+    # sigma_diff: 'log_0.05_0.005'
+    sigma_diff: 0.05
+    sigma_sol: 0.05
+    pretrain_epochs: 2000
+
 european_call:
   n_samples: 200
   epochs: 20000
@@ -64,8 +83,8 @@ european_call:
     # grad_norm_max: 100.0
     # step_size: 'log_0.0001_0.00001'
     step_size: 1.0e-5
-    L: 10
+    L: 6
     sigma_diff: 1.0
     # sigma_diff: 'log_0.5_0.05'
     sigma_sol: 1.0
-    pretrain_epochs: 20000
+    pretrain_epochs: 10000
