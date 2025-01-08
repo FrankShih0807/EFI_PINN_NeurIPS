@@ -242,7 +242,7 @@ class PINN_EFI_Inverse(BasePINN):
         lam = self.lam(annealing_progress)
         lambda_theta = self.lambda_theta(annealing_progress)
         # self.net.sparse_threshold = self.sparse_threshold(self.progress * 3 - 1)
-        lr = self.lr(annealing_progress)
+        lr = self.lr(self.progress)
         sgd_momentum = self.sgd_momentum(annealing_progress)
         sgld_lr = self.sgld_lr(annealing_progress)
         sgld_alpha = self.sgld_alpha(annealing_progress)
