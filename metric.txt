@@ -3,6 +3,9 @@ Mean
 model             algo                                                                                             
 poisson           efi_size30                0.000198       0.941600  0.056503       NaN             NaN         NaN
                   efi_size50                0.000180       0.953300  0.056812       NaN             NaN         NaN
+                  pinn_efi_size50_neck2     0.000173       0.929545  0.053922       NaN             NaN         NaN
+                  pinn_efi_size50_neck4     0.000175       0.927528  0.051554       NaN             NaN         NaN
+                  pinn_efi_size50_neck8     0.000180       0.923810  0.051159       NaN             NaN         NaN
                   pinn_size30               0.000200       0.034200  0.001414       NaN             NaN         NaN
                   pinn_size30_dr005         0.007009       0.866100  0.281794       NaN             NaN         NaN
                   pinn_size30_dr01          0.020725       0.914400  0.523305       NaN             NaN         NaN
@@ -38,6 +41,9 @@ Standard error
 model             algo                                                                                              
 poisson           efi_size30                0.000020       0.014993  0.000798       NaN              NaN         NaN
                   efi_size50                0.000024       0.014965  0.000815       NaN              NaN         NaN
+                  pinn_efi_size50_neck2     0.000020       0.019216  0.000566       NaN              NaN         NaN
+                  pinn_efi_size50_neck4     0.000020       0.019551  0.000536       NaN              NaN         NaN
+                  pinn_efi_size50_neck8     0.000017       0.017567  0.000545       NaN              NaN         NaN
                   pinn_size30               0.000021       0.005888  0.000017       NaN              NaN         NaN
                   pinn_size30_dr005         0.000876       0.021485  0.005137       NaN              NaN         NaN
                   pinn_size30_dr01          0.002114       0.016363  0.014961       NaN              NaN         NaN
