@@ -3,9 +3,18 @@ Mean
 model             algo                                                                                             
 poisson           efi_size30                0.000198       0.941600  0.056503       NaN             NaN         NaN
                   efi_size50                0.000180       0.953300  0.056812       NaN             NaN         NaN
-                  pinn_efi_size50_neck2     0.000173       0.929545  0.053922       NaN             NaN         NaN
-                  pinn_efi_size50_neck4     0.000175       0.927528  0.051554       NaN             NaN         NaN
-                  pinn_efi_size50_neck8     0.000180       0.923810  0.051159       NaN             NaN         NaN
+                  pinn_efi_size50_neck2     0.000202       0.930500  0.054072       NaN             NaN         NaN
+                  pinn_efi_size50_neck2-2   0.000187       0.940000  0.054219       NaN             NaN         NaN
+                  pinn_efi_size50_neck2-3   0.000174       0.949200  0.053073       NaN             NaN         NaN
+                  pinn_efi_size50_neck2-4   0.000204       0.929200  0.053386       NaN             NaN         NaN
+                  pinn_efi_size50_neck4     0.000215       0.917500  0.051601       NaN             NaN         NaN
+                  pinn_efi_size50_neck4-2   0.000185       0.939000  0.051615       NaN             NaN         NaN
+                  pinn_efi_size50_neck4-3   0.000201       0.921000  0.052688       NaN             NaN         NaN
+                  pinn_efi_size50_neck4-4   0.000184       0.942300  0.052311       NaN             NaN         NaN
+                  pinn_efi_size50_neck8     0.000200       0.925400  0.051108       NaN             NaN         NaN
+                  pinn_efi_size50_neck8-2   0.000227       0.887600  0.050723       NaN             NaN         NaN
+                  pinn_efi_size50_neck8-3   0.000168       0.936100  0.051741       NaN             NaN         NaN
+                  pinn_efi_size50_neck8-4   0.000173       0.941600  0.052875       NaN             NaN         NaN
                   pinn_size30               0.000200       0.034200  0.001414       NaN             NaN         NaN
                   pinn_size30_dr005         0.007009       0.866100  0.281794       NaN             NaN         NaN
                   pinn_size30_dr01          0.020725       0.914400  0.523305       NaN             NaN         NaN
@@ -41,9 +50,18 @@ Standard error
 model             algo                                                                                              
 poisson           efi_size30                0.000020       0.014993  0.000798       NaN              NaN         NaN
                   efi_size50                0.000024       0.014965  0.000815       NaN              NaN         NaN
-                  pinn_efi_size50_neck2     0.000020       0.019216  0.000566       NaN              NaN         NaN
-                  pinn_efi_size50_neck4     0.000020       0.019551  0.000536       NaN              NaN         NaN
-                  pinn_efi_size50_neck8     0.000017       0.017567  0.000545       NaN              NaN         NaN
+                  pinn_efi_size50_neck2     0.000023       0.018962  0.000580       NaN              NaN         NaN
+                  pinn_efi_size50_neck2-2   0.000022       0.017146  0.000535       NaN              NaN         NaN
+                  pinn_efi_size50_neck2-3   0.000017       0.013128  0.000543       NaN              NaN         NaN
+                  pinn_efi_size50_neck2-4   0.000020       0.018394  0.000477       NaN              NaN         NaN
+                  pinn_efi_size50_neck4     0.000022       0.018938  0.000531       NaN              NaN         NaN
+                  pinn_efi_size50_neck4-2   0.000022       0.016212  0.000519       NaN              NaN         NaN
+                  pinn_efi_size50_neck4-3   0.000019       0.019073  0.000423       NaN              NaN         NaN
+                  pinn_efi_size50_neck4-4   0.000022       0.016611  0.000464       NaN              NaN         NaN
+                  pinn_efi_size50_neck8     0.000022       0.017985  0.000460       NaN              NaN         NaN
+                  pinn_efi_size50_neck8-2   0.000027       0.024606  0.000433       NaN              NaN         NaN
+                  pinn_efi_size50_neck8-3   0.000021       0.017584  0.000437       NaN              NaN         NaN
+                  pinn_efi_size50_neck8-4   0.000018       0.015025  0.000472       NaN              NaN         NaN
                   pinn_size30               0.000021       0.005888  0.000017       NaN              NaN         NaN
                   pinn_size30_dr005         0.000876       0.021485  0.005137       NaN              NaN         NaN
                   pinn_size30_dr01          0.002114       0.016363  0.014961       NaN              NaN         NaN
