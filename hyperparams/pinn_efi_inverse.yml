@@ -24,25 +24,24 @@ european_call:
     hidden_layers:
     - 50
     - 50
-    - 50
     activation_fn: softplus(beta=5)
     annealing_period: 0.3
-    grad_norm_max: 1.0e4
-    lr: 'poly_1e-5_10.0_0.7'
+    grad_norm_max: 1e-5
+    lr: 'poly_0.1e-5_10.0_0.7'
     sgd_momentum: 'linear_0.9_0.0'
-    sgld_lr: 'poly_1e-5_10.0_0.9'
+    sgld_lr: 'poly_0.1e-5_10.0_0.9'
     sgld_alpha: 'linear_1.0_1.0'
-    lam: 1.0
+    lam: 'linear_0.1_1.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
     pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 128
-      - 128
-      - 16
+      - 64
+      - 64
+      - 8
       encoder_activation: leaky_relu
-      prior_sd: 1.0
+      prior_sd: 10.0
       sparse_sd: 0.001
       sparsity: 1.0
 
@@ -102,22 +101,22 @@ poisson-v2:
     - 30
     - 30
     activation_fn: tanh
-    annealing_period: 0.3
-    lr: 'poly_0.5e-5_10.0_0.7'
+    annealing_period: 0.2
+    lr: 'poly_0.5e-5_10.0_0.55'
     sgd_momentum: 0.0
-    sgld_lr: 'poly_0.5e-5_10.0_0.9'
+    sgld_lr: 'poly_0.5e-5_10.0_0.95'
     sgld_alpha: 1.0
     lam: 'linear_100.0_1000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
-    pretrain_epochs: 2000
+    pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
       - 16
       - 16
-      - 16
+      - 8
       encoder_activation: leaky_relu
-      prior_sd: 1.0
+      prior_sd: 10.0
       sparse_sd: 0.001
       sparsity: 1.0
 
@@ -180,8 +179,8 @@ poisson-inverse:
 
 
 poisson-2d:
-  epochs: 100_000
-  eval_freq: 1000
+  epochs: 200_000
+  eval_freq: 5000
   burn: 0.5
   pinn:
     hidden_layers:
@@ -195,14 +194,14 @@ poisson-2d:
     sgld_lr: 'poly_0.5e-5_10.0_0.95'
     sgld_alpha: 'linear_1.0_1.0'
     lam: 'linear_10.0_500.0'
-    lambda_pde: 'linear_0.01_0.1'
+    lambda_pde: 0.15
     lambda_theta: 1.0
     pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 32
-      - 32
-      - 5
+      - 128
+      - 128
+      - 16
       encoder_activation: leaky_relu
       prior_sd: 10.0
       sparse_sd: 0.001

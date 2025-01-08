@@ -34,7 +34,7 @@ MODELS: Dict[str, Type[PhysicsModel]] = {
     "nonlinear": Nonlinear,
     "european_call_discovery": EuropeanCallDiscovery,
     "poisson": PoissonNonlinear,
-    "poisson-v2": Poisson_v2,
+    "poisson-v2": PoissonNonlinear,
     "poisson-nonlinear": PoissonNonlinear,
     "poisson-inverse": PoissonNonlinear,
     "poisson-2d": Poisson2D
