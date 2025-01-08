@@ -31,7 +31,7 @@ class PoissonNonlinear(PhysicsModel):
                          t_end=t_end, 
                          sol_sd=sol_sd, 
                          diff_sd=diff_sd, 
-                         n_sol_sensor=n_sol_sensors,
+                         n_sol_sensors=n_sol_sensors,
                          n_sol_replicates=n_sol_replicates,
                          n_diff_sensors=n_diff_sensors,
                          n_diff_replicates=n_diff_replicates,
@@ -61,7 +61,7 @@ class PoissonNonlinear(PhysicsModel):
     
     def get_sol_data(self):
         # X = torch.tensor([self.t_start, self.t_end]).repeat_interleave(self.n_sol_samples).view(-1, 1)
-        X = torch.linspace(self.t_start, self.t_end, steps=self.n_sol_sensor).repeat_interleave(self.n_sol_replicates).view(-1, 1)
+        X = torch.linspace(self.t_start, self.t_end, steps=self.n_sol_sensors).repeat_interleave(self.n_sol_replicates).view(-1, 1)
         true_y = self.physics_law(X)
         y = true_y + self.sol_sd * torch.randn_like(true_y)
         return X, y, true_y

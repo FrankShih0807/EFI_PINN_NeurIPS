@@ -91,7 +91,7 @@ def create_parser():
         "--hyperparams",
         type=str,
         nargs="+",
-        action=StoreDict,
+        action=StoreDictHyperparams,
         help="Overwrite hyperparameter (e.g. learning_rate:0.01 train_freq:10)",
     )
     
@@ -99,7 +99,7 @@ def create_parser():
         "--model_settings",
         type=str,
         nargs="+",
-        action=StoreDict,
+        action=StoreDictModelSettings,
         help="Overwrite physics model setting",
     )
     
@@ -151,7 +151,7 @@ default_types = {
     'prior_sd': float,
 }
         
-class StoreDict(argparse.Action):
+class StoreDictHyperparams(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         result = {}
         # print(values)
@@ -175,6 +175,24 @@ class StoreDict(argparse.Action):
             else:
                 # Handle single values
                 result[key] = value
+        setattr(namespace, self.dest, result)
+        
+class StoreDictModelSettings(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        result = {}
+        # print(values)
+        for item in values:
+            key, value = item.split(":")
+            # print(key, value)   
+            # Check if the value contains commas, indicating a list
+            if value.isdigit():
+                value = int(value)
+            else:
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass 
+            result[key] = value
         setattr(namespace, self.dest, result)
      
 def find_key_in_dict(d, key_to_find, new_value):
