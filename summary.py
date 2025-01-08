@@ -70,6 +70,11 @@ def collect_progress_data(output_dir):
                         df['model'] = model
                         df['algo'] = algo
                         df['exp'] = exp
+                        df['done'] = (df['train/progress'] == 1.0)
+                        # if df['train/progress'] >= (1-1e-6):
+                        #     df['done'] = 1
+                        # else:
+                        #     df['done'] = 0
                         # Append to the list of DataFrames
                         data_frames.append(df)
                     except Exception as e:
@@ -319,10 +324,12 @@ output_dir = "output"
 clear_dir('figures/latent_Z')
 clear_dir('figures/latent_Z_diff')
 progress_df = collect_progress_data(output_dir)
+# print(progress_df[progress_df['done']==False])
+# raise
 
 
 # print(progress_df[progress_df['train/progress']<1.0])
-df = progress_df[progress_df['train/progress']==1.0]
+df = progress_df[progress_df['done']==True]
 # df = progress_df
 
 # raise
@@ -365,6 +372,11 @@ rows_with_nan = df[df.isna().any(axis=1)]
 # print(df.groupby(['model', 'algo'])['eval/ci_range'].mean())
 
 # print(df[df['eval/coverage_rate']<0.2][['model', 'algo', 'exp']])
-plot_latent_Z(output_dir)
-plot_latent_Z_diff(output_dir)
-
+try:
+    plot_latent_Z(output_dir)
+except:
+    pass
+try:
+    plot_latent_Z_diff(output_dir)
+except:
+    pass
