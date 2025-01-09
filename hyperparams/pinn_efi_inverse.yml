@@ -66,12 +66,12 @@ nonlinear:
 
 poisson:
   epochs: 200_000
-  eval_freq: 2000
+  eval_freq: -1
   burn: 0.5
   pinn:
     hidden_layers:
-    - 30
-    - 30
+    - 50
+    - 50
     activation_fn: tanh
     annealing_period: 0.2
     lr: 'poly_0.5e-5_10.0_0.55'
