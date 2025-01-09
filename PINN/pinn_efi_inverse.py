@@ -244,7 +244,7 @@ class PINN_EFI_Inverse(BasePINN):
         # self.net.sparse_threshold = self.sparse_threshold(self.progress * 3 - 1)
         lr = self.lr(self.progress)
         sgd_momentum = self.sgd_momentum(annealing_progress)
-        sgld_lr = self.sgld_lr(annealing_progress)
+        sgld_lr = self.sgld_lr(self.progress)
         sgld_alpha = self.sgld_alpha(annealing_progress)
         self._update_optimiser_kwargs(self.optimiser, dict(lr=lr, momentum=sgd_momentum))
         self._update_optimiser_kwargs(self.sampler, dict(lr=sgld_lr, alpha=sgld_alpha))

@@ -89,7 +89,7 @@ poisson-2d:
   n_boundary_replicates: 10
   n_sol_sensors: 5
   n_sol_replicates: 10
-  n_diff_sensors: 40
+  n_diff_sensors: 10
   n_diff_replicates: 1
   k :  0.0
   is_inverse: False
