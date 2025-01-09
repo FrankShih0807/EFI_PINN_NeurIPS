@@ -150,6 +150,7 @@ default_types = {
     'pretrain_epochs': int,
     'encoder_activation': str,
     'prior_sd': float,
+    'dropout_rate': float,
 }
         
 class StoreDictHyperparams(argparse.Action):
