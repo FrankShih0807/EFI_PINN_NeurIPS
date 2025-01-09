@@ -89,12 +89,14 @@ class BasePINN(object):
             toc = time.time()
             
             self.callback.on_training()
+            toc2 = time.time()
             
             self.logger.record('train/progress', self.progress)
             self.logger.record('train/epoch', ep+1)
             self.logger.record_mean('train/sol_loss', sol_loss)
             self.logger.record_mean('train/pde_loss', pde_loss)
             self.logger.record_mean('train/time', toc-tic)
+            self.logger.record_mean('train/callback_time', toc2-toc)
             
             ## 3. Loss calculation
             if (ep+1) % eval_freq == 0:

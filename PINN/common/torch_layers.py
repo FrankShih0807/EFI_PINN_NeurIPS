@@ -76,7 +76,32 @@ class DropoutDNN(nn.Module):
                 x = self.activation_fn(x)
         x = self.layers[-1](x)  # Output layer without activation
         return x
-    
+
+class BottleneckHypernet(nn.Module):
+    def __init__(self, input_dim, hidden_layers, output_dim, activation_fn='relu'):
+        super().__init__()
+        # Define the initial layers
+        self.input_dim = input_dim
+        self.hidden_layers = hidden_layers
+        self.output_dim = output_dim
+        self.activation_fn = get_activation_fn(activation_fn)
+        
+        self.layers = nn.ModuleList()
+        self.layers.append(nn.Linear(input_dim, self.hidden_layers[0]))
+        # Add hidden layers
+        for i in range(1, len(self.hidden_layers)):
+            self.layers.append(nn.Linear(self.hidden_layers[i-1], self.hidden_layers[i]))
+        # Add the output layer
+
+        self.output_layer = nn.Linear(self.hidden_layers[-1], self.output_dim)
+
+    def forward(self, x):
+        for layer in self.layers[:-1]:
+            x = layer(x)
+            x = self.activation_fn(x)
+        x = self.layers[-1](x)
+        x = self.output_layer(x)
+        return x
 
 
 class EFI_Net(nn.Module):
@@ -254,7 +279,8 @@ class EFI_Net_PE(nn.Module):
                 self.nn_shape['bias'].append(value.shape)
                 self.nn_numel['bias'].append(value.numel())
         
-        self.encoder = BaseDNN(input_dim=self.encoder_input_dim, hidden_layers=encoder_hidden_layers, output_dim=self.n_parameters+self.pe_dim , activation_fn=self.encoder_activation).to(self.device)
+        # self.encoder = BaseDNN(input_dim=self.encoder_input_dim, hidden_layers=encoder_hidden_layers, output_dim=self.n_parameters+self.pe_dim , activation_fn=self.encoder_activation).to(self.device)
+        self.encoder = BottleneckHypernet(input_dim=self.encoder_input_dim, hidden_layers=encoder_hidden_layers, output_dim=self.n_parameters+self.pe_dim , activation_fn=self.encoder_activation).to(self.device)
 
     def split_encoder_output(self, theta):
         '''Split encoder output into network layer shapes

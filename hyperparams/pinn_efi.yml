@@ -73,8 +73,8 @@ poisson:
   burn: 0.5
   pinn:
     hidden_layers:
-    - 30
-    - 30
+    - 50
+    - 50
     activation_fn: tanh
     annealing_period: 0.3
     lr: 'poly_5e-6_10.0_0.7'
@@ -87,7 +87,7 @@ poisson:
       encoder_hidden_layers:
       - 16
       - 16
-      - 16
+      - 2
       encoder_activation: leaky_relu
       prior_sd: 1.0
       sparse_sd: 0.001

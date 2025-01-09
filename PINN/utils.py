@@ -34,8 +34,8 @@ MODELS: Dict[str, Type[PhysicsModel]] = {
     "european_call": EuropeanCall,
     "nonlinear": Nonlinear,
     "european_call_discovery": EuropeanCallDiscovery,
-    "poisson": Poisson,
-    "poisson-v2": Poisson_v2,
+    "poisson": PoissonNonlinear,
+    "poisson-v2": PoissonNonlinear,
     "poisson-nonlinear": PoissonNonlinear,
     "poisson-inverse": PoissonNonlinear,
     "poisson-2d": Poisson2D
@@ -92,7 +92,7 @@ def create_parser():
         "--hyperparams",
         type=str,
         nargs="+",
-        action=StoreDict,
+        action=StoreDictHyperparams,
         help="Overwrite hyperparameter (e.g. learning_rate:0.01 train_freq:10)",
     )
     
@@ -100,7 +100,7 @@ def create_parser():
         "--model_settings",
         type=str,
         nargs="+",
-        action=StoreDict,
+        action=StoreDictModelSettings,
         help="Overwrite physics model setting",
     )
     
@@ -139,9 +139,20 @@ def update_hyperparams(original_params, new_params):
                 print('update {}: {}'.format(key, value))
             else:
                 raise KeyError(f"Hyperparameter '{key}' not found.")
-            
+
+default_types = {
+    'epochs': int,
+    'eval_freq': int,
+    'burn': float,
+    'activation': str,
+    'annealing_period': float,
+    'grad_norm_max': float,
+    'pretrain_epochs': int,
+    'encoder_activation': str,
+    'prior_sd': float,
+}
         
-class StoreDict(argparse.Action):
+class StoreDictHyperparams(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         result = {}
         # print(values)
@@ -158,11 +169,31 @@ class StoreDict(argparse.Action):
                         result[key].append(float(v))
                     else:
                         result[key].append(int(v))
-            elif 'activation' in key:
-                result[key] = value
+            # elif 'activation' in key:
+            #     result[key] = value
+            elif key in default_types:
+                result[key] = default_types[key](value)
             else:
                 # Handle single values
-                result[key] = eval(value)
+                result[key] = value
+        setattr(namespace, self.dest, result)
+        
+class StoreDictModelSettings(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        result = {}
+        # print(values)
+        for item in values:
+            key, value = item.split(":")
+            # print(key, value)   
+            # Check if the value contains commas, indicating a list
+            if value.isdigit():
+                value = int(value)
+            else:
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass 
+            result[key] = value
         setattr(namespace, self.dest, result)
      
 def find_key_in_dict(d, key_to_find, new_value):
