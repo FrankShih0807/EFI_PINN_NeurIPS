@@ -169,8 +169,8 @@ poisson-inverse:
     pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 128
-      - 128
+      - 64
+      - 64
       - 12
       encoder_activation: leaky_relu
       prior_sd: 10.0
