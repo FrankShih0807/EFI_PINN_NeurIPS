@@ -145,8 +145,8 @@ for info in abnormal_indices_info:
 # print(filtered_df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].std()/10)
 
 pd.set_option('display.max_rows', 100)
-print(filtered_df.groupby(['model', 'algo'])[['mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_ci_range', 'k_coverage_rate']].mean())
-print(filtered_df.groupby(['model', 'algo'])[['mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_ci_range', 'k_coverage_rate']].std()/10)
+print(filtered_df.groupby(['model', 'algo'])[['mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_coverage_rate', 'k_ci_range']].mean())
+print(filtered_df.groupby(['model', 'algo'])[['mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_coverage_rate', 'k_ci_range']].std()/10)
 
 # print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].mean())
 # print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].std()/10)
