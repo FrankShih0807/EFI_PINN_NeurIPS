@@ -139,7 +139,7 @@ poisson-nonlinear:
     lam: 'linear_50.0_500.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
-    pretrain_epochs: 2000
+    pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
       - 64
