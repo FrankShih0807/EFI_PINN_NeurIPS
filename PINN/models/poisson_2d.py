@@ -66,8 +66,8 @@ class Poisson2D(PhysicsModel):
         return dataset
     
     def get_eval_data(self):
-        X1 = torch.linspace(self.t_start, self.t_end, steps=100)
-        X2 = torch.linspace(self.t_start, self.t_end, steps=100)
+        X1 = torch.linspace(self.t_start, self.t_end, steps=25)
+        X2 = torch.linspace(self.t_start, self.t_end, steps=25)
         X1, X2 = torch.meshgrid(X1, X2)
         eval_X = torch.cat([X1.reshape(-1, 1), X2.reshape(-1, 1)], dim=1)
         eval_y = self.physics_law(eval_X)
@@ -150,7 +150,7 @@ class Poisson2D(PhysicsModel):
         return pde
 
     def plot_true_solution(self, save_path=None):
-        grids = 100
+        grids = 25
         X1 = torch.linspace(self.t_start, self.t_end, steps=grids)
         X2 = torch.linspace(self.t_start, self.t_end, steps=grids)
         X1, X2 = torch.meshgrid(X1, X2, indexing='ij')
@@ -284,7 +284,7 @@ class Poisson2DCallback(BaseCallback):
         
         X = self.eval_X_cpu.numpy()
         # y = self.eval_y_cpu.numpy()
-        grids = 100
+        grids = 25
         
         preds_mean = self.eval_buffer.get_mean()
         # preds_upper, preds_lower = self.eval_buffer.get_ci()
