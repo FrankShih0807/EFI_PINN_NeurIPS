@@ -66,17 +66,17 @@ nonlinear:
 
 poisson:
   epochs: 200_000
-  eval_freq: -1
-  burn: 0.5
+  eval_freq: 1000
+  burn: 0.3
   pinn:
     hidden_layers:
     - 50
     - 50
     activation_fn: tanh
     annealing_period: 0.2
-    lr: 'poly_0.5e-5_10.0_0.55'
-    sgd_momentum: 0.0
-    sgld_lr: 'poly_0.5e-5_10.0_0.95'
+    lr: 'poly_1e-4_1.0_0.55'
+    sgd_momentum: 'linear_0.9_0.0'
+    sgld_lr: 'poly_1e-4_1.0_0.55'
     sgld_alpha: 1.0
     lam: 'linear_50.0_500.0'
     lambda_pde: 1.0
