@@ -41,8 +41,8 @@ MODELS: Dict[str, Type[PhysicsModel]] = {
 }
 
 CALLBACKS: Dict[str, Callable] = {
-    "poisson": PoissonCallback,
-    "poisson-v2": Poisson_v2Callback,
+    "poisson": PoissonNonlinearCallback,
+    "poisson-v2": PoissonNonlinearCallback,
     "poisson-nonlinear": PoissonNonlinearCallback,
     "european_call": EuropeanCallCallback,
     "poisson-inverse": PoissonNonlinearCallback,
