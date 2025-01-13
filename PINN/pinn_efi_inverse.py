@@ -243,11 +243,11 @@ class PINN_EFI_Inverse(BasePINN):
         lam = self.lam(annealing_progress)
         lambda_theta = self.lambda_theta(annealing_progress)
 
-        lr = self.lr(non_annealing_progress) / lam
-        # lr = self.lr(self.progress)
+        # lr = self.lr(non_annealing_progress) / lam
+        lr = self.lr(self.progress)
         sgd_momentum = self.sgd_momentum(annealing_progress)
-        sgld_lr = self.sgld_lr(non_annealing_progress) / lam
-        # sgld_lr = self.sgld_lr(self.progress)
+        # sgld_lr = self.sgld_lr(non_annealing_progress) / lam
+        sgld_lr = self.sgld_lr(self.progress)
         sgld_alpha = self.sgld_alpha(annealing_progress)
         self.cur_lr = lr
         self.cur_sgld_lr = sgld_lr
