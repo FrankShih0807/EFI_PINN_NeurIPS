@@ -12,7 +12,7 @@ cooling:
 
 european_call:
   epochs: 200_000
-  eval_freq: 1000
+  eval_freq: -1
   burn: 0.5 
   pinn:
     hidden_layers:
