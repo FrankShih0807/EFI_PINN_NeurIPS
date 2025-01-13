@@ -10,6 +10,7 @@ from PINN.common.utils import PINNDataset
 from PIL import Image
 from PINN.common.callbacks import BaseCallback
 from PINN.common.buffers import EvaluationBuffer, ScalarBuffer
+import random
 '''
 PoissonNonlinear: Poisson with parameter estimation 
 '''
@@ -126,6 +127,19 @@ class PoissonNonlinearCallback(BaseCallback):
 
     
     def _on_training(self):
+        
+        if self.model.progress >= self.eval_buffer.burn and hasattr(self.model, 'sampler'):
+            
+            if hasattr(self, 'max_lr'):
+                self.max_lr = max(self.max_lr, self.model.cur_sgld_lr)
+                accept_rate = self.model.cur_sgld_lr / self.max_lr
+                if random.random() > accept_rate:
+                    # print(f"Rejecting rate: {1-accept_rate}")
+                    return
+            else:
+                self.max_lr = self.model.cur_sgld_lr
+
+        
         pred_y = self.model.net(self.eval_X).detach().cpu()
         self.eval_buffer.add(pred_y)
         if self.physics_model.is_inverse:
@@ -159,6 +173,11 @@ class PoissonNonlinearCallback(BaseCallback):
             self.plot_latent_Z()
         except:
             pass    
+        
+        if self.model.progress <= self.eval_buffer.burn:
+            self.eval_buffer.reset()
+            if self.physics_model.is_inverse:
+                self.k_buffer.reset()
         # self.physics_model.save_evaluation(self.model, self.save_path)
         # self.physics_model.save_temp_frames(self.model, self.n_evals, self.save_path)
     

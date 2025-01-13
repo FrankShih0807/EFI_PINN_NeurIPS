@@ -15,65 +15,57 @@ class EvaluationBuffer(object):
         self.burn = burn
         self.memory = []
         self.total_ensemble = None
-        self.n_ensemble = 0
         self.new_data_added = False
         
     def add(self, value_tensor):
         value_tensor = value_tensor.unsqueeze(dim = 0).squeeze(dim=-1)
-        
         self.memory.append(value_tensor)
         self.new_data_added = True
-        # if self.total_ensemble is None:
-        #     self.total_ensemble = value_tensor.clone()
-        # else:
-        #     self.total_ensemble = torch.cat([self.total_ensemble, value_tensor])
-
     
     def get_ci(self, p=0.05):
         if self.new_data_added:
             self.total_ensemble = torch.cat(self.memory, dim=0)
             self.new_data_added = False
-        self.ensemble_tensor = self.total_ensemble[int(self.burn*self.total_ensemble.shape[0]):]
-        if self.ensemble_tensor is not None:
-            q = torch.tensor([p/2, 1-p/2])
-            quantiles = self.ensemble_tensor.quantile(q=q, dim=0)
+        q = torch.tensor([p/2, 1-p/2])
+        quantiles = self.total_ensemble.quantile(q=q, dim=0)
         return quantiles[0], quantiles[1]
     
     def get_mean(self):
         if self.new_data_added:
             self.total_ensemble = torch.cat(self.memory, dim=0)
             self.new_data_added = False
-        self.ensemble_tensor = self.total_ensemble[int(self.burn*self.total_ensemble.shape[0]):]
-        return self.ensemble_tensor.mean(dim=0)
-        
-    def __len__(self):
-        self.ensemble_tensor = self.total_ensemble[int(self.burn*self.total_ensemble.shape[0]):]
-        return self.ensemble_tensor.shape[0]
+        return self.total_ensemble.mean(dim=0)
+    
+    def last(self):
+        return self.memory[-1]
+    
+    def reset(self):
+        self.memory = []
+        self.total_ensemble = None
+        self.new_data_added = False
+        print('reset buffer')
 
 class ScalarBuffer(object):
     def __init__(self, burn:float=0.5) -> None:
-        # self.size = size
         self.burn = burn
-        self.total_samples = []
-        self.n_ensemble = 0 
+        self.samples = []
     
     def add(self, value):
-        self.total_samples.append(value)
+        self.samples.append(value)
         
     def get_ci(self, p=0.05):
-        self.effect_samples = self.total_samples[int(self.burn*len(self.total_samples)):]
-        if self.effect_samples is not None:
-            quantiles = np.quantile(self.effect_samples, [p/2, 1-p/2])
+        quantiles = np.quantile(self.samples, [p/2, 1-p/2])
         return quantiles[0], quantiles[1]
     
     def get_mean(self):
-        self.effect_samples = self.total_samples[int(self.burn*len(self.total_samples)):]
-        return np.mean(self.effect_samples)
+        return np.mean(self.samples)
+
+    def last(self):
+        return self.samples[-1]
     
-    def __len__(self):
-        self.effect_samples = self.total_samples[int(self.burn*len(self.total_samples)):]
-        return len(self.effect_samples)
-        
+    def reset(self):
+        self.samples = []
+
     
     
 

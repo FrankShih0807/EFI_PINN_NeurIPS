@@ -238,14 +238,19 @@ class PINN_EFI_Inverse(BasePINN):
     def update(self):
         # update training parameters
         annealing_progress = self.progress / self.annealing_period
+        non_annealing_progress = (self.progress - self.annealing_period) / (1 - self.annealing_period)
         lambda_pde = self.lambda_pde(annealing_progress)
         lam = self.lam(annealing_progress)
         lambda_theta = self.lambda_theta(annealing_progress)
-        # self.net.sparse_threshold = self.sparse_threshold(self.progress * 3 - 1)
+
+        # lr = self.lr(non_annealing_progress) / lam
         lr = self.lr(self.progress)
         sgd_momentum = self.sgd_momentum(annealing_progress)
+        # sgld_lr = self.sgld_lr(non_annealing_progress) / lam
         sgld_lr = self.sgld_lr(self.progress)
         sgld_alpha = self.sgld_alpha(annealing_progress)
+        self.cur_lr = lr
+        self.cur_sgld_lr = sgld_lr
         self._update_optimiser_kwargs(self.optimiser, dict(lr=lr, momentum=sgd_momentum))
         self._update_optimiser_kwargs(self.sampler, dict(lr=sgld_lr, alpha=sgld_alpha))
         
@@ -297,8 +302,8 @@ class PINN_EFI_Inverse(BasePINN):
         self.logger.record('train_param/sgld_lr', sgld_lr, exclude='csv')
         self.logger.record('train_param/sgld_alpha', sgld_alpha, exclude='csv')
         self.logger.record('train/grad_norm', grad_norm, exclude='csv')
-        # self.logger.record('train_param/lambda_pde', lambda_pde)
-        
+        self.logger.record('train_param/lambda', lam, exclude='csv')
+
         self.logger.record('train/theta_loss', theta_loss.item())
         
         self.pe_variables = self.net.pe_variables.detach().cpu().numpy()

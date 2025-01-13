@@ -66,47 +66,19 @@ nonlinear:
 
 poisson:
   epochs: 200_000
-  eval_freq: 2000
-  burn: 0.5
+  eval_freq: 1000
+  burn: 0.3
   pinn:
     hidden_layers:
-    - 30
-    - 30
+    - 50
+    - 50
     activation_fn: tanh
     annealing_period: 0.2
-    lr: 'poly_0.5e-5_10.0_0.55'
-    sgd_momentum: 0.0
-    sgld_lr: 'poly_0.5e-5_10.0_0.95'
+    lr: 'poly_0.5e-5_1000.0_0.55'
+    sgd_momentum: 'linear_0.9_0.0'
+    sgld_lr: 'poly_0.5e-5_10.0_0.55'
     sgld_alpha: 1.0
-    lam: 'linear_50.0_500.0'
-    lambda_pde: 1.0
-    lambda_theta: 1.0
-    pretrain_epochs: 0
-    encoder_kwargs:
-      encoder_hidden_layers:
-      - 16
-      - 16
-      - 2
-      encoder_activation: leaky_relu
-      prior_sd: 10.0
-      sparse_sd: 0.001
-      sparsity: 1.0
-
-poisson-v2:
-  epochs: 200_000
-  eval_freq: 2000
-  burn: 0.5
-  pinn:
-    hidden_layers:
-    - 30
-    - 30
-    activation_fn: tanh
-    annealing_period: 0.2
-    lr: 'poly_0.5e-5_10.0_0.55'
-    sgd_momentum: 0.0
-    sgld_lr: 'poly_0.5e-5_10.0_0.95'
-    sgld_alpha: 1.0
-    lam: 'linear_100.0_1000.0'
+    lam: 'log_50.0_500.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
     pretrain_epochs: 0
@@ -115,6 +87,34 @@ poisson-v2:
       - 16
       - 16
       - 8
+      encoder_activation: leaky_relu
+      prior_sd: 10.0
+      sparse_sd: 0.001
+      sparsity: 1.0
+
+poisson-v2:
+  epochs: 200_000
+  eval_freq: 1000
+  burn: 0.3
+  pinn:
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: tanh
+    annealing_period: 0.2
+    lr: 'poly_0.5e-5_1000.0_0.55'
+    sgd_momentum: 'linear_0.9_0.0'
+    sgld_lr: 'poly_0.5e-5_10.0_0.55'
+    sgld_alpha: 1.0
+    lam: 'linear_50.0_500.0'
+    lambda_pde: 1.0
+    lambda_theta: 1.0
+    pretrain_epochs: 0
+    encoder_kwargs:
+      encoder_hidden_layers:
+      - 128
+      - 128
+      - 32
       encoder_activation: leaky_relu
       prior_sd: 10.0
       sparse_sd: 0.001
@@ -125,33 +125,35 @@ poisson-v2:
 poisson-nonlinear:
   epochs: 200_000
   eval_freq: 1000
-  burn: 0.5
+  burn: 0.4
   pinn:
     hidden_layers:
-    - 30
-    - 30
+    - 50
+    - 50
     activation_fn: tanh
-    annealing_period: 0.3
-    lr: 'poly_0.5e-5_10.0_0.7'
-    sgld_lr: 'poly_0.5e-5_10.0_0.9'
-    lam: 'linear_100.0_1000.0'
+    annealing_period: 0.2
+    lr: 'poly_0.5e-5_1000.0_0.55'
+    sgd_momentum: 'linear_0.9_0.0'
+    sgld_lr: 'poly_0.5e-5_10.0_0.55'
+    sgld_alpha: 1.0
+    lam: 'linear_50.0_500.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
-    pretrain_epochs: 2000
+    pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 16
-      - 16
-      - 16
+      - 128
+      - 128
+      - 32
       encoder_activation: leaky_relu
-      prior_sd: 1.0
+      prior_sd: 10.0
       sparse_sd: 0.001
       sparsity: 1.0
 
 poisson-inverse:
   epochs: 200_000
   eval_freq: 1000
-  burn: 0.5
+  burn: 0.3
   pinn:
     hidden_layers:
     - 100
@@ -159,10 +161,10 @@ poisson-inverse:
     activation_fn: tanh
     annealing_period: 0.2
     grad_norm_max: -1.0
-    lr: 'poly_0.5e-5_50.0_0.55'
+    lr: 'poly_0.5e-5_1000.0_0.55'
     sgd_momentum: 'linear_0.9_0.0'
     sgld_lr: 'poly_0.5e-5_10.0_0.55'
-    sgld_alpha: 'linear_1.0_1.0'
+    sgld_alpha: 1.0
     lam: 'linear_10.0_500.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
@@ -171,7 +173,7 @@ poisson-inverse:
       encoder_hidden_layers:
       - 128
       - 128
-      - 8
+      - 12
       encoder_activation: leaky_relu
       prior_sd: 10.0
       sparse_sd: 0.001
@@ -181,7 +183,7 @@ poisson-inverse:
 poisson-2d:
   epochs: 200_000
   eval_freq: 1000
-  burn: 0.5
+  burn: 0.3
   pinn:
     hidden_layers:
     - 50
@@ -189,11 +191,11 @@ poisson-2d:
     activation_fn: tanh
     annealing_period: 0.2
     grad_norm_max: -1.0
-    lr: 'poly_0.5e-5_100.0_0.55'
+    lr: 'poly_0.5e-5_1000.0_0.55'
     sgd_momentum: 'linear_0.9_0.0'
-    sgld_lr: 'poly_0.5e-5_100.0_0.95'
-    sgld_alpha: 'linear_1.0_1.0'
-    lam: 'linear_10.0_500.0'
+    sgld_lr: 'poly_0.5e-5_10.0_0.55'
+    sgld_alpha: 1.0
+    lam: 'log_50.0_250.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
     pretrain_epochs: 0
@@ -201,7 +203,7 @@ poisson-2d:
       encoder_hidden_layers:
       - 128
       - 128
-      - 8
+      - 128
       encoder_activation: leaky_relu
       prior_sd: 10.0
       sparse_sd: 0.001
