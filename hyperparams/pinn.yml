@@ -20,8 +20,11 @@ european_call:
     - 20
     - 20
     activation_fn: softplus(beta=5)
-    lr: 1.0e-3
-    lambda_pde: 10.0
+    # lr: 1.0e-3
+    # lambda_pde: 10.0
+    lr: 3e-4
+    lambda_pde: 1.0
+    dropout_rate: 0.0
 
 
 poisson:

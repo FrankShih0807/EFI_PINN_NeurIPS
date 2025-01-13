@@ -151,6 +151,8 @@ default_types = {
     'encoder_activation': str,
     'prior_sd': float,
     'dropout_rate': float,
+    'lr': float,
+    'lambda_pde': float,
 }
         
 class StoreDictHyperparams(argparse.Action):
