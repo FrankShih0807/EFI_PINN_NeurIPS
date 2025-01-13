@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
 from PINN.common.callbacks import BaseCallback
-from PINN import PINN, PINN_EFI, Pretrain_EFI, PINN_EFI_Inverse, BayesianPINN, BayesianPINN_Inverse
+from PINN import PINN, PINN_EFI, Pretrain_EFI, PINN_EFI_Inverse, BayesianPINN, BayesianPINN_Inverse, PINN_Inverse
 from PINN.models import Cooling, EuropeanCall, Nonlinear, EuropeanCallDiscovery, Poisson, Poisson_v2, PoissonNonlinear, Poisson2D
 from PINN.models import PoissonCallback, Poisson_v2Callback, PoissonNonlinearCallback, EuropeanCallCallback, Poisson2DCallback
 
@@ -21,6 +21,7 @@ yaml.preserve_quotes = True
 
 ALGOS: Dict[str, Type[BasePINN]] = {
     "pinn": PINN,
+    "pinn_inverse": PINN_Inverse,
     "pinn_efi": PINN_EFI,
     "pretrain_efi": Pretrain_EFI,
     "pinn_efi_inverse": PINN_EFI_Inverse,
@@ -149,6 +150,7 @@ default_types = {
     'pretrain_epochs': int,
     'encoder_activation': str,
     'prior_sd': float,
+    'dropout_rate': float,
 }
         
 class StoreDictHyperparams(argparse.Action):

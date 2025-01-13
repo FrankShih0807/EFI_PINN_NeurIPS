@@ -144,15 +144,18 @@ for info in abnormal_indices_info:
 # print(filtered_df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].mean())
 # print(filtered_df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].std()/10)
 
-print(filtered_df.groupby(['model', 'algo'])[['mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_ci_range', 'k_coverage_rate']].mean())
-print(filtered_df.groupby(['model', 'algo'])[['mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_ci_range', 'k_coverage_rate']].std()/10)
+pd.set_option('display.max_rows', 100)
+print(filtered_df.groupby(['model', 'algo'])[['mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_coverage_rate', 'k_ci_range']].mean())
+print(filtered_df.groupby(['model', 'algo'])[['mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_coverage_rate', 'k_ci_range']].std()/10)
 
 # print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].mean())
 # print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].std()/10)
 
 # df2 = df[df['algo']=='pinn_efi_lam1k_2']
-rows_with_nan = df[df.isna().any(axis=1)]
-print(rows_with_nan)
+
+# rows_with_nan = df[df.isna().any(axis=1)]
+# print(rows_with_nan)
+
 # low_cr = df2[df2['coverage_rate']<0.5]
 # print(low_cr)
 # print("mse")
