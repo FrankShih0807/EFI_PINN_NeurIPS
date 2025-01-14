@@ -84,7 +84,7 @@ european_call:
     # step_size: 'log_0.0001_0.00001'
     step_size: 1.0e-5
     L: 6
-    sigma_diff: 1.0
+    sigma_diff: 0.05
     # sigma_diff: 'log_0.5_0.05'
-    sigma_sol: 1.0
+    sigma_sol: 0.05
     pretrain_epochs: 10000
