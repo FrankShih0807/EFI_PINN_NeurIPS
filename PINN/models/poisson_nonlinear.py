@@ -143,7 +143,7 @@ class PoissonNonlinearCallback(BaseCallback):
         pred_y = self.model.net(self.eval_X).detach().cpu()
         self.eval_buffer.add(pred_y)
         if self.physics_model.is_inverse:
-            self.k_buffer.add(self.model.pe_variables.detach().numpy()[0])
+            self.k_buffer.add(self.model.pe_variables[0].item())
         # print(len(self.eval_buffer))
         
     
