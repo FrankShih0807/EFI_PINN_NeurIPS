@@ -12,16 +12,16 @@ from PINN.common.base_physics import PhysicsModel
 from PINN.common.utils import PINNDataset
 from PIL import Image
 from PINN.common.callbacks import BaseCallback
-
+import random
 
 class EuropeanCall(PhysicsModel):
     def __init__(self, 
-                 S_range = [0, 160],
+                 S_range = [0, 1],
                  t_range = [0, 1],
                  sigma = 0.5,
                  r = 0.05,
-                 K = 80,
-                 noise_sd=1,
+                 K = 0.5,
+                 noise_sd=0.01,
                  n_price_sensors=5,
                  n_price_replicates=10,
                  n_boundary_samples=50,
@@ -29,6 +29,7 @@ class EuropeanCall(PhysicsModel):
                  is_inverse=False,
                  ):
         self.norm_dist = dist.Normal(0, 1)
+        self.grids = 30
         super().__init__(S_range=S_range, 
                          t_range=t_range, 
                          sigma=sigma, 
@@ -71,8 +72,8 @@ class EuropeanCall(PhysicsModel):
         return X, y
     
     def get_eval_data(self):
-        eval_t = torch.linspace(self.t_range[0], self.t_range[1], 100)
-        eval_S = torch.linspace(self.S_range[0], self.S_range[1], 100)
+        eval_t = torch.linspace(self.t_range[0], self.t_range[1], self.grids)
+        eval_S = torch.linspace(self.S_range[0], self.S_range[1], self.grids)
         S, T = torch.meshgrid(eval_S, eval_t, indexing='ij')
         eval_X = torch.cat([T.reshape(-1, 1), S.reshape(-1, 1)], dim=1)
         eval_y = self.physics_law(S, self.t_range[1] - T).reshape(-1, 1)
@@ -143,32 +144,31 @@ class EuropeanCall(PhysicsModel):
         return bs_pde
     
     ##########################
-    def plot(self, s_range=[0, 160], t_range=[0, 1], grid_size=100):
-        s = torch.linspace(s_range[0], s_range[1], grid_size)
-        t = torch.linspace(t_range[0], t_range[1], grid_size)
+    # def plot(self, s_range=[0, 160], t_range=[0, 1], grid_size=30):
+    #     s = torch.linspace(s_range[0], s_range[1], grid_size)
+    #     t = torch.linspace(t_range[0], t_range[1], grid_size)
         
-        S, T = torch.meshgrid(s, t, indexing='ij')
-        C = self.physics_law(S, T)
+    #     S, T = torch.meshgrid(s, t, indexing='ij')
+    #     C = self.physics_law(S, T)
 
-        fig = plt.figure()
+    #     fig = plt.figure()
         
-        ax = fig.add_subplot(111, projection='3d')
+    #     ax = fig.add_subplot(111, projection='3d')
         
-        # print(S.shape, T.shape, C.shape)   
-        # raise
-        ax.plot_surface(S.numpy(), T.numpy(), C.numpy(), cmap='plasma')
-        # ax.contourf(S.numpy(), T.numpy(), C.numpy(), zdir='z', offset=-20, cmap='plasma')
+    #     # print(S.shape, T.shape, C.shape)   
+    #     # raise
+    #     ax.plot_surface(S.numpy(), T.numpy(), C.numpy(), cmap='plasma')
+    #     # ax.contourf(S.numpy(), T.numpy(), C.numpy(), zdir='z', offset=-20, cmap='plasma')
         
-        # fig.colorbar(im, shrink=0.5, aspect=5, pad=0.07)
-        ax.set_xlabel('Stock Price')
-        ax.set_ylabel('Time to Maturity')
-        ax.set_zlabel('Option Price')
-        ax.view_init(elev=15, azim=-125)
-        plt.tight_layout()
-        plt.show()
+    #     # fig.colorbar(im, shrink=0.5, aspect=5, pad=0.07)
+    #     ax.set_xlabel('Stock Price')
+    #     ax.set_ylabel('Time to Maturity')
+    #     ax.set_zlabel('Option Price')
+    #     ax.view_init(elev=15, azim=-125)
+    #     plt.tight_layout()
+    #     plt.show()
         
     def plot_true_solution(self, save_path=None):
-        self.grids = 100
         s = torch.linspace(self.S_range[0], self.S_range[1], self.grids)
         t = torch.linspace(self.t_range[0], self.t_range[1], self.grids)
         
@@ -191,49 +191,49 @@ class EuropeanCall(PhysicsModel):
         plt.savefig(os.path.join(save_path, 'true_solution.png'))
         plt.close()
         
-    ##########################    
-    def save_evaluation(self, model, save_path=None):
-        # preds_upper, preds_lower, preds_mean = model.summary()
-        pred_dict = model.summary()
+    # ##########################    
+    # def save_evaluation(self, model, save_path=None):
+    #     # preds_upper, preds_lower, preds_mean = model.summary()
+    #     pred_dict = model.summary()
         
-        preds_upper = pred_dict['y_preds_upper'].flatten().reshape(self.grids,self.grids).numpy()
-        preds_lower =pred_dict['y_preds_lower'].flatten().reshape(self.grids,self.grids).numpy()
-        preds_mean = pred_dict['y_preds_mean'].flatten().reshape(self.grids,self.grids).numpy()
+    #     preds_upper = pred_dict['y_preds_upper'].flatten().reshape(self.grids,self.grids).numpy()
+    #     preds_lower =pred_dict['y_preds_lower'].flatten().reshape(self.grids,self.grids).numpy()
+    #     preds_mean = pred_dict['y_preds_mean'].flatten().reshape(self.grids,self.grids).numpy()
         
-        S_grid = model.eval_X[:,1].reshape(self.grids,self.grids).numpy()
-        t_grid = 1-model.eval_X[:,0].reshape(self.grids,self.grids).numpy()
+    #     S_grid = model.eval_X[:,1].reshape(self.grids,self.grids).numpy()
+    #     t_grid = 1-model.eval_X[:,0].reshape(self.grids,self.grids).numpy()
         
-        # np.savez(os.path.join(save_path, 'evaluation_data.npz'), preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean, S_grid=S_grid, t_grid=t_grid)
-        np.savez(os.path.join(save_path, 'evaluation_data.npz') , **pred_dict, S_grid=S_grid, t_grid=t_grid)
+    #     # np.savez(os.path.join(save_path, 'evaluation_data.npz'), preds_upper=preds_upper, preds_lower=preds_lower, preds_mean=preds_mean, S_grid=S_grid, t_grid=t_grid)
+    #     np.savez(os.path.join(save_path, 'evaluation_data.npz') , **pred_dict, S_grid=S_grid, t_grid=t_grid)
         
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d') 
-        ax.plot_surface(S_grid,
-                        t_grid, 
-                        preds_mean, 
-                        cmap='plasma')
+    #     fig = plt.figure()
+    #     ax = fig.add_subplot(111, projection='3d') 
+    #     ax.plot_surface(S_grid,
+    #                     t_grid, 
+    #                     preds_mean, 
+    #                     cmap='plasma')
 
-        ax.set_xlabel('Stock Price')
-        ax.set_ylabel('Time to Maturity')
-        ax.set_zlabel('Option Price')
-        ax.view_init(elev=15, azim=-125)
-        plt.tight_layout()
-        plt.savefig(os.path.join(save_path, 'pred_solution.png'))
-        plt.close()
+    #     ax.set_xlabel('Stock Price')
+    #     ax.set_ylabel('Time to Maturity')
+    #     ax.set_zlabel('Option Price')
+    #     ax.view_init(elev=15, azim=-125)
+    #     plt.tight_layout()
+    #     plt.savefig(os.path.join(save_path, 'pred_solution.png'))
+    #     plt.close()
         
-        true_price = self.physics_law(S_grid[:,0], t_grid[:,0])
+    #     true_price = self.physics_law(S_grid[:,0], t_grid[:,0])
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
+    #     fig = plt.figure()
+    #     ax = fig.add_subplot(111)
         
-        ax.plot(S_grid[:,0], preds_mean[:,0], label='Predicted Price')
-        ax.plot(S_grid[:,0], true_price, label='True Price')
-        ax.fill_between(S_grid[:,0], preds_upper[:,0], preds_lower[:,0], alpha=0.2, color='g', label='95% CI')
-        ax.set_xlabel('Stock Price')
-        ax.set_ylabel('Option Price')
-        ax.legend()
-        plt.savefig(os.path.join(save_path, 'slice_prediction.png'))
-        plt.close()
+    #     ax.plot(S_grid[:,0], preds_mean[:,0], label='Predicted Price')
+    #     ax.plot(S_grid[:,0], true_price, label='True Price')
+    #     ax.fill_between(S_grid[:,0], preds_upper[:,0], preds_lower[:,0], alpha=0.2, color='g', label='95% CI')
+    #     ax.set_xlabel('Stock Price')
+    #     ax.set_ylabel('Option Price')
+    #     ax.legend()
+    #     plt.savefig(os.path.join(save_path, 'slice_prediction.png'))
+    #     plt.close()
 
 class EuropeanCallCallback(BaseCallback):
     def __init__(self):
@@ -249,14 +249,24 @@ class EuropeanCallCallback(BaseCallback):
         self.grids = self.physics_model.grids
 
     def _on_training(self):
+        if self.model.progress >= self.eval_buffer.burn and hasattr(self.model, 'sampler'):
+            
+            if hasattr(self, 'max_lr'):
+                self.max_lr = max(self.max_lr, self.model.cur_sgld_lr)
+                accept_rate = self.model.cur_sgld_lr / self.max_lr
+                if random.random() > accept_rate:
+                    # print(f"Rejecting rate: {1-accept_rate}")
+                    return
+            else:
+                self.max_lr = self.model.cur_sgld_lr
+                
         pred_y = self.model.net(self.eval_X).detach().cpu()
-        # print(pred_y)
-        # raise
         self.eval_buffer.add(pred_y)
+        if self.physics_model.is_inverse:
+            self.k_buffer.add(self.model.net.pe_variables[0].item())
 
-    def _on_eval(self):
+    def _on_eval(self): 
         pred_y_mean = self.eval_buffer.get_mean()
-
         ci_low, ci_high = self.eval_buffer.get_ci()
         ci_range = (ci_high - ci_low).mean().item()
         cr = ((ci_low <= self.eval_y_cpu.flatten()) & (self.eval_y_cpu.flatten() <= ci_high)).float().mean().item()
@@ -265,16 +275,31 @@ class EuropeanCallCallback(BaseCallback):
         self.logger.record('eval/ci_range', ci_range)
         self.logger.record('eval/coverage_rate', cr)
         self.logger.record('eval/mse', mse)
-
+        if self.physics_model.is_inverse:
+            k_mean = self.k_buffer.get_mean()
+            k_low, k_high = self.k_buffer.get_ci()
+            k_ci_range = k_high - k_low
+            k_cr = ((k_low <= self.physics_model.k) & (self.physics_model.k <= k_high))
+            
+            self.logger.record('eval/k_ci_range', k_ci_range)
+            self.logger.record('eval/k_coverage_rate', k_cr)
+            self.logger.record('eval/k_mean', k_mean)
+            
         self.save_evaluation()
+        self.save_3d_plot()
+        
         try:
             self.plot_latent_Z()
         except:
             pass    
-
+        
+        if self.model.progress <= self.eval_buffer.burn:
+            self.eval_buffer.reset()
+            if self.physics_model.is_inverse:
+                self.k_buffer.reset()
+                
     def _on_training_end(self):
         self.save_gif()
-        self.save_3d_plot()
 
     def plot_latent_Z(self):
         true_y = self.dataset[0]['true_y'].flatten()
@@ -282,16 +307,18 @@ class EuropeanCallCallback(BaseCallback):
         true_Z = sol_y - true_y
 
         latent_Z = self.model.latent_Z[0].flatten().detach().cpu().numpy()
-
+        min_val = min(true_Z.min(), latent_Z.min())
+        max_val = max(true_Z.max(), latent_Z.max())
         np.save(os.path.join(self.save_path, 'true_Z.npy'), true_Z)
         np.save(os.path.join(self.save_path, 'latent_Z.npy'), latent_Z)
 
         plt.subplots(figsize=(6, 6))
         plt.scatter(true_Z, latent_Z, label='Latent Z')
+        plt.plot([min_val, max_val], [min_val, max_val], 'r--', label='x = y')
         plt.xlabel('True Z')
         plt.ylabel('Latent Z')
-        plt.xlim(-2.0, 2.0)
-        plt.ylim(-2.0, 2.0)
+        # plt.xlim(-2.0, 2.0)
+        # plt.ylim(-2.0, 2.0)
         plt.savefig(os.path.join(self.save_path, 'latent_Z.png'))
         plt.close()
 

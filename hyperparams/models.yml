@@ -10,14 +10,14 @@ cooling:
 european_call:
   S_range:
   - 0.0
-  - 160.0
+  - 2.0
   t_range:
   - 0.0
   - 1.0
   sigma: 0.5
   r: 0.05
-  K: 80
-  noise_sd: 1.0
+  K: 1.0
+  noise_sd: 0.05
   n_price_sensors: 5
   n_price_replicates: 10
   n_boundary_samples: 50
