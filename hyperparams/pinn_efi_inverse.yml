@@ -22,9 +22,9 @@ european_call:
   burn: 0.3
   pinn:
     hidden_layers:
-    - 30
-    - 30
-    - 30
+    - 50
+    - 50
+    - 50
     activation_fn: softplus(beta=5)
     annealing_period: 0.2
     grad_norm_max: -1.0
