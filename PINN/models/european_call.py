@@ -249,16 +249,16 @@ class EuropeanCallCallback(BaseCallback):
         self.grids = self.physics_model.grids
 
     def _on_training(self):
-        if self.model.progress >= self.eval_buffer.burn and hasattr(self.model, 'sampler'):
+        # if self.model.progress >= self.eval_buffer.burn and hasattr(self.model, 'sampler'):
             
-            if hasattr(self, 'max_lr'):
-                self.max_lr = max(self.max_lr, self.model.cur_sgld_lr)
-                accept_rate = self.model.cur_sgld_lr / self.max_lr
-                if random.random() > accept_rate:
-                    # print(f"Rejecting rate: {1-accept_rate}")
-                    return
-            else:
-                self.max_lr = self.model.cur_sgld_lr
+        #     if hasattr(self, 'max_lr'):
+        #         self.max_lr = max(self.max_lr, self.model.cur_sgld_lr)
+        #         accept_rate = self.model.cur_sgld_lr / self.max_lr
+        #         if random.random() > accept_rate:
+        #             # print(f"Rejecting rate: {1-accept_rate}")
+        #             return
+        #     else:
+        #         self.max_lr = self.model.cur_sgld_lr
                 
         pred_y = self.model.net(self.eval_X).detach().cpu()
         self.eval_buffer.add(pred_y)
