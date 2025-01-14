@@ -12,16 +12,16 @@ from PINN.common.base_physics import PhysicsModel
 from PINN.common.utils import PINNDataset
 from PIL import Image
 from PINN.common.callbacks import BaseCallback
-
+import random
 
 class EuropeanCall(PhysicsModel):
     def __init__(self, 
-                 S_range = [0, 160],
+                 S_range = [0, 1],
                  t_range = [0, 1],
                  sigma = 0.5,
                  r = 0.05,
-                 K = 80,
-                 noise_sd=1,
+                 K = 0.5,
+                 noise_sd=0.01,
                  n_price_sensors=5,
                  n_price_replicates=10,
                  n_boundary_samples=50,
@@ -71,8 +71,8 @@ class EuropeanCall(PhysicsModel):
         return X, y
     
     def get_eval_data(self):
-        eval_t = torch.linspace(self.t_range[0], self.t_range[1], 100)
-        eval_S = torch.linspace(self.S_range[0], self.S_range[1], 100)
+        eval_t = torch.linspace(self.t_range[0], self.t_range[1], 30)
+        eval_S = torch.linspace(self.S_range[0], self.S_range[1], 30)
         S, T = torch.meshgrid(eval_S, eval_t, indexing='ij')
         eval_X = torch.cat([T.reshape(-1, 1), S.reshape(-1, 1)], dim=1)
         eval_y = self.physics_law(S, self.t_range[1] - T).reshape(-1, 1)
@@ -143,7 +143,7 @@ class EuropeanCall(PhysicsModel):
         return bs_pde
     
     ##########################
-    def plot(self, s_range=[0, 160], t_range=[0, 1], grid_size=100):
+    def plot(self, s_range=[0, 160], t_range=[0, 1], grid_size=30):
         s = torch.linspace(s_range[0], s_range[1], grid_size)
         t = torch.linspace(t_range[0], t_range[1], grid_size)
         
@@ -168,7 +168,7 @@ class EuropeanCall(PhysicsModel):
         plt.show()
         
     def plot_true_solution(self, save_path=None):
-        self.grids = 100
+        self.grids = 30
         s = torch.linspace(self.S_range[0], self.S_range[1], self.grids)
         t = torch.linspace(self.t_range[0], self.t_range[1], self.grids)
         
@@ -249,12 +249,21 @@ class EuropeanCallCallback(BaseCallback):
         self.grids = self.physics_model.grids
 
     def _on_training(self):
+        if self.model.progress >= self.eval_buffer.burn and hasattr(self.model, 'sampler'):
+            
+            if hasattr(self, 'max_lr'):
+                self.max_lr = max(self.max_lr, self.model.cur_sgld_lr)
+                accept_rate = self.model.cur_sgld_lr / self.max_lr
+                if random.random() > accept_rate:
+                    # print(f"Rejecting rate: {1-accept_rate}")
+                    return
+            else:
+                self.max_lr = self.model.cur_sgld_lr
+                
         pred_y = self.model.net(self.eval_X).detach().cpu()
-        # print(pred_y)
-        # raise
         self.eval_buffer.add(pred_y)
 
-    def _on_eval(self):
+    def _on_eval(self): 
         pred_y_mean = self.eval_buffer.get_mean()
 
         ci_low, ci_high = self.eval_buffer.get_ci()
@@ -271,7 +280,12 @@ class EuropeanCallCallback(BaseCallback):
             self.plot_latent_Z()
         except:
             pass    
-
+        
+        if self.model.progress <= self.eval_buffer.burn:
+            self.eval_buffer.reset()
+            if self.physics_model.is_inverse:
+                self.k_buffer.reset()
+                
     def _on_training_end(self):
         self.save_gif()
         self.save_3d_plot()
@@ -282,16 +296,18 @@ class EuropeanCallCallback(BaseCallback):
         true_Z = sol_y - true_y
 
         latent_Z = self.model.latent_Z[0].flatten().detach().cpu().numpy()
-
+        min_val = min(true_Z.min(), latent_Z.min())
+        max_val = max(true_Z.max(), latent_Z.max())
         np.save(os.path.join(self.save_path, 'true_Z.npy'), true_Z)
         np.save(os.path.join(self.save_path, 'latent_Z.npy'), latent_Z)
 
         plt.subplots(figsize=(6, 6))
         plt.scatter(true_Z, latent_Z, label='Latent Z')
+        plt.plot([min_val, max_val], [min_val, max_val], 'r--', label='x = y')
         plt.xlabel('True Z')
         plt.ylabel('Latent Z')
-        plt.xlim(-2.0, 2.0)
-        plt.ylim(-2.0, 2.0)
+        # plt.xlim(-2.0, 2.0)
+        # plt.ylim(-2.0, 2.0)
         plt.savefig(os.path.join(self.save_path, 'latent_Z.png'))
         plt.close()
 
