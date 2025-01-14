@@ -322,16 +322,14 @@ class EuropeanCallCallback(BaseCallback):
         plt.savefig(os.path.join(self.save_path, 'latent_Z.png'))
         plt.close()
 
-    def save_evaluation(self):
-        subset_indices = torch.arange(0, self.grids * self.grids, self.grids)
+    def plot_slice(self, slice_idx):
+        if slice_idx >= self.grids:
+            raise ValueError(f"Slice index should be less than {self.grids}")
+
+        subset_indices = torch.arange(slice_idx, self.grids * self.grids, self.grids)
 
         S = self.eval_X_cpu[:,1].reshape(self.grids,self.grids).numpy()
         S_eval = S[:,0]
-        # t = 1 - self.eval_X_cpu[:,0].reshape(self.grids,self.grids).numpy()
-        # t_eval = t[:,0]
-        # X = self.eval_X_cpu.flatten().numpy()
-        # y = self.eval_y_cpu.flatten().numpy()
-        # true_price = self.physics_law(S_eval, t_eval)
         true_price = self.eval_y_cpu[subset_indices,:].flatten().numpy()
 
         preds_mean = self.eval_buffer.get_mean()
@@ -341,21 +339,59 @@ class EuropeanCallCallback(BaseCallback):
         plt.subplots(figsize=(8, 6))
         plt.plot(S_eval, true_price, alpha=0.8, color='b', label='True')
         plt.plot(S_eval, preds_mean[subset_indices], alpha=0.8, color='g', label='Mean')
-        # plt.plot(self.model.sol_X.clone().cpu().numpy() , self.model.sol_y.clone().cpu().numpy(), 'x', label='Training data', color='orange')
-
         plt.fill_between(S_eval, preds_upper[subset_indices], preds_lower[subset_indices], alpha=0.2, color='g', label='95% CI')
         plt.xlabel('Stock Price')
         plt.ylabel('Option Price')
         plt.legend(loc='upper left', bbox_to_anchor=(0.1, 0.95))
-        plt.savefig(os.path.join(self.save_path, 'slice_prediction.png'))
+        plt.savefig(os.path.join(self.save_path, f'slice_prediction_idx{slice_idx}.png'))
 
         # save temp frames
-        temp_dir = os.path.join(self.save_path, 'temp_frames')
+        temp_dir = os.path.join(self.save_path, f'temp_frames_idx{slice_idx}')
         os.makedirs(temp_dir, exist_ok=True)
         frame_path = os.path.join(temp_dir, f"frame_{self.n_evals}.png")
         plt.savefig(frame_path)
 
         plt.close()
+
+    def save_evaluation(self):
+        slice_indices = [0, 15, 29]
+        for idx in slice_indices:
+            self.plot_slice(idx)
+
+    # def save_evaluation(self):
+    #     subset_indices = torch.arange(0, self.grids * self.grids, self.grids)
+
+    #     S = self.eval_X_cpu[:,1].reshape(self.grids,self.grids).numpy()
+    #     S_eval = S[:,0]
+    #     # t = 1 - self.eval_X_cpu[:,0].reshape(self.grids,self.grids).numpy()
+    #     # t_eval = t[:,0]
+    #     # X = self.eval_X_cpu.flatten().numpy()
+    #     # y = self.eval_y_cpu.flatten().numpy()
+    #     # true_price = self.physics_law(S_eval, t_eval)
+    #     true_price = self.eval_y_cpu[subset_indices,:].flatten().numpy()
+
+    #     preds_mean = self.eval_buffer.get_mean()
+    #     preds_upper, preds_lower = self.eval_buffer.get_ci()
+
+    #     sns.set_theme()
+    #     plt.subplots(figsize=(8, 6))
+    #     plt.plot(S_eval, true_price, alpha=0.8, color='b', label='True')
+    #     plt.plot(S_eval, preds_mean[subset_indices], alpha=0.8, color='g', label='Mean')
+    #     # plt.plot(self.model.sol_X.clone().cpu().numpy() , self.model.sol_y.clone().cpu().numpy(), 'x', label='Training data', color='orange')
+
+    #     plt.fill_between(S_eval, preds_upper[subset_indices], preds_lower[subset_indices], alpha=0.2, color='g', label='95% CI')
+    #     plt.xlabel('Stock Price')
+    #     plt.ylabel('Option Price')
+    #     plt.legend(loc='upper left', bbox_to_anchor=(0.1, 0.95))
+    #     plt.savefig(os.path.join(self.save_path, 'slice_prediction.png'))
+
+    #     # save temp frames
+    #     temp_dir = os.path.join(self.save_path, 'temp_frames')
+    #     os.makedirs(temp_dir, exist_ok=True)
+    #     frame_path = os.path.join(temp_dir, f"frame_{self.n_evals}.png")
+    #     plt.savefig(frame_path)
+
+    #     plt.close()
 
     def save_3d_plot(self):
         S_grid = self.eval_X_cpu[:,1].reshape(self.grids,self.grids).numpy()
@@ -376,24 +412,45 @@ class EuropeanCallCallback(BaseCallback):
         plt.savefig(os.path.join(self.save_path, 'pred_solution.png'))
         plt.close()
 
-    def save_gif(self):
-        frames = []
-        temp_dir = os.path.join(self.save_path, "temp_frames")
-        n_frames = len(os.listdir(temp_dir))
-        for epoch in range(n_frames):
-            frame_path = os.path.join(temp_dir, f"frame_{epoch}.png")
-            frames.append(Image.open(frame_path))
+    # def save_gif(self):
+    #     frames = []
+    #     temp_dir = os.path.join(self.save_path, "temp_frames")
+    #     n_frames = len(os.listdir(temp_dir))
+    #     for epoch in range(n_frames):
+    #         frame_path = os.path.join(temp_dir, f"frame_{epoch}.png")
+    #         frames.append(Image.open(frame_path))
 
-        frames[0].save(
-            os.path.join(self.save_path, "training_loss.gif"),
-            save_all=True,
-            append_images=frames[1:],
-            duration=500,
-            loop=0,
-        )
-        for frame_path in os.listdir(temp_dir):
-            os.remove(os.path.join(temp_dir, frame_path))
-        os.rmdir(temp_dir)
+    #     frames[0].save(
+    #         os.path.join(self.save_path, "training_loss.gif"),
+    #         save_all=True,
+    #         append_images=frames[1:],
+    #         duration=500,
+    #         loop=0,
+    #     )
+    #     for frame_path in os.listdir(temp_dir):
+    #         os.remove(os.path.join(temp_dir, frame_path))
+    #     os.rmdir(temp_dir)
+
+    def save_gif(self):
+        slice_indices = [0, 15, 29]
+        for idx in slice_indices:
+            temp_dir = os.path.join(self.save_path, f'temp_frames_idx{idx}')
+            frames = []
+            n_frames = len(os.listdir(temp_dir))
+            for epoch in range(n_frames):
+                frame_path = os.path.join(temp_dir, f"frame_{epoch}.png")
+                frames.append(Image.open(frame_path))
+
+            frames[0].save(
+                os.path.join(self.save_path, f"training_loss_idx{idx}.gif"),
+                save_all=True,
+                append_images=frames[1:],
+                duration=500,
+                loop=0,
+            )
+            for frame_path in os.listdir(temp_dir):
+                os.remove(os.path.join(temp_dir, frame_path))
+            os.rmdir(temp_dir)
 
 
 if __name__ == "__main__":
