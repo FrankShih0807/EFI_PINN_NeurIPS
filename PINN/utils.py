@@ -151,8 +151,8 @@ default_types = {
     'encoder_activation': str,
     'prior_sd': float,
     'dropout_rate': float,
-    # 'lr': float,
-    # 'lambda_pde': float,
+    'lr': float,
+    'lambda_pde': float,
 }
         
 class StoreDictHyperparams(argparse.Action):
@@ -175,7 +175,10 @@ class StoreDictHyperparams(argparse.Action):
             # elif 'activation' in key:
             #     result[key] = value
             elif key in default_types:
-                result[key] = default_types[key](value)
+                try:
+                    result[key] = default_types[key](value)
+                except:
+                    result[key] = value
             else:
                 # Handle single values
                 result[key] = value
