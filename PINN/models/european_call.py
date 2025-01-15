@@ -336,6 +336,7 @@ class EuropeanCallCallback(BaseCallback):
         preds_lower, preds_upper = self.eval_buffer.get_ci()
 
         cr = ((preds_lower[subset_indices] <= true_price) & (true_price <= preds_upper[subset_indices])).float().mean().item()
+        self.logger.record(f'eval/cr_idx{slice_idx}', cr)
 
         sns.set_theme()
         plt.subplots(figsize=(8, 6))
