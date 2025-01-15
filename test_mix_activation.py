@@ -25,6 +25,8 @@ class MixedActivationNet(nn.Module):
         softplus_out = self.softplus_branch(x)
         combined = torch.cat((relu_out, softplus_out), dim=1)
         return self.output_layer(combined)
+    
+
 
 
 def physics_law(s, t2m)->torch.Tensor:
@@ -42,8 +44,9 @@ def physics_law(s, t2m)->torch.Tensor:
     V = s * Nd1 - K * torch.exp(-r * (t2m)) * Nd2
     return V
 # Generate data
-s = torch.linspace(0, 1, 100)
-t = torch.linspace(0, 1, 100)
+grids = 100
+s = torch.linspace(0, 1, grids)
+t = torch.linspace(0, 1, grids)
 S, T = torch.meshgrid(s, t, indexing='ij')
 X = torch.stack([S.reshape(-1), T.reshape(-1)], dim=1)
 
@@ -65,7 +68,14 @@ C = physics_law(S, T)
 # plt.show()
 
 # Initialize model, criterion, and optimizer
-model = MixedActivationNet(input_dim=2)
+# model = MixedActivationNet(input_dim=2)
+model = nn.Sequential(
+    nn.Linear(2, 50),
+    nn.Softplus(beta=10),
+    nn.Linear(50, 50),
+    nn.Softplus(beta=10),
+    nn.Linear(50, 1)
+)
 criterion = nn.MSELoss(reduction='mean')
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
@@ -79,7 +89,7 @@ for epoch in range(5000):
     optimizer.step()
 
 # Get predictions
-predicted_y = model(X).detach().reshape(100,100)
+predicted_y = model(X).detach().reshape(grids,grids)
 
 # Plot results
 # print(S.shape, T.shape, predicted_y.shape)
