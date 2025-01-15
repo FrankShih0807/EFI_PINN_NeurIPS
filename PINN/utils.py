@@ -9,11 +9,11 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
 from PINN.common.callbacks import BaseCallback
-from PINN import PINN, PINN_EFI, Pretrain_EFI, PINN_EFI_Inverse, BayesianPINN, BayesianPINN_Inverse, PINN_Inverse
+from PINN import PINN, PINN_EFI_Inverse, BayesianPINN, BayesianPINN_Inverse, PINN_Inverse
 from PINN.models import Cooling, EuropeanCall, Nonlinear, EuropeanCallDiscovery, Poisson1D, Poisson2D
 from PINN.models import Poisson1DCallback, EuropeanCallCallback, Poisson2DCallback
 
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 
 yaml = YAML()
 yaml.preserve_quotes = True
@@ -22,8 +22,6 @@ yaml.preserve_quotes = True
 ALGOS: Dict[str, Type[BasePINN]] = {
     "pinn": PINN,
     "pinn_inverse": PINN_Inverse,
-    # "pinn_efi": PINN_EFI,
-    # "pretrain_efi": Pretrain_EFI,
     "pinn_efi_inverse": PINN_EFI_Inverse,
     "bpinn": BayesianPINN,
     "bpinn_inverse": BayesianPINN_Inverse, 
