@@ -114,6 +114,8 @@ def plot_latent_Z(output_dir):
                 exp_path = os.path.join(algo_path, exp)
 
                 # Skip if latent_Z.npy or true_Z.npy does not exist
+                if not os.path.exists(os.path.join(exp_path, 'training_loss.gif')):
+                    continue
                 latent_Z_path = os.path.join(exp_path, 'latent_Z.npy')
                 true_Z_path = os.path.join(exp_path, 'true_Z.npy')
 
@@ -206,7 +208,8 @@ def plot_latent_Z_diff(output_dir):
 
             for exp in os.listdir(algo_path):
                 exp_path = os.path.join(algo_path, exp)
-
+                if not os.path.exists(os.path.join(exp_path, 'training_loss.gif')):
+                    continue
                 # Skip if latent_Z.npy or true_Z.npy does not exist
                 latent_Z_path = os.path.join(exp_path, 'latent_Z_diff.npy')
                 true_Z_path = os.path.join(exp_path, 'true_Z_diff.npy')
