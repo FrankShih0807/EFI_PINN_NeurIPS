@@ -10,10 +10,10 @@ from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
 from PINN.common.callbacks import BaseCallback
 from PINN import PINN, PINN_EFI, Pretrain_EFI, PINN_EFI_Inverse, BayesianPINN, BayesianPINN_Inverse, PINN_Inverse
-from PINN.models import Cooling, EuropeanCall, Nonlinear, EuropeanCallDiscovery, Poisson, Poisson_v2, PoissonNonlinear, Poisson2D
-from PINN.models import PoissonCallback, Poisson_v2Callback, PoissonNonlinearCallback, EuropeanCallCallback, Poisson2DCallback
+from PINN.models import Cooling, EuropeanCall, Nonlinear, EuropeanCallDiscovery, Poisson1D, Poisson2D
+from PINN.models import Poisson1DCallback, EuropeanCallCallback, Poisson2DCallback
 
-from torch.utils.data import DataLoader,Dataset
+from torch.utils.data import DataLoader, Dataset
 
 yaml = YAML()
 yaml.preserve_quotes = True
@@ -22,8 +22,8 @@ yaml.preserve_quotes = True
 ALGOS: Dict[str, Type[BasePINN]] = {
     "pinn": PINN,
     "pinn_inverse": PINN_Inverse,
-    "pinn_efi": PINN_EFI,
-    "pretrain_efi": Pretrain_EFI,
+    # "pinn_efi": PINN_EFI,
+    # "pretrain_efi": Pretrain_EFI,
     "pinn_efi_inverse": PINN_EFI_Inverse,
     "bpinn": BayesianPINN,
     "bpinn_inverse": BayesianPINN_Inverse, 
@@ -34,19 +34,19 @@ MODELS: Dict[str, Type[PhysicsModel]] = {
     "european_call": EuropeanCall,
     "nonlinear": Nonlinear,
     "european_call_discovery": EuropeanCallDiscovery,
-    "poisson": PoissonNonlinear,
-    "poisson-v2": PoissonNonlinear,
-    "poisson-nonlinear": PoissonNonlinear,
-    "poisson-inverse": PoissonNonlinear,
+    "poisson": Poisson1D,
+    "poisson-v2": Poisson1D,
+    "poisson-nonlinear": Poisson1D,
+    "poisson-inverse": Poisson1D,
     "poisson-2d": Poisson2D
 }
 
 CALLBACKS: Dict[str, Callable] = {
-    "poisson": PoissonNonlinearCallback,
-    "poisson-v2": PoissonNonlinearCallback,
-    "poisson-nonlinear": PoissonNonlinearCallback,
+    "poisson": Poisson1DCallback,
+    "poisson-v2": Poisson1DCallback,
+    "poisson-inverse": Poisson1DCallback,
+    "poisson-nonlinear": Poisson1DCallback,
     "european_call": EuropeanCallCallback,
-    "poisson-inverse": PoissonNonlinearCallback,
     "poisson-2d": Poisson2DCallback
 }
 

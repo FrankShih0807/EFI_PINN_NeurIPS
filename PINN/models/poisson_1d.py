@@ -12,10 +12,10 @@ from PINN.common.callbacks import BaseCallback
 from PINN.common.buffers import EvaluationBuffer, ScalarBuffer
 import random
 '''
-PoissonNonlinear: Poisson with parameter estimation 
+Poisson1D: Poisson with parameter estimation 
 '''
 
-class PoissonNonlinear(PhysicsModel):
+class Poisson1D(PhysicsModel):
     def __init__(self, 
                  t_start=-0.7,
                  t_end=0.7, 
@@ -111,7 +111,7 @@ class PoissonNonlinear(PhysicsModel):
 
 
 
-class PoissonNonlinearCallback(BaseCallback):
+class Poisson1DCallback(BaseCallback):
     def __init__(self):
         super().__init__()
     
