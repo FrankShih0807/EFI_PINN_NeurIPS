@@ -330,20 +330,23 @@ class EuropeanCallCallback(BaseCallback):
 
         S = self.eval_X_cpu[:,1].reshape(self.grids,self.grids).numpy()
         S_eval = S[:,0]
-        true_price = self.eval_y_cpu[subset_indices,:].flatten().numpy()
+        true_price = self.eval_y_cpu[subset_indices,:].flatten()
 
         preds_mean = self.eval_buffer.get_mean()
-        preds_upper, preds_lower = self.eval_buffer.get_ci()
+        preds_lower, preds_upper = self.eval_buffer.get_ci()
+
+        cr = ((preds_lower[subset_indices] <= true_price) & (true_price <= preds_upper[subset_indices])).float().mean().item()
 
         sns.set_theme()
         plt.subplots(figsize=(8, 6))
-        plt.plot(S_eval, true_price, alpha=0.8, color='b', label='True')
+        plt.plot(S_eval, true_price.numpy(), alpha=0.8, color='b', label='True')
         plt.plot(S_eval, preds_mean[subset_indices], alpha=0.8, color='g', label='Mean')
         plt.fill_between(S_eval, preds_upper[subset_indices], preds_lower[subset_indices], alpha=0.2, color='g', label='95% CI')
+        plt.plot([], [], ' ', label=f'CR: {cr:.4f}')
         plt.xlabel('Stock Price')
         plt.ylabel('Option Price')
         plt.legend(loc='upper left', bbox_to_anchor=(0.1, 0.95))
-        plt.savefig(os.path.join(self.save_path, f'slice_prediction_idx{slice_idx}.png'))
+        plt.savefig(os.path.join(self.save_path, f'slice_idx{slice_idx}.png'))
 
         # save temp frames
         temp_dir = os.path.join(self.save_path, f'temp_frames_idx{slice_idx}')
@@ -442,7 +445,7 @@ class EuropeanCallCallback(BaseCallback):
                 frames.append(Image.open(frame_path))
 
             frames[0].save(
-                os.path.join(self.save_path, f"training_loss_idx{idx}.gif"),
+                os.path.join(self.save_path, f"training_idx{idx}.gif"),
                 save_all=True,
                 append_images=frames[1:],
                 duration=500,
