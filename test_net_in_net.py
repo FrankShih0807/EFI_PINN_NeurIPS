@@ -64,29 +64,4 @@ if __name__ == '__main__':
         nn.ReLU()
     )
     
-    class Shell(nn.Module):
-        def __init__(self, net):
-            super(Shell, self).__init__()
-            self.net = net
-        
-        def forward(self, x):
-            return self.net(x)[:5]
-        
-    net2 = Shell(net1)
-    
-    x = torch.randn(10)
-    y1 = net1(x)
-    y2 = net2(x)
-    
-    print(y1)
-    print(y2)
-    
-    with torch.no_grad():
-        for p in net1.parameters():
-            p += 1
-    
-    y1 = net1(x)
-    y2 = net2(x)
-    
-    print(y1)
-    print(y2)
+    print(net1[0].weight.shape, net1[0].bias.shape)

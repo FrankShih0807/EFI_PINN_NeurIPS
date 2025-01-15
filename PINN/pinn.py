@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from PINN.common.base_pinn import BasePINN
-from PINN.common.torch_layers import DropoutDNN
+from PINN.common.torch_layers import DropoutDNN, MixedActivationNet
 from torch import optim
 
 class PINN(BasePINN):
@@ -40,6 +40,7 @@ class PINN(BasePINN):
             activation_fn=self.activation_fn,
             dropout_rate=self.dropout_rate,
         )
+        # self.net = MixedActivationNet(input_dim=self.input_dim, output_dim=self.output_dim)
         self.net.to(self.device)
         self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         # self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr)

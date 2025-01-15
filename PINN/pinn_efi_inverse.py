@@ -86,8 +86,6 @@ class PINN_EFI_Inverse(BasePINN):
             **self.encoder_kwargs
         )
         self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr(0), momentum=self.sgd_momentum(0))
-        # self.optimiser = optim.Adam(self.net.parameters(), lr=3e-4)
-        # self.sampler = SGLD([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0))
         self.sampler = SGHMC([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0), alpha=self.sgld_alpha(0))
 
     def _get_scheduler(self):

@@ -335,39 +335,7 @@ class EFI_Net_PE(nn.Module):
             loss += gmm_loss(p, self.prior_sd, self.sparse_sd, self.sparsity).sum()
         return loss
 
-# class MLP(nn.Module):
-#     def __init__(self,in_features : int, out_features: int, hidden_features: int,num_hidden_layers: int) -> None:
-#         super().__init__()
-#         self.in_features = in_features
-#         self.out_features = out_features
-        
-#         self.linear_in = nn.Linear(in_features,hidden_features)
-#         self.linear_out = nn.Linear(hidden_features,out_features)
-        
-#         self.activation = torch.tanh
-#         self.layers = nn.ModuleList([self.linear_in] + [nn.Linear(hidden_features, hidden_features) for _ in range(num_hidden_layers)  ])
-        
-         
-#     def forward(self,x):
-#         for layer in self.layers:
-#             x = self.activation(layer(x))
-    
-#         return self.linear_out(x)
 
-
-# class DeepONet(nn.Module):
-#     def __init__(self,out_features,branch,trunk) -> None:
-#         super().__init__()
-#         if branch.out_features != trunk.out_features:
-#             raise ValueError('Branch and trunk networks must have the same output dimension')
-#         latent_features = branch.out_features
-#         self.branch = branch
-#         self.trunk = trunk
-#         self.fc = nn.Linear(latent_features,out_features,bias = False)
-        
-
-#     def forward(self,y,u):
-#         return self.fc(self.trunk(y)*self.branch(u))
 
     
 class BayesianPINNNet(nn.Module):
@@ -534,7 +502,28 @@ class EFI_Net_v2(nn.Module):
             loss += gmm_loss(p, self.prior_sd, self.sparse_sd, self.sparsity).sum()
         return loss
     
+class MixedActivationNet(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(MixedActivationNet, self).__init__()
+        self.relu_branch = nn.Sequential(
+            nn.Linear(input_dim, 50),
+            nn.ReLU(),
+            nn.Linear(50, 25),
+            nn.ReLU()
+        )
+        self.softplus_branch = nn.Sequential(
+            nn.Linear(input_dim, 50),
+            nn.Softplus(beta=5),
+            nn.Linear(50, 25),
+            nn.Softplus(beta=5)
+        )
+        self.output_layer = nn.Linear(50, output_dim)
 
+    def forward(self, x):
+        relu_out = self.relu_branch(x)
+        softplus_out = self.softplus_branch(x)
+        combined = torch.cat((relu_out, softplus_out), dim=1)
+        return self.output_layer(combined)
 
 if __name__ == '__main__':
 
