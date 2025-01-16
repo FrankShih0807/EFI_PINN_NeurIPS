@@ -73,7 +73,7 @@ class EuropeanCall(PhysicsModel):
     
     def get_eval_data(self):
         eval_t = torch.linspace(self.t_range[0], self.t_range[1], self.grids)
-        eval_S = torch.linspace(self.S_range[0], self.S_range[1], self.grids)
+        eval_S = torch.linspace(self.S_range[0], self.S_range[1], self.grids + 1)[1::]
         S, T = torch.meshgrid(eval_S, eval_t, indexing='ij')
         eval_X = torch.cat([T.reshape(-1, 1), S.reshape(-1, 1)], dim=1)
         eval_y = self.physics_law(S, self.t_range[1] - T).reshape(-1, 1)
@@ -335,15 +335,20 @@ class EuropeanCallCallback(BaseCallback):
         preds_mean = self.eval_buffer.get_mean()
         preds_lower, preds_upper = self.eval_buffer.get_ci()
 
+        ci_range = (preds_upper[subset_indices] - preds_lower[subset_indices]).mean().item()
         cr = ((preds_lower[subset_indices] <= true_price) & (true_price <= preds_upper[subset_indices])).float().mean().item()
+        mse = F.mse_loss(preds_mean[subset_indices], true_price, reduction='mean').item()
+
+        self.logger.record(f'eval/ci_range_idx{slice_idx}', ci_range)
         self.logger.record(f'eval/cr_idx{slice_idx}', cr)
+        self.logger.record(f'eval/mse_idx{slice_idx}', mse)
 
         sns.set_theme()
         plt.subplots(figsize=(8, 6))
         plt.plot(S_eval, true_price.numpy(), alpha=0.8, color='b', label='True')
         plt.plot(S_eval, preds_mean[subset_indices], alpha=0.8, color='g', label='Mean')
         plt.fill_between(S_eval, preds_upper[subset_indices], preds_lower[subset_indices], alpha=0.2, color='g', label='95% CI')
-        plt.plot([], [], ' ', label=f'CR: {cr:.4f}')
+        # plt.plot([], [], ' ', label=f'CR: {cr:.4f}')
         plt.xlabel('Stock Price')
         plt.ylabel('Option Price')
         plt.legend(loc='upper left', bbox_to_anchor=(0.1, 0.95))
