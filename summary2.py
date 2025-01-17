@@ -36,8 +36,8 @@ def collect_progress_data(output_dir):
                     continue
                 
                 csv_file = os.path.join(exp_path, 'progress.csv')
-                if not os.path.exists(os.path.join(exp_path, 'training_loss.gif')):
-                    continue
+                # if not os.path.exists(os.path.join(exp_path, 'training_loss.gif')):
+                #     continue
                 if os.path.exists(csv_file):
                     try:
                         # Read the CSV file
