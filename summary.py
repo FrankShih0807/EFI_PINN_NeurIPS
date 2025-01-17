@@ -341,7 +341,8 @@ df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
 # print(df[(df['mse']>0.001) & (df['model']=='poisson-inverse') ])
 # print(df[(df['k_coverage_rate']<1.0) &(df['model']=='poisson-inverse')  ])
 
-df = df[['model', 'algo', 'mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_coverage_rate', 'k_ci_range', 'mse_idx0', 'mse_idx15', 'mse_idx29', 'cr_idx0', 'cr_idx15', 'cr_idx29', 'ci_range_idx0', 'ci_range_idx15', 'ci_range_idx29']]
+# df = df[['model', 'algo', 'mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_coverage_rate', 'k_ci_range', 'mse_idx0', 'mse_idx15', 'mse_idx29', 'cr_idx0', 'cr_idx15', 'cr_idx29', 'ci_range_idx0', 'ci_range_idx15', 'ci_range_idx29']]
+df = df[['model', 'algo', 'mse', 'coverage_rate', 'ci_range']]
 # df = df.dropna()
 plot_cr_boxplot(df)
 # df["cover_all"] = (df["coverage_rate"]==1)
