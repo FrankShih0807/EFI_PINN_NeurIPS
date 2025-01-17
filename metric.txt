@@ -1,70 +1,52 @@
 Mean
-                                                     mse coverage_rate  ci_range    k_mean k_coverage_rate  k_ci_range
-model             algo                                                                                                
-poisson           efi_size30                    0.000198        0.9416  0.056503       NaN             NaN         NaN
-                  efi_size50                    0.000180        0.9533  0.056812       NaN             NaN         NaN
-                  pinn_efi_resamp_log_neck8     0.000196        0.9138  0.049045       NaN             NaN         NaN
-                  pinn_efi_resamp_neck2         0.000177        0.9205  0.047543       NaN             NaN         NaN
-                  pinn_efi_resamp_neck4         0.000152        0.9573  0.047808       NaN             NaN         NaN
-                  pinn_efi_resamp_neck8         0.000159        0.9449  0.047504       NaN             NaN         NaN
-                  pinn_efi_resamp_neck8-2       0.000200        0.9285  0.049841       NaN             NaN         NaN
-poisson-inverse   efi_size100                   0.000104         0.942  0.039457  0.699629            0.92    0.016455
-                  efi_size100-2                 0.000104        0.9356  0.038802  0.698687            0.88    0.016480
-poisson-nonlinear efi_size30                    0.000499        0.9559  0.094008       NaN             NaN         NaN
-                  efi_size50                    0.000989      0.938866  0.107904       NaN             NaN         NaN
-poisson-v2        efi_size30                    0.000248        0.9471  0.065076       NaN             NaN         NaN
-                  efi_size50                    0.000294        0.9424  0.068855       NaN             NaN         NaN
-                  pinn_efi_size50_neck16_new    0.000282        0.9235  0.058834       NaN             NaN         NaN
-                  pinn_efi_size50_neck32_new    0.000234        0.9325  0.058579       NaN             NaN         NaN
-                  pinn_efi_size50_neck32_new10  0.000230        0.9347  0.059454       NaN             NaN         NaN
-                  pinn_efi_size50_neck32_new2   0.000272          0.91  0.058121       NaN             NaN         NaN
-                  pinn_efi_size50_neck32_new5   0.000257        0.9057  0.056308       NaN             NaN         NaN
-                  pinn_efi_size50_neck32_new6   0.000250        0.9313  0.059218       NaN             NaN         NaN
-                  pinn_efi_size50_neck32_new7   0.000258      0.915326  0.055703       NaN             NaN         NaN
-                  pinn_efi_size50_neck32_new8   0.000269        0.9025  0.056420       NaN             NaN         NaN
-                  pinn_efi_size50_neck48_new    0.000234      0.952143  0.058755       NaN             NaN         NaN
-                  pinn_efi_size50_no_resamp-1   0.000275      0.897805  0.057010       NaN             NaN         NaN
-                  pinn_efi_size50_no_resamp-2   0.000260      0.902101  0.058059       NaN             NaN         NaN
-                  pinn_efi_size50_no_resamp-3   0.000259      0.915476  0.056749       NaN             NaN         NaN
-                  pinn_efi_size50_no_resamp-5   0.062541      0.044922  0.353910       NaN             NaN         NaN
-                  pinn_efi_size50_resamp-1      0.000256      0.936842  0.059028       NaN             NaN         NaN
-                  pinn_efi_size50_resamp-2      0.000228      0.932041  0.059286       NaN             NaN         NaN
-                  pinn_efi_size50_resamp-3      0.000266      0.864762  0.058711       NaN             NaN         NaN
-                  pinn_efi_size50_resamp-5      0.000251       0.93256  0.058714       NaN             NaN         NaN
-                  pinn_efi_size50_resamp-6      0.000251       0.92656  0.059078       NaN             NaN         NaN
-                  pinn_efi_size50_resamp-7      0.000255       0.54632  0.058860       NaN             NaN         NaN
+                                                     mse  coverage_rate  ci_range
+model             algo                                                           
+poisson           pinn_efi                      0.000148       0.951700  0.050437
+                  pinn_efi_resamp_neck2-4       0.000192       0.920300  0.049205
+                  pinn_efi_resamp_neck4-2       0.000181       0.925600  0.047515
+                  pinn_efi_resamp_neck4-3       0.000147       0.935800  0.046303
+                  pinn_efi_resamp_neck4-4       0.000153       0.943100  0.048812
+                  pinn_efi_resamp_neck8-2       0.000162       0.932200  0.047201
+                  pinn_efi_resamp_neck8-3       0.000186       0.901200  0.045984
+                  pinn_efi_resamp_neck8-4       0.000176       0.930200  0.048738
+poisson-nonlinear efi_size30                    0.000499       0.955900  0.094008
+                  efi_size50                    0.000989       0.938866  0.107904
+poisson-v2        efi_size30                    0.000248       0.947100  0.065076
+                  efi_size50                    0.000294       0.942400  0.068855
+                  pinn_efi_size50_neck16_new    0.000282       0.923500  0.058834
+                  pinn_efi_size50_neck32_new10  0.000230       0.934700  0.059454
+                  pinn_efi_size50_neck48_new    0.000234       0.952143  0.058755
+                  pinn_efi_size50_no_resamp-4   0.000293       0.899360  0.059436
+                  pinn_efi_size50_no_resamp-5   0.000267       0.906880  0.059349
+                  pinn_efi_size50_no_resamp-6   0.000246       0.913280  0.058933
+                  pinn_efi_size50_no_resamp-7   0.000286       0.916911  0.059717
+                  pinn_efi_size50_no_resamp-8   0.000256       0.923306  0.059612
+                  pinn_efi_size50_no_resamp-9   0.000270       0.908145  0.058971
+                  pinn_efi_size50_resamp-5      0.000247       0.932200  0.058533
+                  pinn_efi_size50_resamp-6      0.000249       0.932500  0.059086
 Standard error
-                                                     mse  coverage_rate  ci_range    k_mean  k_coverage_rate  k_ci_range
-model             algo                                                                                                  
-poisson           efi_size30                    0.000020       0.014993  0.000798       NaN              NaN         NaN
-                  efi_size50                    0.000024       0.014965  0.000815       NaN              NaN         NaN
-                  pinn_efi_resamp_log_neck8     0.000022       0.020396  0.000344       NaN              NaN         NaN
-                  pinn_efi_resamp_neck2         0.000019       0.017435  0.000323       NaN              NaN         NaN
-                  pinn_efi_resamp_neck4         0.000015       0.013370  0.000300       NaN              NaN         NaN
-                  pinn_efi_resamp_neck8         0.000018       0.016274  0.000273       NaN              NaN         NaN
-                  pinn_efi_resamp_neck8-2       0.000022       0.019647  0.000350       NaN              NaN         NaN
-poisson-inverse   efi_size100                   0.000009       0.009519  0.000190  0.000458         0.027266    0.000180
-                  efi_size100-2                 0.000009       0.010754  0.000194  0.000471         0.032660    0.000203
-poisson-nonlinear efi_size30                    0.000034       0.008687  0.000860       NaN              NaN         NaN
-                  efi_size50                    0.000238       0.011722  0.003542       NaN              NaN         NaN
-poisson-v2        efi_size30                    0.000018       0.009837  0.000534       NaN              NaN         NaN
-                  efi_size50                    0.000022       0.009621  0.000605       NaN              NaN         NaN
-                  pinn_efi_size50_neck16_new    0.000020       0.010830  0.000285       NaN              NaN         NaN
-                  pinn_efi_size50_neck32_new    0.000018       0.011193  0.000267       NaN              NaN         NaN
-                  pinn_efi_size50_neck32_new10  0.000016       0.010278  0.000384       NaN              NaN         NaN
-                  pinn_efi_size50_neck32_new2   0.000018       0.014479  0.000359       NaN              NaN         NaN
-                  pinn_efi_size50_neck32_new5   0.000018       0.011839  0.000426       NaN              NaN         NaN
-                  pinn_efi_size50_neck32_new6   0.000017       0.011516  0.000296       NaN              NaN         NaN
-                  pinn_efi_size50_neck32_new7   0.000019       0.011235  0.000362       NaN              NaN         NaN
-                  pinn_efi_size50_neck32_new8   0.000019       0.013522  0.000385       NaN              NaN         NaN
-                  pinn_efi_size50_neck48_new    0.000017       0.010978  0.000264       NaN              NaN         NaN
-                  pinn_efi_size50_no_resamp-1   0.000018       0.013188  0.000454       NaN              NaN         NaN
-                  pinn_efi_size50_no_resamp-2   0.000019       0.012243  0.000372       NaN              NaN         NaN
-                  pinn_efi_size50_no_resamp-3   0.000016       0.009754  0.000407       NaN              NaN         NaN
-                  pinn_efi_size50_no_resamp-5        NaN            NaN       NaN       NaN              NaN         NaN
-                  pinn_efi_size50_resamp-1      0.000015       0.009714  0.000222       NaN              NaN         NaN
-                  pinn_efi_size50_resamp-2      0.000015       0.016180  0.000225       NaN              NaN         NaN
-                  pinn_efi_size50_resamp-3      0.000017       0.024030  0.000338       NaN              NaN         NaN
-                  pinn_efi_size50_resamp-5      0.000018       0.010833  0.000257       NaN              NaN         NaN
-                  pinn_efi_size50_resamp-6      0.000017       0.010196  0.000286       NaN              NaN         NaN
-                  pinn_efi_size50_resamp-7      0.000020       0.046402  0.000246       NaN              NaN         NaN
+                                                     mse  coverage_rate  ci_range
+model             algo                                                           
+poisson           pinn_efi                      0.000016       0.014186  0.000462
+                  pinn_efi_resamp_neck2-4       0.000020       0.019080  0.000405
+                  pinn_efi_resamp_neck4-2       0.000019       0.018910  0.000301
+                  pinn_efi_resamp_neck4-3       0.000013       0.016405  0.000457
+                  pinn_efi_resamp_neck4-4       0.000016       0.015309  0.000450
+                  pinn_efi_resamp_neck8-2       0.000016       0.017569  0.000264
+                  pinn_efi_resamp_neck8-3       0.000021       0.021816  0.000439
+                  pinn_efi_resamp_neck8-4       0.000019       0.018635  0.000464
+poisson-nonlinear efi_size30                    0.000034       0.008687  0.000860
+                  efi_size50                    0.000238       0.011722  0.003542
+poisson-v2        efi_size30                    0.000018       0.009837  0.000534
+                  efi_size50                    0.000022       0.009621  0.000605
+                  pinn_efi_size50_neck16_new    0.000020       0.010830  0.000285
+                  pinn_efi_size50_neck32_new10  0.000016       0.010278  0.000384
+                  pinn_efi_size50_neck48_new    0.000017       0.010978  0.000264
+                  pinn_efi_size50_no_resamp-4   0.000020       0.016552  0.000362
+                  pinn_efi_size50_no_resamp-5   0.000020       0.015024  0.000356
+                  pinn_efi_size50_no_resamp-6   0.000020       0.016469  0.000372
+                  pinn_efi_size50_no_resamp-7   0.000022       0.015447  0.000326
+                  pinn_efi_size50_no_resamp-8   0.000018       0.014116  0.000201
+                  pinn_efi_size50_no_resamp-9   0.000019       0.013780  0.000320
+                  pinn_efi_size50_resamp-5      0.000018       0.011249  0.000235
+                  pinn_efi_size50_resamp-6      0.000016       0.009326  0.000302
