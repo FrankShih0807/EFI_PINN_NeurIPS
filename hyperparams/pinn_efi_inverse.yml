@@ -17,8 +17,8 @@ cooling:
       sparse_threshold: 0.01
 
 european_call:
-  epochs: 200_000
-  eval_freq: 1000
+  epochs: 300_000
+  eval_freq: -1
   burn: 0.1
   pinn:
     hidden_layers:
@@ -27,18 +27,18 @@ european_call:
     activation_fn: softplus(beta=10)
     annealing_period: 0.1
     grad_norm_max: -1.0
-    lr: 'poly_0.5e-5_10.0_0.55'
+    lr: 'poly_0.5e-5_100.0_0.55'
     sgd_momentum: 'linear_0.9_0.0'
-    sgld_lr: 'poly_0.5e-5_10.0_0.55'
-    sgld_alpha: 'linear_1.0_1.0'
-    lam: 'linear_50.0_250.0'
+    sgld_lr: 'poly_0.5e-5_100.0_0.55'
+    sgld_alpha: 1.0
+    lam: 'linear_50.0_1000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
     pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 16
-      - 16
+      - 32
+      - 32
       - 8
       encoder_activation: leaky_relu
       prior_sd: 10.0
