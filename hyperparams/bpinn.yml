@@ -49,6 +49,7 @@ poisson-nonlinear:
     # sigma_diff: 0.05
     sigma_diff: 0.05
     sigma_sol: 0.05
+    pretrain_epochs: 0
 
 poisson-2d:
   n_samples: 100
