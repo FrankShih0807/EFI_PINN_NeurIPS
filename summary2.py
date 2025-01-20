@@ -123,7 +123,7 @@ df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
 
 
 # Filter out rows with abnormal large mse or nan mse
-abnormal_mse_indices = df[df['mse'] > .1 | df['mse'].isna()].index
+abnormal_mse_indices = df[(df['mse'] > .1) | (df['mse'].isna())].index
 filtered_df = df[df['mse'] <= .1]
 
 # Find the group and in-group index for abnormal mse rows
@@ -131,10 +131,10 @@ abnormal_indices_info = []
 for idx in abnormal_mse_indices:
     row = df.loc[idx]
     group_key = (row['model'], row['algo'], row['exp'])
-    if row['mse'].isna():
-        filtered_reason = "nan mse"
+    if pd.isna(row['mse']):
+        filtered_reason = "nan"
     else:
-        filtered_reason = "abnormal large mse"
+        filtered_reason = "large"
     abnormal_indices_info.append((group_key, filtered_reason))
 
 # Print the indices of rows with abnormal large mse and their in-group index
