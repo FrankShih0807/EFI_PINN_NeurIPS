@@ -62,7 +62,8 @@ class BayesianPINN(BasePINN):
 
     def _pinn_init(self):
         sigma_diff = self.sigma_diff(progress=0.0)
-        self.bnet = BayesianPINNNet(sigma_diff, self.sigma_sol, self.physics_model, self.num_bd, self.input_dim, self.output_dim, self.hidden_layers)
+        sigma_sol = self.sigma_sol(progress=0.0)
+        self.bnet = BayesianPINNNet(sigma_diff, sigma_sol, self.physics_model, self.num_bd, self.input_dim, self.output_dim, self.hidden_layers)
         self.net = self.bnet.fnn
         for param in self.net.parameters():
             torch.nn.init.normal_(param)
@@ -79,17 +80,19 @@ class BayesianPINN(BasePINN):
     def _get_scheduler(self):
         self.step_size = get_schedule(self.step_size)
         self.sigma_diff = get_schedule(self.sigma_diff)
+        self.sigma_sol = get_schedule(self.sigma_sol)
 
     def pretrain_net(self):
         print('Pretraining Bayesian PINN...')
         optimiser = optim.Adam(self.net.parameters(), lr=5.0e-4)
         sigma_diff = self.sigma_diff(progress=0.0)
+        sigma_sol = self.sigma_sol(progress=0.0)
         self.net.train()
         for ep in range(self.pretrain_epochs):
             optimiser.zero_grad()
             output = self.bnet(self.X)
             pde_loss = self.mse_loss(output[:-self.num_bd] * (sigma_diff * 2 ** 0.5), self.diff_y)
-            sol_loss = self.mse_loss(output[-self.num_bd:] * (self.sigma_sol * 2 ** 0.5), self.sol_y)
+            sol_loss = self.mse_loss(output[-self.num_bd:] * (sigma_sol * 2 ** 0.5), self.sol_y)
             l2_loss = 0
             for param in self.net.parameters():
                 l2_loss += torch.sum(param**2)
@@ -107,10 +110,11 @@ class BayesianPINN(BasePINN):
         annealing_progress = self.progress / annealing_period
         step_size = self.step_size(annealing_progress)
         sigma_diff = self.sigma_diff(annealing_progress)
+        sigma_sol = self.sigma_sol(annealing_progress)
         # step_size = 0.02 * min(sigma_diff, self.sigma_sol)
 
         self.bnet.sigma_diff = sigma_diff
-        self.y = torch.cat([self.diff_y / (sigma_diff * 2 ** 0.5), self.sol_y / (self.sigma_sol * 2 ** 0.5)], dim=0).to(self.device)
+        self.y = torch.cat([self.diff_y / (sigma_diff * 2 ** 0.5), self.sol_y / (sigma_sol * 2 ** 0.5)], dim=0).to(self.device)
 
         # params_hmc = hamiltorch.sample_model(
         #     self.bnet, self.X, self.y, model_loss='regression', params_init=self.params_init,
