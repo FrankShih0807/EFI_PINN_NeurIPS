@@ -60,8 +60,8 @@ def collect_progress_data(output_dir):
                     continue
                 
                 csv_file = os.path.join(exp_path, 'progress.csv')
-                # if not os.path.exists(os.path.join(exp_path, 'training_loss.gif')):
-                #     continue
+                if not os.path.exists(os.path.join(exp_path, 'training_loss.gif')):
+                    continue
                 if os.path.exists(csv_file):
                     try:
                         # Read the CSV file
@@ -338,7 +338,7 @@ df = progress_df[progress_df['done']==True]
 # raise
 df = df.loc[:, ~df.columns.str.startswith('train')]
 df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
-# print(df[(df['mse']>0.001) & (df['model']=='poisson-inverse') ])
+print(df[(df['mse']>0.001) & (df['model']=='poisson-v2') ])
 # print(df[(df['k_coverage_rate']<1.0) &(df['model']=='poisson-inverse')  ])
 
 # df = df[['model', 'algo', 'mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_coverage_rate', 'k_ci_range', 'mse_idx0', 'mse_idx15', 'mse_idx29', 'cr_idx0', 'cr_idx15', 'cr_idx29', 'ci_range_idx0', 'ci_range_idx15', 'ci_range_idx29']]
