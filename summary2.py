@@ -122,31 +122,36 @@ df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
 # print("coverage rate")
 
 
-# Filter out rows with abnormal large mse
-abnormal_mse_indices = df[df['mse'] > 1].index
-filtered_df = df[df['mse'] <= 1]
+# Filter out rows with abnormal large mse or nan mse
+abnormal_mse_indices = df[df['mse'] > .1 | df['mse'].isna()].index
+filtered_df = df[df['mse'] <= .1]
 
 # Find the group and in-group index for abnormal mse rows
 abnormal_indices_info = []
 for idx in abnormal_mse_indices:
     row = df.loc[idx]
-    group_key = (row['model'], row['algo'])
-    group_df = df[(df['model'] == row['model']) & (df['algo'] == row['algo'])]
-    in_group_index = group_df.index.get_loc(idx)
-    abnormal_indices_info.append((idx, group_key, in_group_index))
+    group_key = (row['model'], row['algo'], row['exp'])
+    if row['mse'].isna():
+        filtered_reason = "nan mse"
+    else:
+        filtered_reason = "abnormal large mse"
+    abnormal_indices_info.append((group_key, filtered_reason))
 
 # Print the indices of rows with abnormal large mse and their in-group index
 print("Indices of rows with abnormal large mse and their in-group index:")
 for info in abnormal_indices_info:
-    print(f"Global index: {info[0]}, Group: {info[1]}, In-group index: {info[2]}")
+    print(f"Group: {info[0]}, Reason: {info[1]}")
 
 # Calculate and print the mean and std of the filtered dataframe
+pd.set_option('display.max_rows', 200)
 # print(filtered_df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].mean())
 # print(filtered_df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].std()/10)
 
-pd.set_option('display.max_rows', 100)
 print(filtered_df.groupby(['model', 'algo'])[['mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_coverage_rate', 'k_ci_range']].mean())
 print(filtered_df.groupby(['model', 'algo'])[['mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_coverage_rate', 'k_ci_range']].std()/10)
+
+# print(filtered_df.groupby(['model', 'algo'])[['mse_idx0', 'cr_idx0', 'ci_range_idx0', 'mse_idx15', 'cr_idx15', 'ci_range_idx15']].mean())
+# print(filtered_df.groupby(['model', 'algo'])[['mse_idx0', 'cr_idx0', 'ci_range_idx0', 'mse_idx15', 'cr_idx15', 'ci_range_idx15']].std()/10)
 
 # print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].mean())
 # print(df.groupby(['model', 'algo'])[['coverage_rate', 'mse', 'ci_range']].std()/10)
