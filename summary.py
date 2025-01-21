@@ -3,34 +3,11 @@ import os
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-
-# def remove_outliers_iqr(data, multiplier=1.5):
-#     if len(data) == 0:
-#         return data  # Return empty array if input is empty
-#     # Calculate Q1 (25th percentile) and Q3 (75th percentile)
-#     q1 = np.percentile(data, 25)
-#     q3 = np.percentile(data, 75)
-#     # Compute the IQR
-#     iqr = q3 - q1
-#     # Define the lower and upper bounds for non-outliers
-#     lower_bound = q1 - multiplier * iqr
-#     upper_bound = q3 + multiplier * iqr
-#     # Filter the data
-#     filtered_data = data[(data >= lower_bound) & (data <= upper_bound)]
-    
-#     return filtered_data
-
-# model = "poisson"
-# # exp = "efi_sgd"
-# exp = "efi_new_loss2"
-# # exp = "efi_sgd_plw20"
-# # exp = "efi_adam_plw20"
-# # exp = "efi_adam_plw20"
-
-# output_folder = f"output/{model}/{exp}"
+import scipy.stats as stats
+import pylab
 
 
-def collect_progress_data(output_dir):
+def collect_progress_data(output_dir, model):
     """
     Collects all progress data from progress.csv files in the directory structure
     and combines them into a single DataFrame with additional columns for 'model', 'algo', and 'exp'.
@@ -44,44 +21,48 @@ def collect_progress_data(output_dir):
     data_frames = []
 
     # Walk through the directory structure
-    for model in os.listdir(output_dir):
-        model_path = os.path.join(output_dir, model)
-        if not os.path.isdir(model_path):
+    model_path = os.path.join(output_dir, model)
+    if not os.path.isdir(model_path):
+        print(model_path, 'does not exist.')
+        return 0
+    
+    for algo in os.listdir(model_path):
+        algo_path = os.path.join(model_path, algo)
+        if not os.path.isdir(algo_path):
             continue
         
-        for algo in os.listdir(model_path):
-            algo_path = os.path.join(model_path, algo)
-            if not os.path.isdir(algo_path):
+        for exp in os.listdir(algo_path):
+            exp_path = os.path.join(algo_path, exp)
+            if not os.path.isdir(exp_path):
                 continue
             
-            for exp in os.listdir(algo_path):
-                exp_path = os.path.join(algo_path, exp)
-                if not os.path.isdir(exp_path):
-                    continue
-                
-                csv_file = os.path.join(exp_path, 'progress.csv')
-                if not os.path.exists(os.path.join(exp_path, 'training_loss.gif')):
-                    continue
-                if os.path.exists(csv_file):
-                    try:
-                        # Read the CSV file
-                        df = pd.read_csv(csv_file).tail(1)
-                        # Add columns for 'model', 'algo', and 'exp'
-                        df['model'] = model
-                        df['algo'] = algo
-                        df['exp'] = exp
-                        df['done'] = (df['train/progress'] == 1.0)
-                        # if df['train/progress'] >= (1-1e-6):
-                        #     df['done'] = 1
-                        # else:
-                        #     df['done'] = 0
-                        # Append to the list of DataFrames
-                        data_frames.append(df)
-                    except Exception as e:
-                        print(f"Error reading {csv_file}: {e}")
+            csv_file = os.path.join(exp_path, 'progress.csv')
+            if not os.path.exists(os.path.join(exp_path, 'training_loss.gif')):
+                continue
+            if os.path.exists(csv_file):
+                try:
+                    # Read the CSV file
+                    df = pd.read_csv(csv_file).tail(1)
+                    # Add columns for 'model', 'algo', and 'exp'
+                    df['model'] = model
+                    df['algo'] = algo
+                    df['exp'] = exp
+                    df['done'] = (df['train/progress'] == 1.0)
+                    df = df.loc[:, ~df.columns.str.startswith('train')]
+                    
+                    # if df['train/progress'] >= (1-1e-6):
+                    #     df['done'] = 1
+                    # else:
+                    #     df['done'] = 0
+                    # Append to the list of DataFrames
+                    data_frames.append(df)
+                except Exception as e:
+                    print(f"Error reading {csv_file}: {e}")
     
     # Combine all DataFrames into one
     combined_df = pd.concat(data_frames, ignore_index=True) if data_frames else pd.DataFrame()
+    combined_df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
+    
     return combined_df
 
 
@@ -160,19 +141,19 @@ def plot_latent_Z(output_dir):
         plt.savefig(output_path)
         plt.close()
         
-        fig, axes = plt.subplots(1, 1, figsize=(8, 6))
-        # Ordered comparison plot
-        sorted_latent_Z = np.sort(group['latent_Z'])
-        sorted_true_Z = np.sort(group['true_Z'])
-        axes.scatter(sorted_true_Z, sorted_latent_Z, alpha=0.6)
-        axes.plot([min_val, max_val], [min_val, max_val], 'r--', label='x = y')
-        axes.set_title(r'$Z_{(i)}$ vs $\hat{Z}_{(i)}$')
-        # axes[1].set_xlabel('Ordered True Z')
-        # axes[1].set_ylabel('Ordered Latent Z')
-        axes.legend()
-        axes.grid(True)
 
-        # Save the combined plot
+        res = stats.probplot(group['latent_Z'], dist="norm", plot=pylab)
+        ax = pylab.gca()
+        line0 = ax.get_lines()[0]
+        line0.set_alpha(0.3)
+
+        # Add titles, labels, and grid
+        ax.set_title("Q-Q Plot of Z")
+        ax.set_xlabel("Theoretical Quantiles")
+        ax.set_ylabel("Sample Quantiles")
+        ax.grid(True, alpha=0.5)  # Adjust grid transparency
+
+        # Save the figure
         output_path = os.path.join('figures/latent_Z', f'{model}_{algo}_qq.png')
         plt.tight_layout()
         plt.savefig(output_path)
@@ -255,24 +236,23 @@ def plot_latent_Z_diff(output_dir):
         plt.savefig(output_path)
         plt.close()
         
-        fig, axes = plt.subplots(1, 1, figsize=(8, 6))
-        # Ordered comparison plot
-        sorted_latent_Z = np.sort(group['latent_Z'])
-        sorted_true_Z = np.sort(group['true_Z'])
-        axes.scatter(sorted_true_Z, sorted_latent_Z, alpha=0.6)
-        axes.plot([min_val, max_val], [min_val, max_val], 'r--', label='x = y')
-        axes.set_title(r'$Z_{(i)}$ vs $\hat{Z}_{(i)}$')
-        # axes[1].set_xlabel('Ordered True Z')
-        # axes[1].set_ylabel('Ordered Latent Z')
-        axes.legend()
-        axes.grid(True)
 
-        # Save the combined plot
+        res = stats.probplot(group['latent_Z'], dist="norm", plot=pylab)
+        ax = pylab.gca()
+        line0 = ax.get_lines()[0]
+        line0.set_alpha(0.3)
+
+        # Add titles, labels, and grid
+        ax.set_title("Q-Q Plot of Z")
+        ax.set_xlabel("Theoretical Quantiles")
+        ax.set_ylabel("Sample Quantiles")
+        ax.grid(True, alpha=0.5)  # Adjust grid transparency
+
+        # Save the figure
         output_path = os.path.join('figures/latent_Z_diff', f'{model}_{algo}_qq.png')
         plt.tight_layout()
         plt.savefig(output_path)
         plt.close()
-
     # print(f"Scatter and Ordered plots saved in {output_dir}")
     # Combine all DataFrames into one
 
@@ -322,65 +302,65 @@ def clear_dir(folder):
                 shutil.rmtree(file_path)
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e))
-# Example usage
-output_dir = "output"
-clear_dir('figures/latent_Z')
-clear_dir('figures/latent_Z_diff')
-progress_df = collect_progress_data(output_dir)
-# print(progress_df[progress_df['done']==False])
-# raise
+            
 
 
-# print(progress_df[progress_df['train/progress']<1.0])
-df = progress_df[progress_df['done']==True]
-# df = progress_df
+if __name__ == '__main__':
+    # Example usage
+    output_dir = "output"
+    clear_dir('figures/latent_Z')
+    clear_dir('figures/latent_Z_diff')
 
-# raise
-df = df.loc[:, ~df.columns.str.startswith('train')]
-df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
-print(df[(df['mse']>0.001) & (df['model']=='poisson-v2') ])
-# print(df[(df['k_coverage_rate']<1.0) &(df['model']=='poisson-inverse')  ])
-
-# df = df[['model', 'algo', 'mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_coverage_rate', 'k_ci_range', 'mse_idx0', 'mse_idx15', 'mse_idx29', 'cr_idx0', 'cr_idx15', 'cr_idx29', 'ci_range_idx0', 'ci_range_idx15', 'ci_range_idx29']]
-df = df[['model', 'algo', 'mse', 'coverage_rate', 'ci_range']]
-# df = df.dropna()
-plot_cr_boxplot(df)
-# df["cover_all"] = (df["coverage_rate"]==1)
-# print(df_cr.groupby(['model', 'algo'])['cr'].mean())
-
-# print(df_cr[df_cr['cr']<0.3])
-# print(progress_df[progress_df['train/progress']==1.0])
-# print("coverage rate")
-
-print(df.groupby(['model', 'algo']).mean())
-print(df.groupby(['model', 'algo']).std()/10)
-
-with open('metric.txt', 'w') as file:
-    file.write('Mean\n')
-    file.write(df.groupby(['model', 'algo']).mean().to_string())
-    file.write('\n')
-    file.write('Standard error\n')
-    file.write((df.groupby(['model', 'algo']).std()/10).to_string())
+    models = os.listdir(output_dir)
     
-print(df.groupby(['model', 'algo']).size())
+    file = open('metric.txt', 'w')
+    for model in models:
+        df = collect_progress_data(output_dir, model)
+        print(df[df['mse']>0.01])
+        df = df.drop(columns=['exp'])
+        print(df.groupby(['model', 'algo']).mean())
+        
+        file.write('Mean\n')
+        file.write(df.groupby(['model', 'algo']).mean().to_string())
+        file.write('\n')
+        file.write('Standard error\n')
+        file.write((df.groupby(['model', 'algo']).std()/10).to_string())
+        file.write('\n')
+        file.write('='*100 + '\n')
+        
+    # print(progress_df[progress_df['train/progress']<1.0])
+    # df = progress_df[progress_df['done']==True]
+    # df = progress_df
 
-# print(df[(df['mse']>0.001) & (df['algo']=='efi_size30_3')])
+    # df = df.loc[:, ~df.columns.str.startswith('train')]
+    # df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
+    # print(df[(df['mse']>0.001) & (df['model']=='poisson-v2') ])
+    # # print(df[(df['k_coverage_rate']<1.0) &(df['model']=='poisson-inverse')  ])
 
-rows_with_nan = df[df.isna().any(axis=1)]
-# print(rows_with_nan)
-# low_cr = df2[df2['coverage_rate']<0.5]
-# print(low_cr)
-# print("mse")
-# print(df.groupby(['model', 'algo'])['eval/mse'].mean())
-# print("ci range")
-# print(df.groupby(['model', 'algo'])['eval/ci_range'].mean())
+    # # df = df[['model', 'algo', 'mse', 'coverage_rate', 'ci_range', 'k_mean', 'k_coverage_rate', 'k_ci_range', 'mse_idx0', 'mse_idx15', 'mse_idx29', 'cr_idx0', 'cr_idx15', 'cr_idx29', 'ci_range_idx0', 'ci_range_idx15', 'ci_range_idx29']]
+    # df = df[['model', 'algo', 'mse', 'coverage_rate', 'ci_range']]
 
-# print(df[df['eval/coverage_rate']<0.2][['model', 'algo', 'exp']])
-try:
-    plot_latent_Z(output_dir)
-except:
-    pass
-try:
-    plot_latent_Z_diff(output_dir)
-except:
-    pass
+
+    # print(df.groupby(['model', 'algo']).mean())
+    # print(df.groupby(['model', 'algo']).std()/10)
+
+    # with open('metric.txt', 'w') as file:
+    #     file.write('Mean\n')
+    #     file.write(df.groupby(['model', 'algo']).mean().to_string())
+    #     file.write('\n')
+    #     file.write('Standard error\n')
+    #     file.write((df.groupby(['model', 'algo']).std()/10).to_string())
+        
+    # print(df.groupby(['model', 'algo']).size())
+
+
+    # rows_with_nan = df[df.isna().any(axis=1)]
+
+    try:
+        plot_latent_Z(output_dir)
+    except:
+        pass
+    try:
+        plot_latent_Z_diff(output_dir)
+    except:
+        pass
