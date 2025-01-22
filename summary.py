@@ -37,8 +37,8 @@ def collect_progress_data(output_dir, model):
                 continue
             
             csv_file = os.path.join(exp_path, 'progress.csv')
-            if not os.path.exists(os.path.join(exp_path, 'training_loss.gif')):
-                continue
+            # if not os.path.exists(os.path.join(exp_path, 'training_loss.gif')):
+            #     continue
             if os.path.exists(csv_file):
                 try:
                     # Read the CSV file
@@ -315,7 +315,9 @@ if __name__ == '__main__':
     
     file = open('metric.txt', 'w')
     for model in models:
+        print(model)
         df = collect_progress_data(output_dir, model)
+        print(df)
         print(df[df['mse']>0.01])
         df = df.drop(columns=['exp'])
         print(df.groupby(['model', 'algo']).mean())
