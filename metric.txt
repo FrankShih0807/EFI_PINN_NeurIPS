@@ -3,6 +3,8 @@ Mean
 model      algo                                                                 
 poisson-v2 efi_size30                    0.065076       0.947100  0.000248   1.0
            efi_size50                    0.068855       0.942400  0.000294   1.0
+           pinn_efi_neck64-32_test1      0.066909       0.948443  0.000243   1.0
+           pinn_efi_neck64-32_test2      0.056286       0.892560  0.000287   1.0
            pinn_efi_size50_neck16_new    0.058834       0.923500  0.000282   1.0
            pinn_efi_size50_neck32_new10  0.059454       0.934700  0.000230   1.0
            pinn_efi_size50_neck48_new    0.058755       0.952143  0.000234   1.0
@@ -11,6 +13,8 @@ Standard error
 model      algo                                                                 
 poisson-v2 efi_size30                    0.000534       0.009837  0.000018   0.0
            efi_size50                    0.000605       0.009621  0.000022   0.0
+           pinn_efi_neck64-32_test1      0.000374       0.008064  0.000016   0.0
+           pinn_efi_neck64-32_test2      0.000464       0.016781  0.000018   0.0
            pinn_efi_size50_neck16_new    0.000285       0.010830  0.000020   0.0
            pinn_efi_size50_neck32_new10  0.000384       0.010278  0.000016   0.0
            pinn_efi_size50_neck48_new    0.000264       0.010978  0.000017   0.0
