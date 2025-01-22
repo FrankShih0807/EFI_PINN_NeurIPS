@@ -114,7 +114,7 @@ poisson-v2:
       encoder_hidden_layers:
       - 64
       - 64
-      - 16
+      - 48
       encoder_activation: leaky_relu
       prior_sd: 10.0
       sparse_sd: 0.001

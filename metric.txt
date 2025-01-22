@@ -1,67 +1,36 @@
 Mean
-                                         ci_range  coverage_rate       mse  done
-model      algo                                                                 
-poisson-v2 efi_size30                    0.065076       0.947100  0.000248   1.0
-           efi_size50                    0.068855       0.942400  0.000294   1.0
-           pinn_efi_neck64-32_test1      0.066909       0.948443  0.000243   1.0
-           pinn_efi_neck64-32_test2      0.056286       0.892560  0.000287   1.0
-           pinn_efi_size50_neck16_new    0.058834       0.923500  0.000282   1.0
-           pinn_efi_size50_neck32_new10  0.059454       0.934700  0.000230   1.0
-           pinn_efi_size50_neck48_new    0.058755       0.952143  0.000234   1.0
+                                  ci_range  cr_idx15  ci_range_idx29  mse_idx15  ci_range_idx0   cr_idx0       mse  mse_idx29  ci_range_idx15  coverage_rate  cr_idx29  mse_idx0  done
+model         algo                                                                                                                                                                    
+european_call efi_neck32-8-test2  0.013036     0.957        0.012814   0.000020       0.015946  0.934667  0.000026   0.000123        0.012721       0.904578     0.573  0.000035   1.0
+              pinn_efi            0.012705     0.960        0.012527   0.000017       0.015831  0.944000  0.000025   0.000126        0.012280       0.906267     0.566  0.000038   1.0
 Standard error
-                                         ci_range  coverage_rate       mse  done
-model      algo                                                                 
-poisson-v2 efi_size30                    0.000534       0.009837  0.000018   0.0
-           efi_size50                    0.000605       0.009621  0.000022   0.0
-           pinn_efi_neck64-32_test1      0.000374       0.008064  0.000016   0.0
-           pinn_efi_neck64-32_test2      0.000464       0.016781  0.000018   0.0
-           pinn_efi_size50_neck16_new    0.000285       0.010830  0.000020   0.0
-           pinn_efi_size50_neck32_new10  0.000384       0.010278  0.000016   0.0
-           pinn_efi_size50_neck48_new    0.000264       0.010978  0.000017   0.0
+                                  ci_range  cr_idx15  ci_range_idx29  mse_idx15  ci_range_idx0   cr_idx0       mse  mse_idx29  ci_range_idx15  coverage_rate  cr_idx29  mse_idx0  done
+model         algo                                                                                                                                                                    
+european_call efi_neck32-8-test2  0.000091  0.008918        0.000086   0.000002       0.000108  0.013958  0.000002   0.000002        0.000111       0.008145  0.007426  0.000004   0.0
+              pinn_efi            0.000074  0.008206        0.000068   0.000002       0.000113  0.013349  0.000002   0.000002        0.000090       0.008165  0.007416  0.000005   0.0
 ====================================================================================================
 Mean
-                                             mse  ci_range  coverage_rate  done
-model   algo                                                                   
-poisson pinn_efi                        0.000148  0.050437         0.9517   1.0
-        pinn_efi_resamp_neck16-4-test1  0.000189  0.049689         0.9144   1.0
-        pinn_efi_resamp_neck16-4-test2  0.000180  0.049193         0.9295   1.0
-        pinn_efi_resamp_neck16-8-test1  0.000191  0.049314         0.9125   1.0
-        pinn_efi_resamp_neck16-8-test2  0.000203  0.049178         0.8987   1.0
-        pinn_efi_resamp_neck2-4         0.000192  0.049205         0.9203   1.0
-        pinn_efi_resamp_neck4-2         0.000181  0.047515         0.9256   1.0
-        pinn_efi_resamp_neck4-3         0.000147  0.046303         0.9358   1.0
-        pinn_efi_resamp_neck4-4         0.000153  0.048812         0.9431   1.0
-        pinn_efi_resamp_neck8-2         0.000162  0.047201         0.9322   1.0
-        pinn_efi_resamp_neck8-3         0.000186  0.045984         0.9012   1.0
-        pinn_efi_resamp_neck8-4         0.000176  0.048738         0.9302   1.0
+                                           k_coverage_rate  coverage_rate    k_mean  k_ci_range  ci_range       mse  done
+model           algo                                                                                                     
+poisson-inverse efi_size100_findbest-1                0.89         0.9544  0.698968    0.016623  0.039651  0.000096   1.0
+                efi_size100_findbest-2                0.96         0.9560  0.699544    0.016794  0.039498  0.000098   1.0
+                efi_size100_findbest-3                0.93         0.9577  0.699294    0.016530  0.039507  0.000091   1.0
+                efi_size100_findbest-4                0.92         0.9541  0.698820    0.016738  0.039369  0.000098   1.0
+                efi_size100_findbest-5                0.96         0.9421  0.699804    0.016784  0.039380  0.000108   1.0
+                efi_size50_lam1k-1                    0.94         0.9473  0.698539    0.017875  0.039580  0.000103   1.0
+                efi_size50_lam1k-2                    0.92         0.9490  0.698261    0.017798  0.039068  0.000104   1.0
+                efi_size50_lam1k_neck16               0.91         0.9614  0.698713    0.017996  0.039279  0.000096   1.0
+                efi_size50_lam1k_neck16-2             0.93         0.9688  0.698352    0.017870  0.039624  0.000083   1.0
 Standard error
-                                             mse  ci_range  coverage_rate  done
-model   algo                                                                   
-poisson pinn_efi                        0.000016  0.000462       0.014186   0.0
-        pinn_efi_resamp_neck16-4-test1  0.000023  0.000376       0.020554   0.0
-        pinn_efi_resamp_neck16-4-test2  0.000019  0.000460       0.018653   0.0
-        pinn_efi_resamp_neck16-8-test1  0.000020  0.000412       0.020201   0.0
-        pinn_efi_resamp_neck16-8-test2  0.000022  0.000440       0.021709   0.0
-        pinn_efi_resamp_neck2-4         0.000020  0.000405       0.019080   0.0
-        pinn_efi_resamp_neck4-2         0.000019  0.000301       0.018910   0.0
-        pinn_efi_resamp_neck4-3         0.000013  0.000457       0.016405   0.0
-        pinn_efi_resamp_neck4-4         0.000016  0.000450       0.015309   0.0
-        pinn_efi_resamp_neck8-2         0.000016  0.000264       0.017569   0.0
-        pinn_efi_resamp_neck8-3         0.000021  0.000439       0.021816   0.0
-        pinn_efi_resamp_neck8-4         0.000019  0.000464       0.018635   0.0
-====================================================================================================
-Mean
-                                  ci_range  coverage_rate       mse  done
-model             algo                                                   
-poisson-nonlinear efi_size30      0.094008       0.955900  0.000499   1.0
-                  efi_size50      0.104662       0.945684  0.000666   1.0
-                  pinn_efi_test1  0.083278       0.919897  0.008473   1.0
-                  pinn_efi_test2  0.076906       0.916000  0.008373   1.0
-Standard error
-                                  ci_range  coverage_rate       mse  done
-model             algo                                                   
-poisson-nonlinear efi_size30      0.000860       0.008687  0.000034   0.0
-                  efi_size50      0.002617       0.010712  0.000064   0.0
-                  pinn_efi_test1  0.001945       0.014012  0.007930   0.0
-                  pinn_efi_test2  0.001269       0.013875  0.007962   0.0
+                                           k_coverage_rate  coverage_rate    k_mean  k_ci_range  ci_range       mse  done
+model           algo                                                                                                     
+poisson-inverse efi_size100_findbest-1            0.031447       0.009173  0.000444    0.000194  0.000187  0.000007   0.0
+                efi_size100_findbest-2            0.019695       0.009865  0.000423    0.000196  0.000182  0.000007   0.0
+                efi_size100_findbest-3            0.025643       0.007582  0.000452    0.000182  0.000187  0.000006   0.0
+                efi_size100_findbest-4            0.027266       0.010039  0.000455    0.000176  0.000169  0.000008   0.0
+                efi_size100_findbest-5            0.019695       0.009907  0.000451    0.000174  0.000168  0.000009   0.0
+                efi_size50_lam1k-1                0.023868       0.009897  0.000428    0.000202  0.000176  0.000008   0.0
+                efi_size50_lam1k-2                0.027266       0.009145  0.000445    0.000226  0.000200  0.000007   0.0
+                efi_size50_lam1k_neck16           0.028762       0.008654  0.000465    0.000187  0.000176  0.000007   0.0
+                efi_size50_lam1k_neck16-2         0.025643       0.007039  0.000434    0.000165  0.000190  0.000007   0.0
 ====================================================================================================
