@@ -10,7 +10,7 @@ from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
 from PINN.common.callbacks import BaseCallback
 from PINN import PINN, PINN_EFI_Inverse, BayesianPINN, BayesianPINN_Inverse, PINN_Inverse
-from PINN.models import Cooling, EuropeanCall, Nonlinear, EuropeanCallDiscovery, Poisson1D, Poisson2D
+from PINN.models import Cooling, EuropeanCall, Nonlinear, Poisson1D, Poisson2D
 from PINN.models import Poisson1DCallback, EuropeanCallCallback, Poisson2DCallback
 
 from torch.utils.data import Dataset
@@ -31,7 +31,6 @@ MODELS: Dict[str, Type[PhysicsModel]] = {
     "cooling": Cooling,
     "european_call": EuropeanCall,
     "nonlinear": Nonlinear,
-    "european_call_discovery": EuropeanCallDiscovery,
     "poisson": Poisson1D,
     "poisson-v2": Poisson1D,
     "poisson-nonlinear": Poisson1D,

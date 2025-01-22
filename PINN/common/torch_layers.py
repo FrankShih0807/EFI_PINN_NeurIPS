@@ -78,13 +78,14 @@ class DropoutDNN(nn.Module):
         return x
 
 class BottleneckHypernet(nn.Module):
-    def __init__(self, input_dim, hidden_layers, output_dim, activation_fn='relu'):
+    def __init__(self, input_dim, hidden_layers, output_dim, activation_fn='relu', neck_layer_activation='identity'):
         super().__init__()
         # Define the initial layers
         self.input_dim = input_dim
         self.hidden_layers = hidden_layers
         self.output_dim = output_dim
         self.activation_fn = get_activation_fn(activation_fn)
+        self.neck_layer_activation = get_activation_fn(neck_layer_activation)
         
         self.layers = nn.ModuleList()
         self.layers.append(nn.Linear(input_dim, self.hidden_layers[0]))
@@ -92,7 +93,6 @@ class BottleneckHypernet(nn.Module):
         for i in range(1, len(self.hidden_layers)):
             self.layers.append(nn.Linear(self.hidden_layers[i-1], self.hidden_layers[i]))
         # Add the output layer
-
         self.output_layer = nn.Linear(self.hidden_layers[-1], self.output_dim)
 
     def forward(self, x):
@@ -100,6 +100,7 @@ class BottleneckHypernet(nn.Module):
             x = layer(x)
             x = self.activation_fn(x)
         x = self.layers[-1](x)
+        x = self.neck_layer_activation(x)
         x = self.output_layer(x)
         return x
 
@@ -228,6 +229,7 @@ class EFI_Net_PE(nn.Module):
                  pe_dim=0,
                  encoder_hidden_layers=None,
                  encoder_activation='relu',
+                 neck_layer_activation='identity',
                  prior_sd=0.1, 
                  sparse_sd=0.01,
                  sparsity=1.0,
@@ -246,6 +248,7 @@ class EFI_Net_PE(nn.Module):
         # Encoder Net Info
         self.encoder_input_dim = self.input_dim + self.output_dim + self.latent_Z_dim
         self.encoder_activation = get_activation_fn(encoder_activation)
+        self.neck_layer_activation = get_activation_fn(neck_layer_activation)
         
         # sparse prior settings
         self.sparsity = sparsity
@@ -280,7 +283,7 @@ class EFI_Net_PE(nn.Module):
                 self.nn_numel['bias'].append(value.numel())
         
         # self.encoder = BaseDNN(input_dim=self.encoder_input_dim, hidden_layers=encoder_hidden_layers, output_dim=self.n_parameters+self.pe_dim , activation_fn=self.encoder_activation).to(self.device)
-        self.encoder = BottleneckHypernet(input_dim=self.encoder_input_dim, hidden_layers=encoder_hidden_layers, output_dim=self.n_parameters+self.pe_dim , activation_fn=self.encoder_activation).to(self.device)
+        self.encoder = BottleneckHypernet(input_dim=self.encoder_input_dim, hidden_layers=encoder_hidden_layers, output_dim=self.n_parameters+self.pe_dim , activation_fn=self.encoder_activation, neck_layer_activation=self.neck_layer_activation).to(self.device)
 
     def split_encoder_output(self, theta):
         '''Split encoder output into network layer shapes

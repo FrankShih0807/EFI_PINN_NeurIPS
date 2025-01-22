@@ -8,7 +8,7 @@ import seaborn as sns
 import time
 
 from PINN.common.base_pinn import BasePINN
-from PINN.models.poisson import Poisson, PoissonCallback
+# from PINN.models.poisson import Poisson, PoissonCallback
 from PINN.common.torch_layers import BayesianPINNNet
 from PINN.common.scheduler import get_schedule
 
@@ -166,23 +166,23 @@ class BayesianPINN(BasePINN):
         self.callback.on_training_end()
 
 
-if __name__ == "__main__":
-    # hamiltorch.set_random_seed(123)
-    # torch.manual_seed(123)
-    # np.random.seed(123)
+# if __name__ == "__main__":
+#     # hamiltorch.set_random_seed(123)
+#     # torch.manual_seed(123)
+#     # np.random.seed(123)
 
-    # Initialize the physics model
-    physics_model = Poisson(sol_sd=0.05, diff_sd=0.0)
-    dataset = physics_model.generate_data(device='cpu')
+#     # Initialize the physics model
+#     physics_model = Poisson(sol_sd=0.05, diff_sd=0.0)
+#     dataset = physics_model.generate_data(device='cpu')
 
-    # Initialize the Bayesian PINN model
-    model = BayesianPINN(physics_model, dataset=dataset, device='cpu', step_size=0.0002, lam_diff=100.0, lam_sol=30.0, num_samples=100)
-    num_bd = model.num_bd
+#     # Initialize the Bayesian PINN model
+#     model = BayesianPINN(physics_model, dataset=dataset, device='cpu', step_size=0.0002, lam_diff=100.0, lam_sol=30.0, num_samples=100)
+#     num_bd = model.num_bd
 
-    # Perform HMC sampling
-    hmc_params = model.sample_posterior(num_samples=10)
-    print(len(hmc_params))
-    print(hmc_params[0].shape)
+#     # Perform HMC sampling
+#     hmc_params = model.sample_posterior(num_samples=10)
+#     print(len(hmc_params))
+#     print(hmc_params[0].shape)
     # model.train(epochs=5000, eval_freq=500, burn=0.5, callback=PoissonCallback())
 
     # # Evaluate the model
