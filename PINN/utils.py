@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
 from PINN.common.callbacks import BaseCallback
-from PINN import PINN, PINN_EFI_Inverse, BayesianPINN, BayesianPINN_Inverse, PINN_Inverse
+from PINN import PINN, PINN_EFI, BayesianPINN, BayesianPINN_Inverse, PINN_Inverse
 from PINN.models import Cooling, EuropeanCall, Nonlinear, Poisson1D, Poisson2D
 from PINN.models import Poisson1DCallback, EuropeanCallCallback, Poisson2DCallback
 
@@ -22,7 +22,7 @@ yaml.preserve_quotes = True
 ALGOS: Dict[str, Type[BasePINN]] = {
     "pinn": PINN,
     "pinn_inverse": PINN_Inverse,
-    "pinn_efi_inverse": PINN_EFI_Inverse,
+    "pinn_efi": PINN_EFI,
     "bpinn": BayesianPINN,
     "bpinn_inverse": BayesianPINN_Inverse, 
 }

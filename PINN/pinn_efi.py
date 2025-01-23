@@ -1,16 +1,13 @@
-import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-import torch.optim as optim
-import time
 import torch.nn.functional as F
-import seaborn as sns
-from torch.nn.utils import parameters_to_vector
-from PINN.common import SGLD, SGHMC
-from PINN.common.torch_layers import EFI_Net
+import torch.optim as optim
+from PINN.common import SGHMC
+from PINN.common.torch_layers import EFI_Net_PE
 from PINN.common.base_pinn import BasePINN
 from PINN.common.torch_layers import BaseDNN
 from PINN.common.scheduler import get_schedule
+from torch.nn.utils import parameters_to_vector
 
 
 class PINN_EFI(BasePINN):
@@ -24,7 +21,9 @@ class PINN_EFI(BasePINN):
         annealing_period=0.3,
         grad_norm_max=-1,
         lr=1e-3,
+        sgd_momentum=0.0,
         sgld_lr=1e-3,
+        sgld_alpha=1.0,
         lam=1,
         lambda_pde=1,
         lambda_theta=1,
@@ -34,10 +33,13 @@ class PINN_EFI(BasePINN):
     ) -> None:
         # EFI configs
         self.encoder_kwargs = encoder_kwargs
+        self.sgd_momentum = sgd_momentum
         self.sgld_lr = sgld_lr
+        self.sgld_alpha = sgld_alpha
         self.lam = lam
         self.lambda_theta = lambda_theta
         self.pretrain_epochs = pretrain_epochs
+        self.pe_dim = physics_model.pe_dim
         
         super().__init__(
             physics_model=physics_model,
@@ -49,7 +51,8 @@ class PINN_EFI(BasePINN):
             save_path=save_path,
             device=device,
         )
-
+        # parameter estimation configs
+        
         self.annealing_period = annealing_period
         self.grad_norm_max = grad_norm_max
         # # EFI configs
@@ -72,31 +75,36 @@ class PINN_EFI(BasePINN):
                 self.noise_sd.append(0)
         self.latent_Z_dim = len([ Z for Z in self.latent_Z if Z is not None])
         # init EFI net and optimiser
-        self.net = EFI_Net(
+        self.net = EFI_Net_PE(
             input_dim=self.input_dim,
             output_dim=self.output_dim,
             latent_Z_dim=self.latent_Z_dim,
             hidden_layers=self.hidden_layers,
             activation_fn=self.activation_fn,
+            pe_dim=self.pe_dim,
             device=self.device,
             **self.encoder_kwargs
         )
-        self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr(0))
-        self.sampler = SGLD([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0))
-        # self.sampler = SGHMC([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0), alpha=0.1)
+        self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr(0), momentum=self.sgd_momentum(0))
+        self.sampler = SGHMC([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0), alpha=self.sgld_alpha(0))
 
     def _get_scheduler(self):
         self.lr = get_schedule(self.lr)
+        self.sgd_momentum = get_schedule(self.sgd_momentum)
         self.sgld_lr = get_schedule(self.sgld_lr)
+        self.sgld_alpha = get_schedule(self.sgld_alpha)
         self.lambda_pde = get_schedule(self.lambda_pde)
         self.lam = get_schedule(self.lam)
         self.lambda_theta = get_schedule(self.lambda_theta)
+        
         # self.sparse_threshold = get_schedule(self.encoder_kwargs.get('sparse_threshold', 0.01))
         # self.encoder_kwargs['sparse_threshold'] = self.sparse_threshold(0)
         
-    def _update_lr(self, optimiser, lr):
+    def _update_optimiser_kwargs(self, optimiser, kwargs):
         for param_group in optimiser.param_groups:
-            param_group['lr'] = lr
+            for key, value in kwargs.items():
+                param_group[key] = value
+            # param_group['lr'] = lr
     
     def solution_loss(self):
         loss = 0
@@ -134,14 +142,18 @@ class PINN_EFI(BasePINN):
         return loss
     
     def pde_loss(self):
+        if self.pe_dim == 0:
+            pe_variables = None
+        else:
+            pe_variables = self.net.pe_variables
         loss = 0
         for i, d in enumerate(self.dataset):
             if d['category'] == 'differential':
                 if d['noise_sd'] > 0:
-                    diff_o = self.differential_operator(self.net, d['X']) + self.latent_Z[i]
+                    diff_o = self.differential_operator(self.net, d['X'], pe_variables) + self.latent_Z[i]
                     loss += self.mse_loss(diff_o, d['y'])
                 else:
-                    diff_o = self.differential_operator(self.net, d['X'])
+                    diff_o = self.differential_operator(self.net, d['X'], pe_variables)
                     loss += self.mse_loss(diff_o, d['y'])
         return loss
     
@@ -171,14 +183,12 @@ class PINN_EFI(BasePINN):
         base_net.train()
         for ep in range(self.pretrain_epochs):
             optimiser.zero_grad()
-            # output = base_net(self.sol_X)
             sol_loss = self.pretrain_solution_loss(base_net)
             pde_loss = self.pretrain_pde_loss(base_net)
             # l2_loss = 0
             # for param in base_net.parameters():
             #     l2_loss += torch.sum(param**2)
-            # loss = sol_loss + pde_loss + l2_loss * 1e-5
-            loss = sol_loss + pde_loss 
+            loss = sol_loss + pde_loss
             loss.backward()
             optimiser.step()
             if (ep+1) % 1000 == 0:
@@ -187,10 +197,11 @@ class PINN_EFI(BasePINN):
         print('PINN pretraining done.')
         return base_net
 
-    def optimize_encoder(self, param_vector, steps=5000):
+    def optimize_encoder(self, param_vector, steps=1000):
         # optimiser = optim.Adam(self.net.parameters(), lr=3e-4)
-        optimiser = optim.SGD(self.net.parameters(), lr=3e-4)
+        optimiser = optim.SGD(self.net.parameters(), lr=1e-3)
         print('Pretraining EFI...')
+        param_vector =  F.pad(param_vector, (0, self.pe_dim), value=0)
         for _ in range(steps):
             self.net.train()
             # batch_size = self.n_samples
@@ -211,14 +222,13 @@ class PINN_EFI(BasePINN):
             batch_size = noise_X.shape[0]
 
             encoder_output = self.net.encoder(torch.cat([noise_X, noise_y, noise_Z], dim=1))
-            loss = F.mse_loss(encoder_output, param_vector.repeat(batch_size, 1), reduction="mean")
-            # loss = F.mse_loss(encoder_output, param_vector.repeat(batch_size, 1), reduction="sum") / batch_size
-            # w_prior_loss = self.net.gmm_prior_loss() /batch_size
-            # loss += w_prior_loss
+            # loss = F.mse_loss(encoder_output, param_vector.repeat(batch_size, 1), reduction="mean")
+            loss = F.mse_loss(encoder_output, param_vector.repeat(batch_size, 1), reduction="sum") / batch_size
+            w_prior_loss = self.net.gmm_prior_loss() /batch_size
+            loss += w_prior_loss
 
             optimiser.zero_grad()
             loss.backward()
-            nn.utils.clip_grad_norm_(self.net.parameters(), 100)
             optimiser.step()
         print('EFI pretraining done.')
 
@@ -226,14 +236,21 @@ class PINN_EFI(BasePINN):
     def update(self):
         # update training parameters
         annealing_progress = self.progress / self.annealing_period
+        non_annealing_progress = (self.progress - self.annealing_period) / (1 - self.annealing_period)
         lambda_pde = self.lambda_pde(annealing_progress)
         lam = self.lam(annealing_progress)
         lambda_theta = self.lambda_theta(annealing_progress)
-        # self.net.sparse_threshold = self.sparse_threshold(self.progress * 3 - 1)
-        lr = self.lr(annealing_progress)
-        sgld_lr = self.sgld_lr(annealing_progress)
-        self._update_lr(self.optimiser, lr)
-        self._update_lr(self.sampler, sgld_lr)
+
+        # lr = self.lr(non_annealing_progress) / lam
+        lr = self.lr(self.progress)
+        sgd_momentum = self.sgd_momentum(annealing_progress)
+        # sgld_lr = self.sgld_lr(non_annealing_progress) / lam
+        sgld_lr = self.sgld_lr(self.progress)
+        sgld_alpha = self.sgld_alpha(annealing_progress)
+        self.cur_lr = lr
+        self.cur_sgld_lr = sgld_lr
+        self._update_optimiser_kwargs(self.optimiser, dict(lr=lr, momentum=sgd_momentum))
+        self._update_optimiser_kwargs(self.sampler, dict(lr=sgld_lr, alpha=sgld_alpha))
         
         
         ## 1. Latent variable sampling (Sample Z)
@@ -246,12 +263,11 @@ class PINN_EFI(BasePINN):
 
         self.sampler.zero_grad()
         Z_loss.backward()
-        
-        # for p in self.net.parameters():
-        #     print(p.shape)
-        #     print(p.grad.abs().max())
-        # raise
-        if self.grad_norm_max > 0 and self.progress < self.annealing_period:
+        # for param in self.sampler.param_groups[0]['params']:
+        #     print('latent_Z_grad', param.abs().max())
+            
+        # if self.grad_norm_max > 0 and self.progress < self.annealing_period:
+        if self.grad_norm_max > 0:
             nn.utils.clip_grad_norm_([ Z for Z in self.latent_Z if Z is not None], self.grad_norm_max)
         self.sampler.step()
 
@@ -263,21 +279,32 @@ class PINN_EFI(BasePINN):
         pde_loss = self.pde_loss()
 
         w_loss = lam * (y_loss + lambda_theta * theta_loss + lambda_pde * pde_loss) + w_prior_loss
-
+        # print('theta_loss', theta_loss.item())
+        # print('y_loss', y_loss.item())
+        # print('w_prior_loss', w_prior_loss.item())
+        # print('pde_loss', pde_loss.item())
+        
         self.optimiser.zero_grad()
         w_loss.backward()
-        if self.grad_norm_max > 0 and self.progress < self.annealing_period:
+        
+        grad_norm = torch.sqrt(sum(p.grad.norm(2)**2 for p in self.net.parameters() if p.grad is not None)).item()
+            
+        # if self.grad_norm_max > 0 and self.progress < self.annealing_period:
+        if self.grad_norm_max > 0:
             nn.utils.clip_grad_norm_(self.net.parameters(), self.grad_norm_max)
         self.optimiser.step()
         
         # record training parameters
-        self.logger.record('train_param/lr', self.optimiser.param_groups[0]['lr'])
-        self.logger.record('train_param/sgld_lr', self.sampler.param_groups[0]['lr'])
-        self.logger.record('train_param/lambda_pde', lambda_pde)
-        # self.logger.record('train_param/sparse_threshold', self.net.sparse_threshold)
+        self.logger.record('train_param/lr', lr, exclude='csv')
+        self.logger.record('train_param/sgd_momentum', sgd_momentum, exclude='csv')
+        self.logger.record('train_param/sgld_lr', sgld_lr, exclude='csv')
+        self.logger.record('train_param/sgld_alpha', sgld_alpha, exclude='csv')
+        self.logger.record('train/grad_norm', grad_norm, exclude='csv')
+        self.logger.record('train_param/lambda', lam, exclude='csv')
+
         self.logger.record('train/theta_loss', theta_loss.item())
-        # print(y_loss.item(), pde_loss.item(), theta_loss.item(), w_prior_loss.item(), z_prior_loss.item())
-        # raise
+        
+        self.pe_variables = self.net.pe_variables.detach().cpu().numpy()
         return y_loss.item(), pde_loss.item()
 
     def train(self, epochs=10000, eval_freq=-1, burn=0.5, callback=None):
@@ -294,5 +321,3 @@ class PINN_EFI(BasePINN):
         self.optimize_encoder(param_vector)
         
         super().train(epochs, eval_freq, burn, callback)
-        
-        
