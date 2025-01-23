@@ -42,8 +42,12 @@ class PINN_Inverse(BasePINN):
             dropout_rate=self.dropout_rate,
         )
         self.net.to(self.device)
-        self.pe_variables = torch.randn(self.pe_dim, requires_grad=True, device=self.device)
-        self.optimiser = optim.Adam(list(self.net.parameters()) + [self.pe_variables], lr=self.lr)
+        if self.pe_dim > 0:
+            self.pe_variables = torch.randn(self.pe_dim, requires_grad=True, device=self.device)
+            self.optimiser = optim.Adam(list(self.net.parameters()) + [self.pe_variables], lr=self.lr)
+        else:
+            self.pe_variables = None
+            self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
         # self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr)
         
     def pde_loss(self):
