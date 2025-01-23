@@ -317,7 +317,7 @@ if __name__ == '__main__':
     for model in models:
         print(model)
         df = collect_progress_data(output_dir, model)
-        print(df)
+        # print(df)
         print(df[df['mse']>0.01])
         df = df.drop(columns=['exp'])
         print(df.groupby(['model', 'algo']).mean())
