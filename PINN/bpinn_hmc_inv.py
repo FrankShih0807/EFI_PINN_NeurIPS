@@ -69,7 +69,7 @@ class BayesianPINN_Inverse(BasePINN):
     def _pinn_init(self):
         sigma_diff = self.sigma_diff(progress=0.0)
         sigma_sol = self.sigma_sol(progress=0.0)
-        self.net = BayesianNet(hidden_layers=self.hidden_layers)
+        self.net = BayesianNet(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers)
         for param in self.net.parameters():
             torch.nn.init.normal_(param)
         self.net.to(self.device)
