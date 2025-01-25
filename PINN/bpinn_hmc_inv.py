@@ -99,25 +99,43 @@ class BayesianPINN_Inverse(BasePINN):
         self.sigma_sol = get_schedule(self.sigma_sol)
 
     def model_loss(self, data, fmodel, params_unflattened, tau_likes, gradients, params_single=None):
-        x_u = data['x_u']
-        y_u = data['y_u']
-        pred_u = fmodel[0](x_u, params=params_unflattened[0])
-        ll = - 0.5 * tau_likes[0] * ((pred_u - y_u) ** 2).sum(0)
-        x_f = data['x_f']
-        x_f = x_f.detach().requires_grad_()
-        u = fmodel[0](x_f, params=params_unflattened[0])
-        u_x = gradients(u,x_f)[0]
-        u_xx = gradients(u_x,x_f)[0]
-        pred_f = 0.01*u_xx + params_single[0]*torch.tanh(u)
-        y_f = data['y_f']
-        ll = ll - 0.5 * tau_likes[1] * ((pred_f - y_f) ** 2).sum(0)
-        output = [pred_u,pred_f]
+        sol_X = self.sol_X
+        sol_y = self.sol_y
+        diff_X = self.diff_X
+        diff_y = self.diff_y
 
-        # if torch.cuda.is_available():
-        #     del x_u, y_u, x_f, y_f, u, u_x, u_xx, pred_u, pred_f
-        #     torch.cuda.empty_cache()
+        pred_sol = fmodel[0](sol_X, params=params_unflattened[0])
+        ll = - 0.5 * tau_likes[0] * ((pred_sol - sol_y) ** 2).sum(0)
+
+        def net_within_loss(X):
+            return fmodel[0](X, params=params_unflattened[0])
+        
+        pred_diff = self.differential_operator(net_within_loss, diff_X, params_single)
+        ll = ll - 0.5 * tau_likes[1] * ((pred_diff - diff_y) ** 2).sum(0)
+        output = [pred_sol, pred_diff]
 
         return ll, output
+
+    # def model_loss(self, data, fmodel, params_unflattened, tau_likes, gradients, params_single=None):
+    #     x_u = data['x_u']
+    #     y_u = data['y_u']
+    #     pred_u = fmodel[0](x_u, params=params_unflattened[0])
+    #     ll = - 0.5 * tau_likes[0] * ((pred_u - y_u) ** 2).sum(0)
+    #     x_f = data['x_f']
+    #     x_f = x_f.detach().requires_grad_()
+    #     u = fmodel[0](x_f, params=params_unflattened[0])
+    #     u_x = gradients(u,x_f)[0]
+    #     u_xx = gradients(u_x,x_f)[0]
+    #     pred_f = 0.01*u_xx + params_single[0]*torch.tanh(u)
+    #     y_f = data['y_f']
+    #     ll = ll - 0.5 * tau_likes[1] * ((pred_f - y_f) ** 2).sum(0)
+    #     output = [pred_u,pred_f]
+
+    #     # if torch.cuda.is_available():
+    #     #     del x_u, y_u, x_f, y_f, u, u_x, u_xx, pred_u, pred_f
+    #     #     torch.cuda.empty_cache()
+
+    #     return ll, output
 
     def sample_posterior(self, num_samples):
         # update training parameters
