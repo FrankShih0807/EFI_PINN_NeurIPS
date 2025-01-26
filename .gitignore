@@ -9,3 +9,4 @@ output*
 *.ipynb
 run_scripts/
 figures/
+metric.txt
