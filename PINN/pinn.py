@@ -4,7 +4,7 @@ from PINN.common.base_pinn import BasePINN
 from PINN.common.torch_layers import DropoutDNN
 from torch import optim
 
-class PINN_Inverse(BasePINN):
+class PINN(BasePINN):
     def __init__(
         self,
         physics_model,
