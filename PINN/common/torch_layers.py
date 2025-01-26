@@ -367,16 +367,16 @@ class BayesianPINNNet(nn.Module):
         return torch.cat([pde / (self.sigma_diff * 2 ** 0.5), u_bd / (self.sigma_sol * 2 ** 0.5)], dim=0)
     
 class BayesianNet(nn.Module):
-    def __init__(self, hidden_layers, activation_fn=torch.tanh):
+    def __init__(self, input_dim=1, output_dim=1, hidden_layers = [50, 50], activation_fn=torch.tanh):
         super(BayesianNet, self).__init__()
         self.hidden_layers = hidden_layers
         # self.layer_list = []
         self.activation_fn = activation_fn
         # self.pe_variables = nn.Parameter(torch.randn(1), requires_grad=True)
 
-        self.l1 = nn.Linear(1, hidden_layers[0])
+        self.l1 = nn.Linear(input_dim, hidden_layers[0])
         self.l2 = nn.Linear(hidden_layers[0], hidden_layers[1])
-        self.l3 = nn.Linear(hidden_layers[1], 1)
+        self.l3 = nn.Linear(hidden_layers[1], output_dim)
 
     def forward(self, x):
         x = self.l1(x)
