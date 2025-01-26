@@ -15,7 +15,7 @@ from PINN.common.torch_layers import BayesianNet
 from PINN.common.scheduler import get_schedule
 
 
-class BayesianPINN_Inverse(BasePINN):
+class BayesianPINN(BasePINN):
     def __init__(
         self,
         physics_model,

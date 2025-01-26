@@ -1,3 +1,15 @@
+cooling:
+  n_samples: 200
+  epochs: 10_000
+  pinn:
+    hidden_layers:
+    - 20
+    - 20
+    activation_fn: softplus(beta=5)
+    lr: 1.0e-3
+    lambda_pde: 50.0
+
+
 european_call:
   epochs: 200_000
   eval_freq: -1
@@ -20,12 +32,12 @@ poisson:
   burn: 0.5
   pinn:
     hidden_layers:
-    - 50
-    - 50
+    - 30
+    - 30
     activation_fn: tanh
     lr: 3e-4
     lambda_pde: 1.0
-    dropout_rate: 0.0
+    dropout_rate: 0.005
 
 
 poisson-v2:
@@ -34,12 +46,12 @@ poisson-v2:
   burn: 0.5
   pinn:
     hidden_layers:
-    - 50
-    - 50
+    - 30
+    - 30
     activation_fn: tanh
     lr: 3e-4
     lambda_pde: 1.0
-    dropout_rate: 0.0
+    dropout_rate: 0.005
 
 
 poisson-nonlinear:
@@ -48,6 +60,20 @@ poisson-nonlinear:
   burn: 0.5
   pinn:
     hidden_layers:
+    - 30
+    - 30
+    activation_fn: tanh
+    lr: 3e-4
+    lambda_pde: 1.0
+    dropout_rate: 0.005
+
+
+poisson-2d:
+  epochs: 200_000
+  eval_freq: -1
+  burn: 0.5
+  pinn:
+    hidden_layers:
     - 50
     - 50
     activation_fn: tanh
@@ -56,15 +82,13 @@ poisson-nonlinear:
     dropout_rate: 0.0
 
 
-poisson-inverse:
-  epochs: 20_000
-  eval_freq: -1
-  burn: 0.5
+nonlinear:
+  epochs: 10_000
   pinn:
     hidden_layers:
     - 30
     - 30
     activation_fn: tanh
-    lr: 3e-4
-    lambda_pde: 1.0
-    dropout_rate: 0.0
+    lr: 1.0e-3
+    lambda_pde: 0.0
+
