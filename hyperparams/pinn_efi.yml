@@ -89,8 +89,7 @@ poisson:
       - 16
       encoder_activation: leaky_relu
       prior_sd: 10.0
-      sparse_sd: 0.001
-      sparsity: 1.0
+
 
 poisson-v2:
   epochs: 200_000

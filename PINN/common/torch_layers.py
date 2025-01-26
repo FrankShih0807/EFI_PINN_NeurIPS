@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-# import torchbnn as bnn
 import numpy as np
 import torch.distributions as dist
 from collections import defaultdict
@@ -104,119 +103,6 @@ class BottleneckHypernet(nn.Module):
         x = self.output_layer(x)
         return x
 
-
-class EFI_Net(nn.Module):
-    def __init__(self, 
-                 input_dim=1, 
-                 output_dim=1, 
-                 latent_Z_dim=1,
-                 hidden_layers=[15, 15], 
-                 activation_fn='relu', 
-                 encoder_hidden_layers=None,
-                 encoder_activation='relu',
-                 prior_sd=0.1, 
-                 sparse_sd=0.01,
-                 sparsity=1.0,
-                 device='cpu'
-                 ):
-        super(EFI_Net, self).__init__()
-        
-        self.device = device
-        # EFI Net Info
-        self.input_dim = input_dim
-        self.output_dim = output_dim
-        self.latent_Z_dim = latent_Z_dim
-        self.hidden_layers = hidden_layers
-        self.activation_fn = get_activation_fn(activation_fn)
-
-        # Encoder Net Info
-        self.encoder_input_dim = self.input_dim + self.output_dim + self.latent_Z_dim
-        self.encoder_activation = get_activation_fn(encoder_activation)
-        
-        # sparse prior settings
-        self.sparsity = sparsity
-        self.prior_sd = prior_sd
-        self.sparse_sd = sparse_sd
-        
-        sample_net = nn.ModuleList()
-        sample_net.append(nn.Linear(input_dim, hidden_layers[0]))
-        for i in range(1, len(hidden_layers)):
-            sample_net.append(nn.Linear(hidden_layers[i-1], hidden_layers[i]))
-        sample_net.append(nn.Linear(hidden_layers[-1], output_dim))
-        
-        
-        self.n_layers = len(sample_net)
-        self.n_parameters = sum([p.numel() for p in sample_net.parameters()])
-        self.nn_shape = defaultdict(list)
-        self.nn_numel = defaultdict(list)
-        self.nn_tensor = defaultdict(list)
-
-        
-        for key, value in sample_net.named_parameters():
-            if 'weight' in key:
-                self.nn_shape['weight'].append(value.shape)
-                self.nn_numel['weight'].append(value.numel())
-            if 'bias' in key:
-                self.nn_shape['bias'].append(value.shape)
-                self.nn_numel['bias'].append(value.numel())
-        
-        self.encoder = BaseDNN(input_dim=self.encoder_input_dim, hidden_layers=encoder_hidden_layers, output_dim=self.n_parameters, activation_fn=self.encoder_activation).to(self.device)
-
-    def split_encoder_output(self, theta):
-        '''Split encoder output into network layer shapes
-
-        Args:
-            theta (tensor): encoder ouput mean
-
-        Returns:
-            weight_tensors, bias_tensors: tensors
-        '''
-        theta_weight, theta_bias = torch.split(theta, [sum(self.nn_numel['weight']), sum(self.nn_numel['bias'])] , dim=-1)
-        theta_weight_split = torch.split(theta_weight, self.nn_numel['weight'], dim=-1)
-        theta_bias_split = torch.split(theta_bias, self.nn_numel['bias'], dim=-1)
-        
-        weight_tensors = [theta_weight_split[i].view(*shape).to(self.device) for i, shape in enumerate(self.nn_shape['weight'])]
-        bias_tensors = [theta_bias_split[i].view(*shape).to(self.device) for i, shape in enumerate(self.nn_shape['bias'])]
-        
-        return weight_tensors, bias_tensors
-            
-    
-    def forward(self, x):
-        x = x.to(self.device)
-        for i in range(self.n_layers-1):
-            x = self.activation_fn(F.linear(x, self.weight_tensors[i], self.bias_tensors[i]))
-        x = F.linear(x, self.weight_tensors[-1], self.bias_tensors[-1])
-        return x
-
-    
-    def theta_encode(self, X, y, Z):
-        '''Encode X, y, and Z into theta
-        Args:
-            X (tensor): explanatory variable
-            y (tensor): response variable
-            Z (tensor): noise variable
-
-        Returns:
-            tensor: flattend theta
-        '''
-        X, y, Z = X.to(self.device), y.to(self.device), Z.to(self.device)
-        
-        batch_size = X.shape[0]
-        xyz = torch.cat([X, y, Z], dim=1).to(self.device)
-        batch_theta = self.encoder(xyz)
-        theta_bar = batch_theta.mean(dim=0)
-        theta_loss = F.mse_loss(batch_theta, theta_bar.repeat(batch_size, 1), reduction='sum')
-        self.weight_tensors, self.bias_tensors = self.split_encoder_output(theta_bar)
-        return theta_loss
-        
-    def gmm_prior_loss(self):
-        if self.prior_sd <= 0.0:
-            return 0
-        else:
-            loss = 0
-            for p in self.parameters():
-                loss += gmm_loss(p, self.prior_sd, self.sparse_sd, self.sparsity).sum()
-            return loss
     
         
 class EFI_Net_PE(nn.Module):
