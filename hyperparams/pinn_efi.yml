@@ -16,7 +16,6 @@ european_call:
     lam: 'linear_50.0_1000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
-    pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
       - 32
@@ -45,7 +44,6 @@ poisson:
     lam: 'log_50.0_1000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
-    pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
       - 16
@@ -72,7 +70,6 @@ poisson-v2:
     lam: 'linear_50.0_1000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
-    pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
       - 64
@@ -99,7 +96,6 @@ poisson-nonlinear:
     lam: 'log_100.0_1000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
-    pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
       - 64
@@ -127,7 +123,6 @@ poisson-inverse:
     lam: 'linear_10.0_1000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
-    pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
       - 128
@@ -156,7 +151,6 @@ poisson-2d:
     lam: 'log_50.0_250.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
-    pretrain_epochs: 0
     encoder_kwargs:
       encoder_hidden_layers:
       - 128

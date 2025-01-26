@@ -27,7 +27,6 @@ class PINN_EFI(BasePINN):
         lam=1,
         lambda_pde=1,
         lambda_theta=1,
-        pretrain_epochs=0,
         save_path=None,
         device="cpu",
     ) -> None:
@@ -38,7 +37,6 @@ class PINN_EFI(BasePINN):
         self.sgld_alpha = sgld_alpha
         self.lam = lam
         self.lambda_theta = lambda_theta
-        self.pretrain_epochs = pretrain_epochs
         self.pe_dim = physics_model.pe_dim
         
         super().__init__(
@@ -52,7 +50,6 @@ class PINN_EFI(BasePINN):
             device=device,
         )
         # parameter estimation configs
-        
         self.annealing_period = annealing_period
         self.grad_norm_max = grad_norm_max
         # # EFI configs
@@ -60,10 +57,6 @@ class PINN_EFI(BasePINN):
         self.mse_loss = nn.MSELoss(reduction="sum")
 
     def _pinn_init(self):
-
-
-        # init latent noise and sampler
-        # self.Z = (self.noise_sd * torch.randn_like(self.y)).requires_grad_().to(self.device)
         self.latent_Z = []
         self.noise_sd = []
         for d in self.dataset:
@@ -96,16 +89,13 @@ class PINN_EFI(BasePINN):
         self.lambda_pde = get_schedule(self.lambda_pde)
         self.lam = get_schedule(self.lam)
         self.lambda_theta = get_schedule(self.lambda_theta)
-        
-        # self.sparse_threshold = get_schedule(self.encoder_kwargs.get('sparse_threshold', 0.01))
-        # self.encoder_kwargs['sparse_threshold'] = self.sparse_threshold(0)
+
         
     def _update_optimiser_kwargs(self, optimiser, kwargs):
         for param_group in optimiser.param_groups:
             for key, value in kwargs.items():
                 param_group[key] = value
-            # param_group['lr'] = lr
-    
+
     def solution_loss(self):
         loss = 0
         for i, d in enumerate(self.dataset):
@@ -116,7 +106,6 @@ class PINN_EFI(BasePINN):
         return loss
     
     def theta_loss(self):
-        
         noise_X = []
         noise_y = []
         noise_Z = []
@@ -156,46 +145,6 @@ class PINN_EFI(BasePINN):
                     diff_o = self.differential_operator(self.net, d['X'], pe_variables)
                     loss += self.mse_loss(diff_o, d['y'])
         return loss
-    
-    def pretrain_pde_loss(self, net):
-        loss = 0
-        for i, d in enumerate(self.dataset):
-            if d['category'] == 'differential':
-                loss += F.mse_loss(self.differential_operator(net, d['X']), d['y'])
-        return loss
-    
-    def pretrain_solution_loss(self, net):
-        loss = 0
-        for i, d in enumerate(self.dataset):
-            if d['category'] == 'solution':
-                loss += F.mse_loss(net(d['X']), d['y'])
-        return loss
-    
-    def train_base_dnn(self):
-        print('Pretraining PINN...')
-        base_net = BaseDNN(
-            input_dim=self.input_dim,
-            output_dim=self.output_dim,
-            hidden_layers=self.hidden_layers,
-            activation_fn=self.activation_fn,
-        ).to(self.device)
-        optimiser = optim.Adam(base_net.parameters(), lr=3e-4)
-        base_net.train()
-        for ep in range(self.pretrain_epochs):
-            optimiser.zero_grad()
-            sol_loss = self.pretrain_solution_loss(base_net)
-            pde_loss = self.pretrain_pde_loss(base_net)
-            # l2_loss = 0
-            # for param in base_net.parameters():
-            #     l2_loss += torch.sum(param**2)
-            loss = sol_loss + pde_loss
-            loss.backward()
-            optimiser.step()
-            if (ep+1) % 1000 == 0:
-                print(f"Epoch {ep+1}/{self.pretrain_epochs}, sol_loss: {sol_loss.item():.2f}, pde_loss: {pde_loss.item():.2f}")
-                # print('haha')
-        print('PINN pretraining done.')
-        return base_net
 
     def optimize_encoder(self, param_vector, steps=1000):
         # optimiser = optim.Adam(self.net.parameters(), lr=3e-4)
@@ -236,15 +185,13 @@ class PINN_EFI(BasePINN):
     def update(self):
         # update training parameters
         annealing_progress = self.progress / self.annealing_period
-        non_annealing_progress = (self.progress - self.annealing_period) / (1 - self.annealing_period)
+        # non_annealing_progress = (self.progress - self.annealing_period) / (1 - self.annealing_period)
         lambda_pde = self.lambda_pde(annealing_progress)
         lam = self.lam(annealing_progress)
         lambda_theta = self.lambda_theta(annealing_progress)
 
-        # lr = self.lr(non_annealing_progress) / lam
         lr = self.lr(self.progress)
         sgd_momentum = self.sgd_momentum(annealing_progress)
-        # sgld_lr = self.sgld_lr(non_annealing_progress) / lam
         sgld_lr = self.sgld_lr(self.progress)
         sgld_alpha = self.sgld_alpha(annealing_progress)
         self.cur_lr = lr
@@ -307,17 +254,18 @@ class PINN_EFI(BasePINN):
         self.pe_variables = self.net.pe_variables.detach().cpu().numpy()
         return y_loss.item(), pde_loss.item()
 
-    def train(self, epochs=10000, eval_freq=-1, burn=0.5, callback=None):
-        # Train BaseDNN
-        base_net = self.train_base_dnn()
-
-        # Plot pretraining result
+    def train(self, epochs=10000, eval_freq=-1, burn=0.1, callback=None):
+        base_net = BaseDNN(
+            input_dim=self.input_dim,
+            output_dim=self.output_dim,
+            hidden_layers=self.hidden_layers,
+            activation_fn=self.activation_fn,
+        ).to(self.device)
         base_net.eval()
-
+        
         # Convert BaseDNN parameters to vector
         param_vector = parameters_to_vector(base_net.parameters()).to(self.device)
 
         # Optimize encoder network
         self.optimize_encoder(param_vector)
-        
         super().train(epochs, eval_freq, burn, callback)
