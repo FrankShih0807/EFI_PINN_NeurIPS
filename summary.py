@@ -319,6 +319,8 @@ if __name__ == '__main__':
         df = collect_progress_data(output_dir, model)
         # print(df)
         print(df[df['mse']>0.01])
+        print(df[df['coverage_rate']<0.5])
+        df = df.dropna()
         df = df.drop(columns=['exp'])
         print(df.groupby(['model', 'algo']).mean())
         
