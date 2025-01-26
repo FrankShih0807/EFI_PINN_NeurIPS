@@ -1,21 +1,3 @@
-cooling:
-  n_samples: 200
-  epochs: 10_000
-  pinn:
-    hidden_layers:
-    - 20
-    - 20
-    activation_fn: softplus(beta=10)
-    lr: 1.0e-5
-    lambda_pde: 50.0
-    sgld_lr: 1e-4
-    lambda_y: 1.0
-    lambda_theta: 0.1
-    encoder_kwargs:
-      encoder_activation: softplus(beta=10)
-      prior_sd: 0.1
-      sparse_threshold: 0.01
-
 european_call:
   epochs: 300_000
   eval_freq: -1
@@ -45,24 +27,6 @@ european_call:
       sparse_sd: 0.001
       sparsity: 1.0
 
-
-nonlinear:
-  n_samples: 200
-  epochs: 10_000
-  pinn:
-    hidden_layers:
-    - 15
-    - 15
-    activation_fn: softplus(beta=10)
-    lr: 1.0e-4
-    lambda_pde: 0.0
-    sgld_lr: 1e-4
-    lambda_y: 20.0
-    lambda_theta: 0.2
-    encoder_kwargs:
-      encoder_activation: softplus(beta=10)
-      prior_sd: 0.5
-      sparse_threshold: 0.01
 
 poisson:
   epochs: 200_000
@@ -116,9 +80,6 @@ poisson-v2:
       - 16
       encoder_activation: leaky_relu
       prior_sd: 10.0
-      sparse_sd: 0.001
-      sparsity: 1.0
-
 
 
 poisson-nonlinear:
@@ -147,8 +108,6 @@ poisson-nonlinear:
       encoder_activation: leaky_relu
       neck_layer_activation: identity
       prior_sd: 10.0
-      sparse_sd: 0.001
-      sparsity: 1.0
 
 poisson-inverse:
   epochs: 350_000
@@ -176,8 +135,6 @@ poisson-inverse:
       - 12
       encoder_activation: leaky_relu
       prior_sd: 10.0
-      sparse_sd: 0.001
-      sparsity: 1.0
 
 
 poisson-2d:
@@ -207,5 +164,3 @@ poisson-2d:
       - 128
       encoder_activation: leaky_relu
       prior_sd: 10.0
-      sparse_sd: 0.001
-      sparsity: 1.0
