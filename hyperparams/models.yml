@@ -91,5 +91,5 @@ poisson-2d:
   n_sol_replicates: 10
   n_diff_sensors: 15
   n_diff_replicates: 1
-  k :  0.0
+  k : 0.0
   is_inverse: False
