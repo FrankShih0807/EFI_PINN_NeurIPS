@@ -48,7 +48,6 @@ class PINN(BasePINN):
         else:
             self.pe_variables = None
             self.optimiser = optim.Adam(self.net.parameters(), lr=self.lr)
-        # self.optimiser = optim.SGD(self.net.parameters(), lr=self.lr)
         
     def pde_loss(self):
         loss = 0
