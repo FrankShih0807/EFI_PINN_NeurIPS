@@ -62,6 +62,7 @@ class PINN_EFI(BasePINN):
         for d in self.dataset:
             if d['noise_sd'] > 0:
                 self.latent_Z.append((d['noise_sd'] * torch.randn_like(d['y'])).requires_grad_().to(self.device))
+                # self.latent_Z.append((torch.randn_like(d['y'])).requires_grad_().to(self.device))
                 self.noise_sd.append(d['noise_sd'])
             else:
                 self.latent_Z.append(None)
@@ -101,6 +102,7 @@ class PINN_EFI(BasePINN):
         for i, d in enumerate(self.dataset):
             if d['category'] == 'solution' and d['noise_sd'] > 0:
                 loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i])
+                # loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i] * d['noise_sd'])
             elif d['category'] == 'solution':
                 loss += self.mse_loss(d['y'], self.net(d['X']))
         return loss
@@ -117,6 +119,7 @@ class PINN_EFI(BasePINN):
                 padded_Z = torch.zeros(d['X'].shape[0], self.latent_Z_dim, device=self.device, requires_grad=True)
                 padded_Z = padded_Z.clone()
                 padded_Z[:, i:i+1] = Z / d['noise_sd']
+                # padded_Z[:, i:i+1] = Z 
                 noise_Z.append(padded_Z)
                 i += 1
         theta_loss = self.net.theta_encode(torch.cat(noise_X, dim=0), torch.cat(noise_y, dim=0), torch.cat(noise_Z, dim=0))
@@ -127,7 +130,7 @@ class PINN_EFI(BasePINN):
         for i, d in enumerate(self.dataset):
             if d['noise_sd'] > 0:
                 loss += torch.sum(self.latent_Z[i]**2)/2/d['noise_sd']**2
-                # loss += torch.mean(self.latent_Z[i]**2)/2/d['noise_sd']**2
+                # loss += torch.sum(self.latent_Z[i]**2)/2
         return loss
     
     def pde_loss(self):
@@ -139,7 +142,7 @@ class PINN_EFI(BasePINN):
         for i, d in enumerate(self.dataset):
             if d['category'] == 'differential':
                 if d['noise_sd'] > 0:
-                    diff_o = self.differential_operator(self.net, d['X'], pe_variables) + self.latent_Z[i]
+                    diff_o = self.differential_operator(self.net, d['X'], pe_variables) + self.latent_Z[i] * d['noise_sd']
                     loss += self.mse_loss(diff_o, d['y'])
                 else:
                     diff_o = self.differential_operator(self.net, d['X'], pe_variables)
