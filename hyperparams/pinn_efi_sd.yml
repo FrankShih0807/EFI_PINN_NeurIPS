@@ -29,7 +29,7 @@ european_call:
 
 poisson:
   epochs: 200_000
-  eval_freq: -1
+  eval_freq: 2000
   burn: 0.1
   pinn:
     hidden_layers:
@@ -63,11 +63,11 @@ poisson-v2:
     - 50
     activation_fn: tanh
     annealing_period: 0.1
-    lr: 'poly_2e-6_10.0_0.55'
+    lr: 'poly_0.25e-5_50.0_0.55'
     sgd_momentum: 'linear_0.9_0.0'
-    sgld_lr: 'poly_7e-4_5.0_0.95'
+    sgld_lr: 'poly_0.5e-5_100.0_0.55'
     sgld_alpha: 1.0
-    lam: 'linear_50.0_500.0'
+    lam: 'linear_50.0_1000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
     encoder_kwargs:
@@ -89,11 +89,11 @@ poisson-nonlinear:
     - 50
     activation_fn: tanh
     annealing_period: 0.1
-    lr: 'poly_2e-6_10.0_0.55'
+    lr: 'poly_0.25e-5_100.0_0.55'
     sgd_momentum: 'linear_0.9_0.0'
-    sgld_lr: 'poly_7e-4_5.0_0.95'
+    sgld_lr: 'poly_0.25e-5_1000.0_0.55'
     sgld_alpha: 1.0
-    lam: 'linear_50.0_500.0'
+    lam: 'log_100.0_1000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
     encoder_kwargs:

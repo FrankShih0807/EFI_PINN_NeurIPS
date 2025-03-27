@@ -10,7 +10,7 @@ from PINN.common.scheduler import get_schedule
 from torch.nn.utils import parameters_to_vector
 
 
-class PINN_EFI(BasePINN):
+class PINN_EFI_SD(BasePINN):
     def __init__(
         self,
         physics_model,
@@ -75,6 +75,7 @@ class PINN_EFI(BasePINN):
             latent_Z_dim=self.latent_Z_dim,
             hidden_layers=self.hidden_layers,
             activation_fn=self.activation_fn,
+            sd_known=False,
             pe_dim=self.pe_dim,
             device=self.device,
             **self.encoder_kwargs
@@ -101,8 +102,8 @@ class PINN_EFI(BasePINN):
         loss = 0
         for i, d in enumerate(self.dataset):
             if d['category'] == 'solution' and d['noise_sd'] > 0:
-                # loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i])
-                loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i] * d['noise_sd'])
+                loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i] * self.net.log_sd.exp())
+                # loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i] * d['noise_sd'])
             elif d['category'] == 'solution':
                 loss += self.mse_loss(d['y'], self.net(d['X']))
         return loss
@@ -153,7 +154,7 @@ class PINN_EFI(BasePINN):
         # optimiser = optim.Adam(self.net.parameters(), lr=3e-4)
         optimiser = optim.SGD(self.net.parameters(), lr=1e-3)
         print('Pretraining EFI...')
-        param_vector =  F.pad(param_vector, (0, self.pe_dim), value=0)
+        param_vector =  F.pad(param_vector, (0, self.pe_dim+1), value=0)
         for _ in range(steps):
             self.net.train()
             # batch_size = self.n_samples
@@ -251,6 +252,7 @@ class PINN_EFI(BasePINN):
         self.logger.record('train_param/sgld_alpha', sgld_alpha, exclude='csv')
         self.logger.record('train/grad_norm', grad_norm, exclude='csv')
         self.logger.record('train_param/lambda', lam, exclude='csv')
+        # self.logger.record('eval/sd', self.net.log_sd.exp().item(), exclude='csv')
 
         self.logger.record('train/theta_loss', theta_loss.item())
         

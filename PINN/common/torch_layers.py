@@ -112,6 +112,7 @@ class EFI_Net_PE(nn.Module):
                  latent_Z_dim=1,
                  hidden_layers=[15, 15], 
                  activation_fn='relu', 
+                 sd_known=True,
                  pe_dim=0,
                  encoder_hidden_layers=None,
                  encoder_activation='relu',
@@ -130,6 +131,7 @@ class EFI_Net_PE(nn.Module):
         self.latent_Z_dim = latent_Z_dim
         self.hidden_layers = hidden_layers
         self.activation_fn = get_activation_fn(activation_fn)
+        self.sd_known = sd_known
 
         # Encoder Net Info
         self.encoder_input_dim = self.input_dim + self.output_dim + self.latent_Z_dim
@@ -142,7 +144,10 @@ class EFI_Net_PE(nn.Module):
         self.sparse_sd = sparse_sd
         
         # parameter estimation settings
-        self.pe_dim = pe_dim
+        if self.sd_known:
+            self.pe_dim = pe_dim
+        else:
+            self.pe_dim = pe_dim + 1
         # if self.pe_dim > 0:
         #     self.pe_variables = nn.Parameter(torch.randn(self.pe_dim), requires_grad=True, device=self.device)
         
@@ -180,7 +185,13 @@ class EFI_Net_PE(nn.Module):
         Returns:
             weight_tensors, bias_tensors: tensors
         '''
-        theta_weight, theta_bias, theta_pe = torch.split(theta, [sum(self.nn_numel['weight']), sum(self.nn_numel['bias']), self.pe_dim ] , dim=-1)
+        if self.sd_known:
+            theta_weight, theta_bias, theta_pe = torch.split(theta, [sum(self.nn_numel['weight']), sum(self.nn_numel['bias']), self.pe_dim] , dim=-1)
+        else:
+            theta_weight, theta_bias, theta_pe, log_sd = torch.split(theta, [sum(self.nn_numel['weight']), sum(self.nn_numel['bias']), self.pe_dim-1, 1], dim=-1)
+            self.log_sd = log_sd.view(-1)
+            
+        # theta_weight, theta_bias, theta_pe = torch.split(theta, [sum(self.nn_numel['weight']), sum(self.nn_numel['bias']), self.pe_dim ] , dim=-1)
         theta_weight_split = torch.split(theta_weight, self.nn_numel['weight'], dim=-1)
         theta_bias_split = torch.split(theta_bias, self.nn_numel['bias'], dim=-1)
         

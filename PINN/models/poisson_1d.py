@@ -124,7 +124,8 @@ class Poisson1DCallback(BaseCallback):
         
         if self.physics_model.is_inverse:
             self.k_buffer = ScalarBuffer(burn=self.burn)
-
+        if self.model.net.sd_known==False:
+            self.sd_buffer = ScalarBuffer(burn=self.burn)
     
     def _on_training(self):
         
@@ -144,6 +145,8 @@ class Poisson1DCallback(BaseCallback):
         self.eval_buffer.add(pred_y)
         if self.physics_model.is_inverse:
             self.k_buffer.add(self.model.pe_variables[0].item())
+        if self.model.net.sd_known==False:
+            self.sd_buffer.add(self.model.net.log_sd.exp().item())
         # print(len(self.eval_buffer))
         
     
@@ -167,6 +170,16 @@ class Poisson1DCallback(BaseCallback):
             self.logger.record('eval/k_coverage_rate', k_cr)
             self.logger.record('eval/k_mean', k_mean)
         
+        if self.model.net.sd_known==False:
+            sd_mean = self.sd_buffer.get_mean()
+            sd_low, sd_high = self.sd_buffer.get_ci()
+            sd_ci_range = sd_high - sd_low
+            sd_cr = ((sd_low <= self.physics_model.sol_sd) & (self.physics_model.sol_sd <= sd_high))
+            
+            self.logger.record('eval/sd_ci_range', sd_ci_range)
+            self.logger.record('eval/sd_coverage_rate', sd_cr)
+            self.logger.record('eval/sd_mean', sd_mean)
+        
         self.save_evaluation()
         # self.plot_latent_Z()
         try:
@@ -188,7 +201,7 @@ class Poisson1DCallback(BaseCallback):
         true_y = self.dataset[0]['true_y'].flatten()
         sol_y = self.dataset[0]['y'].flatten()
         sd = self.dataset[0]['noise_sd']
-        true_Z = sol_y - true_y
+        true_Z = (sol_y - true_y) / sd
         
         latent_Z = self.model.latent_Z[0].flatten().detach().cpu().numpy()
         
@@ -199,15 +212,15 @@ class Poisson1DCallback(BaseCallback):
         plt.scatter(true_Z, latent_Z, label='Latent Z')
         plt.xlabel('True Z')
         plt.ylabel('Latent Z')
-        plt.xlim(-3*sd, 3*sd)
-        plt.ylim(-3*sd, 3*sd)
+        plt.xlim(-3, 3)
+        plt.ylim(-3, 3)
         plt.savefig(os.path.join(self.save_path, 'latent_Z.png'))
         plt.close()
         
         true_y = self.dataset[1]['true_y'].flatten()
         sol_y = self.dataset[1]['y'].flatten()
         sd = self.dataset[1]['noise_sd']
-        true_Z = sol_y - true_y
+        true_Z = (sol_y - true_y) / sd
         
         latent_Z = self.model.latent_Z[1].flatten().detach().cpu().numpy()
         
@@ -218,8 +231,8 @@ class Poisson1DCallback(BaseCallback):
         plt.scatter(true_Z, latent_Z, label='Latent Z')
         plt.xlabel('True Z')
         plt.ylabel('Latent Z')
-        plt.xlim(-3*sd, 3*sd)
-        plt.ylim(-3*sd, 3*sd)
+        plt.xlim(-3, 3)
+        plt.ylim(-3, 3)
         plt.savefig(os.path.join(self.save_path, 'latent_Z_diff.png'))
         plt.close()
         
