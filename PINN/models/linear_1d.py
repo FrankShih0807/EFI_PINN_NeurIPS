@@ -11,7 +11,7 @@ from PIL import Image
 from PINN.common.callbacks import BaseCallback
 from PINN.common.buffers import EvaluationBuffer, ScalarBuffer
 import random
-import statsmodels.api as sm
+# import statsmodels.api as sm
 '''
 Linear1D: Linear model with parameter estimation 
 '''
