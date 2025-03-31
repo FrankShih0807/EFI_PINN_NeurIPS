@@ -314,11 +314,14 @@ if __name__ == '__main__':
     models = os.listdir(output_dir)
     
     file = open('metric.txt', 'w')
+    pd.set_option('display.max_rows', None)   
     for model in models:
         print(model)
         df = collect_progress_data(output_dir, model)
+        df = df[df['done']==1.0]
         # print(df)
-        print(df[df['mse']>0.01])
+        print(df[df['mse']>0.001])
+        # print(df[df['done']==0.0])
         print(df[df['coverage_rate']<0.5])
         df = df.dropna()
         df = df.drop(columns=['exp'])
