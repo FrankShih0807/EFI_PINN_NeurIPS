@@ -10,3 +10,4 @@ output*
 run_scripts/
 figures/
 metric.txt
+metric_poisson.txt
