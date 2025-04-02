@@ -26,7 +26,7 @@ european_call:
       sparse_sd: 0.001
       sparsity: 1.0
 
-
+# Tuned for replicate 30
 poisson:
   epochs: 200_000
   eval_freq: 2000
@@ -37,17 +37,17 @@ poisson:
     - 50
     activation_fn: tanh
     annealing_period: 0.1
-    lr: 'poly_2e-6_10.0_0.55'
+    lr: 'poly_2e-6_2.0_0.55'
     sgd_momentum: 'linear_0.9_0.0'
-    sgld_lr: 'poly_7e-4_5.0_0.95'
+    sgld_lr: 'poly_7e-4_4.0_0.95'
     sgld_alpha: 1.0
     lam: 'log_50.0_500.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 16
-      - 16
+      - 32
+      - 32
       - 16
       encoder_activation: leaky_relu
       prior_sd: 10.0
