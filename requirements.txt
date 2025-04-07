@@ -6,4 +6,5 @@ seaborn
 jupyter
 ruamel.yaml
 tqdm
+statsmodels
 git+https://github.com/AdamCobb/hamiltorch.git
