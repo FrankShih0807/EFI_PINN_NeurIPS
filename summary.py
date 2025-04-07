@@ -126,7 +126,7 @@ def plot_latent_Z(output_dir):
         fig, axes = plt.subplots(1, 1, figsize=(8, 6))
 
         # Scatter plot with x=y line
-        sns.scatterplot(data=group, x='true_Z', y='latent_Z', alpha=0.6, ax=axes)
+        sns.scatterplot(data=group, x='true_Z', y='latent_Z', alpha=0.6, ax=axes, label=group['latent_Z'].std())
         min_val = min(group['true_Z'].min(), group['latent_Z'].min())
         max_val = max(group['true_Z'].max(), group['latent_Z'].max())
         axes.plot([min_val, max_val], [min_val, max_val], 'r--', label='x = y')
