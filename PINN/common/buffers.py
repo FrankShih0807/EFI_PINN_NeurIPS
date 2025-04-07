@@ -65,6 +65,7 @@ class ScalarBuffer(object):
     
     def reset(self):
         self.samples = []
+        print('reset buffer')
 
     
     
