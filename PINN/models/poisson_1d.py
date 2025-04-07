@@ -191,6 +191,8 @@ class Poisson1DCallback(BaseCallback):
             self.eval_buffer.reset()
             if self.physics_model.is_inverse:
                 self.k_buffer.reset()
+            if self.model.net.sd_known==False:
+                self.sd_buffer.reset()
         # self.physics_model.save_evaluation(self.model, self.save_path)
         # self.physics_model.save_temp_frames(self.model, self.n_evals, self.save_path)
     
@@ -263,6 +265,16 @@ class Poisson1DCallback(BaseCallback):
         frame_path = os.path.join(temp_dir, f"frame_{self.n_evals}.png")
         plt.savefig(frame_path)
         plt.close()
+
+        if self.model.net.sd_known==False:
+            sigma_samples = self.sd_buffer.samples
+            sns.set_style("whitegrid")
+            plt.subplots(figsize=(8, 6))
+            plt.plot(sigma_samples)
+            plt.xlabel('Iteration')
+            plt.ylabel('Sigma')
+            plt.savefig(os.path.join(self.save_path, 'sigma.png'))
+            plt.close()
         
     def save_gif(self):
         frames = []
