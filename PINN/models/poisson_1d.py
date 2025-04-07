@@ -11,6 +11,7 @@ from PIL import Image
 from PINN.common.callbacks import BaseCallback
 from PINN.common.buffers import EvaluationBuffer, ScalarBuffer
 import random
+from matplotlib import gridspec
 '''
 Poisson1D: Poisson with parameter estimation 
 '''
@@ -266,13 +267,27 @@ class Poisson1DCallback(BaseCallback):
         plt.savefig(frame_path)
         plt.close()
 
-        if self.model.net.sd_known==False:
+        if self.model.net.sd_known == False:
             sigma_samples = self.sd_buffer.samples
             sns.set_style("whitegrid")
-            plt.subplots(figsize=(8, 6))
-            plt.plot(sigma_samples)
-            plt.xlabel('Iteration')
-            plt.ylabel('Sigma')
+            
+            fig = plt.figure(figsize=(10, 6))
+            gs = gridspec.GridSpec(1, 4)  # 4 columns: 3 for line plot, 1 for histogram
+
+            # Line plot (left, wider)
+            ax_main = plt.subplot(gs[0, :3])
+            ax_main.plot(sigma_samples, color='steelblue')
+            ax_main.set_xlabel('Iteration')
+            ax_main.set_ylabel('Sigma')
+            ax_main.set_title('Sigma Trace')
+
+            # Histogram (right, narrow)
+            ax_hist = plt.subplot(gs[0, 3], sharey=ax_main)
+            ax_hist.hist(sigma_samples, bins=30, orientation='horizontal', color='lightcoral', edgecolor='black')
+            ax_hist.set_xlabel('Density')
+            ax_hist.tick_params(labelleft=False)  # hide y-tick labels to avoid clutter
+
+            plt.tight_layout()
             plt.savefig(os.path.join(self.save_path, 'sigma.png'))
             plt.close()
         
