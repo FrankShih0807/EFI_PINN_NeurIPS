@@ -322,8 +322,8 @@ if __name__ == '__main__':
         # print(df)
         print(df[df['mse']>0.001])
         # print(df[df['done']==0.0])
-        print(df[df['coverage_rate']<0.5])
-        df = df.dropna()
+        # print(df[df['coverage_rate']<0.5])
+        # df = df.dropna()
         df = df.drop(columns=['exp'])
         print(df.groupby(['model', 'algo']).mean())
         
