@@ -283,7 +283,7 @@ class Poisson1DCallback(BaseCallback):
 
             # Histogram (right, narrow)
             ax_hist = plt.subplot(gs[0, 3], sharey=ax_main)
-            ax_hist.hist(sigma_samples, bins=30, orientation='horizontal', color='lightcoral', edgecolor='black')
+            ax_hist.hist(sigma_samples, bins=30, orientation='horizontal', density=True, color='lightcoral', edgecolor='black')
             ax_hist.set_xlabel('Density')
             ax_hist.tick_params(labelleft=False)  # hide y-tick labels to avoid clutter
 
