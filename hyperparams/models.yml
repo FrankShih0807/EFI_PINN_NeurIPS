@@ -105,3 +105,14 @@ linear-1d:
   n_diff_sensors: 200
   n_diff_replicates: 1
   is_inverse: False
+
+
+montroll:
+  t_start: 0.05
+  # t_end: 60.0
+  # t_start: -0.5
+  t_end: 1.0
+  sol_sd: 0.1
+  n_diff_sensors: 20
+  is_inverse: True
+  sd_known: False

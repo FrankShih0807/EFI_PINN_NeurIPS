@@ -10,8 +10,8 @@ from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
 from PINN.common.callbacks import BaseCallback
 from PINN import PINN, PINN_EFI, BayesianPINN, PINN_EFI_SD
-from PINN.models import EuropeanCall, Poisson1D, Poisson2D, Linear1D
-from PINN.models import Poisson1DCallback, EuropeanCallCallback, Poisson2DCallback, Linear1DCallback
+from PINN.models import EuropeanCall, Poisson1D, Poisson2D, Linear1D, Montroll
+from PINN.models import Poisson1DCallback, EuropeanCallCallback, Poisson2DCallback, Linear1DCallback, MontrollCallback
 
 from torch.utils.data import Dataset
 
@@ -34,6 +34,7 @@ MODELS: Dict[str, Type[PhysicsModel]] = {
     "poisson-inverse": Poisson1D,
     "poisson-2d": Poisson2D,
     "linear-1d": Linear1D,
+    "montroll": Montroll,
 }
 
 CALLBACKS: Dict[str, Callable] = {
@@ -44,6 +45,7 @@ CALLBACKS: Dict[str, Callable] = {
     "european_call": EuropeanCallCallback,
     "poisson-2d": Poisson2DCallback,
     "linear-1d": Linear1DCallback,
+    "montroll": MontrollCallback,
 }
 
 def get_callback(key: str) -> Callable:

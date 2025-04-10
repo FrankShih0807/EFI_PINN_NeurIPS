@@ -120,6 +120,7 @@ class EFI_Net_PE(nn.Module):
                  prior_sd=0.1, 
                  sparse_sd=0.01,
                  sparsity=1.0,
+                 positive_output=False,
                  device='cpu'
                  ):
         super(EFI_Net_PE, self).__init__()
@@ -142,6 +143,8 @@ class EFI_Net_PE(nn.Module):
         self.sparsity = sparsity
         self.prior_sd = prior_sd
         self.sparse_sd = sparse_sd
+        
+        self.positive_output = positive_output
         
         # parameter estimation settings
         if self.sd_known:
@@ -175,6 +178,7 @@ class EFI_Net_PE(nn.Module):
         
         # self.encoder = BaseDNN(input_dim=self.encoder_input_dim, hidden_layers=encoder_hidden_layers, output_dim=self.n_parameters+self.pe_dim , activation_fn=self.encoder_activation).to(self.device)
         self.encoder = BottleneckHypernet(input_dim=self.encoder_input_dim, hidden_layers=encoder_hidden_layers, output_dim=self.n_parameters+self.pe_dim , activation_fn=self.encoder_activation, neck_layer_activation=self.neck_layer_activation).to(self.device)
+        # print(self.encoder_input_dim, self.n_parameters, self.pe_dim, )
 
     def split_encoder_output(self, theta):
         '''Split encoder output into network layer shapes
@@ -206,6 +210,8 @@ class EFI_Net_PE(nn.Module):
         for i in range(self.n_layers-1):
             x = self.activation_fn(F.linear(x, self.weight_tensors[i], self.bias_tensors[i]))
         x = F.linear(x, self.weight_tensors[-1], self.bias_tensors[-1])
+        if self.positive_output:
+            x = torch.exp(x)
         return x
 
     

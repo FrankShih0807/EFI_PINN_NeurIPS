@@ -27,6 +27,7 @@ class PINN_EFI_SD(BasePINN):
         lam=1,
         lambda_pde=1,
         lambda_theta=1,
+        positive_output=False,
         save_path=None,
         device="cpu",
     ) -> None:
@@ -38,6 +39,7 @@ class PINN_EFI_SD(BasePINN):
         self.lam = lam
         self.lambda_theta = lambda_theta
         self.pe_dim = physics_model.pe_dim
+        self.positive_output = positive_output
         
         super().__init__(
             physics_model=physics_model,
@@ -77,6 +79,7 @@ class PINN_EFI_SD(BasePINN):
             activation_fn=self.activation_fn,
             sd_known=False,
             pe_dim=self.pe_dim,
+            positive_output=self.positive_output,
             device=self.device,
             **self.encoder_kwargs
         )
@@ -211,9 +214,19 @@ class PINN_EFI_SD(BasePINN):
         z_prior_loss = self.z_prior_loss()
         pde_loss = self.pde_loss()
         Z_loss = lam * (y_loss + lambda_theta * theta_loss + lambda_pde * pde_loss) + z_prior_loss
+        
+        # print('Z_loss', Z_loss.item())
+        # print('theta_loss', theta_loss.item())
+        # print('y_loss', y_loss.item())
+        # print('z_prior_loss', z_prior_loss.item())
+        # print('pde_loss', pde_loss.item())
 
         self.sampler.zero_grad()
         Z_loss.backward()
+        
+        grad_norm = torch.sqrt(sum(p.grad.norm(2)**2 for p in self.net.parameters() if p.grad is not None)).item()
+        # print('latent_Z_grad', grad_norm)
+        # raise
         # for param in self.sampler.param_groups[0]['params']:
         #     print('latent_Z_grad', param.abs().max())
             
@@ -239,6 +252,7 @@ class PINN_EFI_SD(BasePINN):
         w_loss.backward()
         
         grad_norm = torch.sqrt(sum(p.grad.norm(2)**2 for p in self.net.parameters() if p.grad is not None)).item()
+
             
         # if self.grad_norm_max > 0 and self.progress < self.annealing_period:
         if self.grad_norm_max > 0:
