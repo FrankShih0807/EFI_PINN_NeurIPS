@@ -35,6 +35,8 @@ MODELS: Dict[str, Type[PhysicsModel]] = {
     "poisson-2d": Poisson2D,
     "linear-1d": Linear1D,
     "montroll": Montroll,
+    "montroll_theta": Montroll,
+    "montroll_fixed": Montroll,
 }
 
 CALLBACKS: Dict[str, Callable] = {
@@ -46,6 +48,8 @@ CALLBACKS: Dict[str, Callable] = {
     "poisson-2d": Poisson2DCallback,
     "linear-1d": Linear1DCallback,
     "montroll": MontrollCallback,
+    "montroll_theta": MontrollCallback,
+    "montroll_fixed": MontrollCallback,
 }
 
 def get_callback(key: str) -> Callable:

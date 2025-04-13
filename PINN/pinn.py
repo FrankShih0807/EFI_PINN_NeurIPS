@@ -14,11 +14,13 @@ class PINN(BasePINN):
         lr=1e-3,
         lambda_pde=1,
         dropout_rate=0.0,
+        positive_output=False,
         save_path=None,
         device='cpu'
     ) -> None:
         
         self.dropout_rate = dropout_rate
+        self.positive_output = positive_output
         self.pe_dim = physics_model.pe_dim
         
         super().__init__(
@@ -40,6 +42,7 @@ class PINN(BasePINN):
             hidden_layers=self.hidden_layers,
             activation_fn=self.activation_fn,
             dropout_rate=self.dropout_rate,
+            positive_output=self.positive_output,
         )
         self.net.to(self.device)
         if self.pe_dim > 0:

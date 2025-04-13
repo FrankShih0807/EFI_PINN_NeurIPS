@@ -16,38 +16,35 @@ import pandas as pd
 
 
 '''
-Montroll model for tumor growth (real data)
+MontrollTheta model for tumor growth (real data)
 '''
-class Montroll(PhysicsModel):
+class MontrollTheta(PhysicsModel):
     def __init__(self, 
                  t_start=0.0,
                  t_end=60.0, 
+                 sol_sd=1,
                  n_diff_sensors=100,
-                 k = None,
-                 C = None,
-                 theta = None,
-                #  is_inverse=True,
-                #  sd_known=False,
+                 theta=1.0,
+                 is_inverse=True,
+                 sd_known=False,
                  ):
         super().__init__(t_start=t_start, 
                          t_end=t_end, 
-                         n_diff_sensors=n_diff_sensors,
-                         k=k,
-                         C=C,
+                         sol_sd=sol_sd,
                          theta=theta,
-                        #  is_inverse=is_inverse,
-                        #  sd_known=sd_known,
+                         n_diff_sensors=n_diff_sensors,
+                         is_inverse=is_inverse,
+                         sd_known=sd_known,
                          )
 
-        self.pe_dim = 3
-        
+        self.pe_dim = 2
 
     def generate_data(self, device):
         dataset = PINNDataset(device=device)
         sol_X, sol_y, sol_true_y = self.get_sol_data()
         diff_X, diff_y, diff_true_y = self.get_diff_data()
         eval_X, eval_y = self.get_eval_data()
-        dataset.add_data(sol_X, sol_y, sol_true_y, category='solution', noise_sd=1.0)
+        dataset.add_data(sol_X, sol_y, sol_true_y, category='solution', noise_sd=self.sol_sd)
         dataset.add_data(diff_X, diff_y, diff_true_y, category='differential', noise_sd=0)
         dataset.add_data(eval_X, eval_y, eval_y, category='evaluation', noise_sd=0)
         
@@ -76,23 +73,13 @@ class Montroll(PhysicsModel):
         y = true_y.clone()
         return X, y, true_y
     
-    # def physics_law(self, X):
-    #     y = torch.sin(6 * X) ** 3
-    #     return y
-    
+
     def differential_operator(self, model: torch.nn.Module, physics_X, pe_variables=None):
         if pe_variables is None:
             raise ValueError("pe_variables should be provided for inverse problems.")
         else:
             k = pe_variables[0].exp()
             C = pe_variables[1].exp()
-            theta = pe_variables[2].exp()
-        
-        if self.k is not None:
-            k = self.k * 60
-        if self.C is not None:
-            C = self.C / 8
-        if self.theta is not None:
             theta = self.theta
         
         p = model(physics_X)
@@ -106,13 +93,10 @@ class Montroll(PhysicsModel):
             print("pde:", pde)
             raise
         
-        # print(k, C, theta)
-        # print(p_t, p, pde)
-        
         return pde
 
 
-class MontrollCallback(BaseCallback):
+class MontrollThetaCallback(BaseCallback):
     def __init__(self):
         super().__init__()
     
@@ -123,46 +107,23 @@ class MontrollCallback(BaseCallback):
         self.X = self.dataset[0]['X'].flatten() * 60
         self.y = self.dataset[0]['y'].flatten() * 8
         
-        if self.physics_model.k is None:
+
+        if self.physics_model.is_inverse:
             self.k_buffer = ScalarBuffer(burn=self.burn)
-        if self.physics_model.C is None:
             self.C_buffer = ScalarBuffer(burn=self.burn)
-        if self.physics_model.theta is None:
-            self.theta_buffer = ScalarBuffer(burn=self.burn)
-        
-        # if self.physics_model.is_inverse:
-        #     self.k_buffer = ScalarBuffer(burn=self.burn)
-        #     self.C_buffer = ScalarBuffer(burn=self.burn)
-        #     self.theta_buffer = ScalarBuffer(burn=self.burn)
-        # if self.model.net.sd_known==False:
-        try:
+        if self.model.net.sd_known==False:
             self.sd_buffer = ScalarBuffer(burn=self.burn)
-        except:
-            pass
-        # self.sd_buffer = ScalarBuffer(burn=self.burn)
     
     def _on_training(self):
         
         
         pred_y = self.model.net(self.eval_X).detach().cpu()
         self.eval_buffer.add(pred_y * 8)
-        
-        if self.physics_model.k is None:
+        if self.physics_model.is_inverse:
             self.k_buffer.add(self.model.net.pe_variables[0].exp().item() / 60)
-        if self.physics_model.C is None:
             self.C_buffer.add(self.model.net.pe_variables[1].exp().item() * 8)
-        if self.physics_model.theta is None:
-            self.theta_buffer.add(self.model.net.pe_variables[2].exp().item())
-        # if self.physics_model.is_inverse:
-        #     self.k_buffer.add(self.model.net.pe_variables[0].exp().item() / 60)
-        #     self.C_buffer.add(self.model.net.pe_variables[1].exp().item() * 8)
-        #     self.theta_buffer.add(self.model.net.pe_variables[2].exp().item())
-        # if self.model.net.sd_known==False:
-        try:
+        if self.model.net.sd_known==False:
             self.sd_buffer.add(self.model.net.log_sd.exp().item() * 8)
-        except:
-            pass
-        # self.sd_buffer.add(self.model.net.log_sd.exp().item() * 8)
         
     
     def _on_eval(self):
@@ -175,42 +136,37 @@ class MontrollCallback(BaseCallback):
         
         # self.logger.record('eval/mse', mse)
         self.logger.record('eval/ci_range', ci_range)
-        # if self.physics_model.is_inverse:
-            
-        if self.physics_model.k is None:
+        if self.physics_model.is_inverse:
             k_mean = self.k_buffer.get_mean()
             k_low, k_high = self.k_buffer.get_ci()
+            # k_ci_range = k_high - k_low
+            
+            # self.logger.record('eval/k_ci_range', k_ci_range)
             self.logger.record('eval/k_low', k_low)
             self.logger.record('eval/k_high', k_high)
             self.logger.record('eval/k_mean', k_mean)
-        
-        if self.physics_model.C is None:
+            
             C_mean = self.C_buffer.get_mean()
             C_low, C_high = self.C_buffer.get_ci()
+            # C_ci_range = C_high - C_low
+
+            # self.logger.record('eval/C_ci_range', C_ci_range)
             self.logger.record('eval/C_low', C_low)
             self.logger.record('eval/C_high', C_high)
             self.logger.record('eval/C_mean', C_mean)
+            
         
-        if self.physics_model.theta is None:
-            theta_mean = self.theta_buffer.get_mean()
-            theta_low, theta_high = self.theta_buffer.get_ci()
-            self.logger.record('eval/theta_low', theta_low)
-            self.logger.record('eval/theta_high', theta_high)
-            self.logger.record('eval/theta_mean', theta_mean)
-        
-        try:
+        if self.model.net.sd_known==False:
             sd_mean = self.sd_buffer.get_mean()
             sd_low, sd_high = self.sd_buffer.get_ci()
+            sd_ci_range = sd_high - sd_low
+
+            
+            self.logger.record('eval/sd_ci_range', sd_ci_range)
             self.logger.record('eval/sd_mean', sd_mean)
-            self.logger.record('eval/sd_low', sd_low)
-            self.logger.record('eval/sd_high', sd_high)
-        except:
-            pass
         
         self.save_evaluation()
-        
-        if self.physics_model.k is None and self.physics_model.theta is None:
-            self.plot_k_vs_theta()
+        # self.plot_k_vs_theta()
         # self.plot_latent_Z()
         try:
             self.plot_latent_Z()
@@ -219,16 +175,12 @@ class MontrollCallback(BaseCallback):
         
         if self.model.progress <= self.eval_buffer.burn:
             self.eval_buffer.reset()
-            if self.physics_model.k is None:
+            if self.physics_model.is_inverse:
                 self.k_buffer.reset()
-            if self.physics_model.C is None:
                 self.C_buffer.reset()
-            if self.physics_model.theta is None:
-                self.theta_buffer.reset()
-            try:
+                # self.theta_buffer.reset()
+            if self.model.net.sd_known==False:
                 self.sd_buffer.reset()
-            except:
-                pass
         # self.physics_model.save_evaluation(self.model, self.save_path)
         # self.physics_model.save_temp_frames(self.model, self.n_evals, self.save_path)
     
@@ -299,30 +251,7 @@ class MontrollCallback(BaseCallback):
         plt.savefig(frame_path)
         plt.close()
 
-        # if self.model.net.sd_known == False:
-        #     sigma_samples = self.sd_buffer.samples
-        #     sns.set_style("whitegrid")
-            
-        #     fig = plt.figure(figsize=(10, 6))
-        #     gs = gridspec.GridSpec(1, 4)  # 4 columns: 3 for line plot, 1 for histogram
 
-        #     # Line plot (left, wider)
-        #     ax_main = plt.subplot(gs[0, :3])
-        #     ax_main.plot(sigma_samples, color='steelblue')
-        #     ax_main.set_xlabel('Iteration')
-        #     ax_main.set_ylabel('Sigma')
-        #     ax_main.set_title('Sigma Trace')
-
-        #     # Histogram (right, narrow)
-        #     ax_hist = plt.subplot(gs[0, 3], sharey=ax_main)
-        #     ax_hist.hist(sigma_samples, bins=30, orientation='horizontal', density=True, color='lightcoral', edgecolor='black')
-        #     ax_hist.set_xlabel('Density')
-        #     ax_hist.tick_params(labelleft=False)  # hide y-tick labels to avoid clutter
-
-        #     plt.tight_layout()
-        #     plt.savefig(os.path.join(self.save_path, 'sigma.png'))
-        #     plt.close()
-        
     def save_gif(self):
         frames = []
         temp_dir = os.path.join(self.save_path, 'temp_frames')
@@ -347,7 +276,7 @@ class MontrollCallback(BaseCallback):
         
         
 if __name__ == '__main__':
-    model = Montroll()
+    model = MontrollTheta()
     dataset = model.generate_data(device='cpu')
     
     X = dataset[0]['X'].flatten().numpy()

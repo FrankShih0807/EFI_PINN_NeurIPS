@@ -187,22 +187,74 @@ linear-1d:
 
 
 montroll:
-  epochs: 400_000
+  epochs: 500_000
   eval_freq: 2000
-  burn: 0.2
+  burn: 0.3
   pinn:
     positive_output: True
     hidden_layers:
     - 50
     - 50
-    activation_fn: tanh
-    annealing_period: 0.3
+    activation_fn: softplus(beta=10)
+    annealing_period: 0.2
     lr: 'poly_1e-6_10.0_0.55'
     sgd_momentum: 'linear_0.9_0.99'
-    sgld_lr: 'poly_2e-6_10.0_0.95'
+    sgld_lr: 'poly_1e-4_10.0_0.95'
     sgld_alpha: 1.0
-    lam: 'log_50.0_2000.0'
-    lambda_pde: 1.0
+    lam: 'log_50.0_500.0'
+    lambda_pde: 'linear_0.0_1.0'
+    lambda_theta: 1.0
+    encoder_kwargs:
+      encoder_hidden_layers:
+      - 32
+      - 32
+      - 16
+      encoder_activation: leaky_relu
+      prior_sd: 10.0
+  
+montroll_theta:
+  epochs: 500_000
+  eval_freq: 2000
+  burn: 0.3
+  pinn:
+    positive_output: True
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: softplus(beta=10)
+    annealing_period: 0.2
+    lr: 'poly_1e-6_10.0_0.55'
+    sgd_momentum: 'linear_0.9_0.99'
+    sgld_lr: 'poly_1e-4_10.0_0.95'
+    sgld_alpha: 1.0
+    lam: 'log_50.0_500.0'
+    lambda_pde: 'linear_0.0_1.0'
+    lambda_theta: 1.0
+    encoder_kwargs:
+      encoder_hidden_layers:
+      - 32
+      - 32
+      - 16
+      encoder_activation: leaky_relu
+      prior_sd: 10.0
+  
+montroll_fixed:
+  epochs: 500_000
+  eval_freq: 2000
+  burn: 0.3
+  pinn:
+    positive_output: True
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: softplus(beta=10)
+    annealing_period: 0.2
+    lr: 'poly_1e-6_10.0_0.55'
+    sgd_momentum: 'linear_0.9_0.99'
+    sgld_lr: 'poly_1e-4_10.0_0.95'
+    sgld_alpha: 1.0
+    lam: 'log_50.0_500.0'
+    lambda_pde: 'linear_0.0_1.0'
     lambda_theta: 1.0
     encoder_kwargs:
       encoder_hidden_layers:

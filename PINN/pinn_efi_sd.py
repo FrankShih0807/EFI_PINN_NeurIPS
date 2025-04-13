@@ -105,7 +105,8 @@ class PINN_EFI_SD(BasePINN):
         loss = 0
         for i, d in enumerate(self.dataset):
             if d['category'] == 'solution' and d['noise_sd'] > 0:
-                loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i] * self.net.log_sd.exp())
+                loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i] * self.net.log_sd.exp() * d['X'].sqrt())
+                # loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i] * self.net.log_sd.exp())
                 # loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i] * d['noise_sd'])
             elif d['category'] == 'solution':
                 loss += self.mse_loss(d['y'], self.net(d['X']))
@@ -259,6 +260,10 @@ class PINN_EFI_SD(BasePINN):
             nn.utils.clip_grad_norm_(self.net.parameters(), self.grad_norm_max)
         self.optimiser.step()
         
+        with torch.no_grad():
+            y_pred = self.net(self.sol_X)
+            mse = F.mse_loss(y_pred, self.sol_y, reduction='mean')
+        
         # record training parameters
         self.logger.record('train_param/lr', lr, exclude='csv')
         self.logger.record('train_param/sgd_momentum', sgd_momentum, exclude='csv')
@@ -269,6 +274,7 @@ class PINN_EFI_SD(BasePINN):
         # self.logger.record('eval/sd', self.net.log_sd.exp().item(), exclude='csv')
 
         self.logger.record('train/theta_loss', theta_loss.item())
+        self.logger.record('train/mse', mse.item())
         
         self.pe_variables = self.net.pe_variables.detach().cpu().numpy()
         return y_loss.item(), pde_loss.item()

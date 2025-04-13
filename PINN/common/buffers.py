@@ -36,8 +36,9 @@ class EvaluationBuffer(object):
             self.new_data_added = False
         return self.total_ensemble.mean(dim=0)
     
-    def last(self):
-        return self.memory[-1]
+    def last(self, n=1):
+        return self.memory[-n:]   
+        # return self.memory[-1]
     
     def reset(self):
         self.memory = []
@@ -60,14 +61,14 @@ class ScalarBuffer(object):
     def get_mean(self):
         return np.mean(self.samples)
 
-    def last(self):
-        return self.samples[-1]
+    def last(self, n=1):
+        return self.samples[-n:]
+        # return self.samples[-1]
     
     def reset(self):
         self.samples = []
         print('reset buffer')
 
-    
     
 
 

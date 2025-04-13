@@ -68,3 +68,33 @@ poisson-inverse:
     lr: 3e-4
     lambda_pde: 1.0
     dropout_rate: 0.0
+
+
+montroll:
+  epochs: 100_000
+  eval_freq: 2000
+  burn: 0.2
+  pinn:
+    positive_output: True
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: softplus(beta=10)
+    lr: 3e-4
+    lambda_pde: 1.0
+    dropout_rate: 0.0
+
+
+montroll_fixed:
+  epochs: 100_000
+  eval_freq: 2000
+  burn: 0.2
+  pinn:
+    positive_output: True
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: softplus(beta=10)
+    lr: 3e-4
+    lambda_pde: 1.0
+    dropout_rate: 0.0

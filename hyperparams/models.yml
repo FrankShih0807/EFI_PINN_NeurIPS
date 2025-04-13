@@ -109,10 +109,20 @@ linear-1d:
 
 montroll:
   t_start: 0.05
-  # t_end: 60.0
-  # t_start: -0.5
   t_end: 1.0
-  sol_sd: 0.1
-  n_diff_sensors: 20
-  is_inverse: True
-  sd_known: False
+  n_diff_sensors: 40
+
+
+montroll_theta:
+  t_start: 0.05
+  t_end: 1.0
+  n_diff_sensors: 40
+  theta: 0.1694
+
+montroll_fixed:
+  t_start: 0.05
+  t_end: 1.0
+  n_diff_sensors: 40
+  k: 0.8311218
+  C: 7.3327312
+  theta: 0.16937177

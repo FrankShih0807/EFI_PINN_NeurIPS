@@ -44,7 +44,7 @@ class BaseDNN(nn.Module):
     
 
 class DropoutDNN(nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu, dropout_rate=0.01):
+    def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu, dropout_rate=0.01, positive_output=False):
         super(DropoutDNN, self).__init__()
         # Define input, output dimensions, hidden layers, and activation function
         self.input_dim = input_dim
@@ -55,7 +55,7 @@ class DropoutDNN(nn.Module):
         self.hidden_layers = hidden_layers
         self.activation_fn = get_activation_fn(activation_fn)
         self.dropout_rate = dropout_rate
-
+        self.positive_output = positive_output
         # Initialize layers
         self.layers = nn.ModuleList()
         self.layers.append(nn.Linear(input_dim, self.hidden_layers[0]))  # Input layer
@@ -74,6 +74,8 @@ class DropoutDNN(nn.Module):
             if isinstance(layer, nn.Linear):  # Apply activation after linear layers
                 x = self.activation_fn(x)
         x = self.layers[-1](x)  # Output layer without activation
+        if self.positive_output:
+            x = torch.exp(x)
         return x
 
 class BottleneckHypernet(nn.Module):
