@@ -130,11 +130,6 @@ class MontrollCallback(BaseCallback):
         if self.physics_model.theta is None:
             self.theta_buffer = ScalarBuffer(burn=self.burn)
         
-        # if self.physics_model.is_inverse:
-        #     self.k_buffer = ScalarBuffer(burn=self.burn)
-        #     self.C_buffer = ScalarBuffer(burn=self.burn)
-        #     self.theta_buffer = ScalarBuffer(burn=self.burn)
-        # if self.model.net.sd_known==False:
         try:
             self.sd_buffer = ScalarBuffer(burn=self.burn)
         except:
@@ -148,34 +143,23 @@ class MontrollCallback(BaseCallback):
         self.eval_buffer.add(pred_y * 8)
         
         if self.physics_model.k is None:
-            self.k_buffer.add(self.model.net.pe_variables[0].exp().item() / 60)
+            self.k_buffer.add(np.exp(self.model.pe_variables[0].detach().cpu().numpy()) / 60)
         if self.physics_model.C is None:
-            self.C_buffer.add(self.model.net.pe_variables[1].exp().item() * 8)
+            self.C_buffer.add(np.exp(self.model.pe_variables[1].detach().cpu().numpy()) * 8)
         if self.physics_model.theta is None:
-            self.theta_buffer.add(self.model.net.pe_variables[2].exp().item())
-        # if self.physics_model.is_inverse:
-        #     self.k_buffer.add(self.model.net.pe_variables[0].exp().item() / 60)
-        #     self.C_buffer.add(self.model.net.pe_variables[1].exp().item() * 8)
-        #     self.theta_buffer.add(self.model.net.pe_variables[2].exp().item())
-        # if self.model.net.sd_known==False:
+            self.theta_buffer.add(np.exp(self.model.pe_variables[2].detach().cpu().numpy()))
+
         try:
             self.sd_buffer.add(self.model.net.log_sd.exp().item() * 8)
         except:
             pass
-        # self.sd_buffer.add(self.model.net.log_sd.exp().item() * 8)
         
     
     def _on_eval(self):
-        # y = self.dataset[0]['y'].flatten()
-        # pred_y_mean = self.eval_buffer.get_mean()
         ci_low, ci_high = self.eval_buffer.get_ci()
         ci_range = (ci_high - ci_low).mean().item()
-        # print(y.shape, pred_y_mean.shape)
-        # mse = torch.mean((pred_y_mean - y) ** 2).item()
-        
-        # self.logger.record('eval/mse', mse)
+
         self.logger.record('eval/ci_range', ci_range)
-        # if self.physics_model.is_inverse:
             
         if self.physics_model.k is None:
             k_mean = self.k_buffer.get_mean()
@@ -211,7 +195,6 @@ class MontrollCallback(BaseCallback):
         
         if self.physics_model.k is None and self.physics_model.theta is None:
             self.plot_k_vs_theta()
-        # self.plot_latent_Z()
         try:
             self.plot_latent_Z()
         except:
@@ -229,8 +212,7 @@ class MontrollCallback(BaseCallback):
                 self.sd_buffer.reset()
             except:
                 pass
-        # self.physics_model.save_evaluation(self.model, self.save_path)
-        # self.physics_model.save_temp_frames(self.model, self.n_evals, self.save_path)
+
     
     def _on_training_end(self) -> None:
         self.save_gif()
@@ -248,25 +230,14 @@ class MontrollCallback(BaseCallback):
         plt.close()
         
     def plot_latent_Z(self):
-        # true_y = self.dataset[0]['true_y'].flatten()
         sol_X = self.dataset[0]['X'].flatten() * 60
-        sol_y = self.dataset[0]['y'].flatten() * 8
-         
-        sd_hat = self.model.net.log_sd.exp().item() * 8
-        # true_Z = (sol_y - true_y) / sd
-        # true_Z = (sol_y - true_y)
-        
         latent_Z = self.model.latent_Z[0].flatten().detach().cpu().numpy()
         
-        # np.save(os.path.join(self.save_path, 'true_Z.npy'), true_Z)
-        # np.save(os.path.join(self.save_path, 'latent_Z.npy'), latent_Z)
         
         plt.subplots(figsize=(6, 6))
         plt.scatter(sol_X, latent_Z, label='Latent Z')
         plt.xlabel('Time')
         plt.ylabel('Latent Z')
-        # plt.xlim(-3, 3)
-        # plt.ylim(-3, 3)
         plt.savefig(os.path.join(self.save_path, 'latent_Z.png'))
         plt.close()
         
@@ -298,30 +269,6 @@ class MontrollCallback(BaseCallback):
         frame_path = os.path.join(temp_dir, f"frame_{self.n_evals}.png")
         plt.savefig(frame_path)
         plt.close()
-
-        # if self.model.net.sd_known == False:
-        #     sigma_samples = self.sd_buffer.samples
-        #     sns.set_style("whitegrid")
-            
-        #     fig = plt.figure(figsize=(10, 6))
-        #     gs = gridspec.GridSpec(1, 4)  # 4 columns: 3 for line plot, 1 for histogram
-
-        #     # Line plot (left, wider)
-        #     ax_main = plt.subplot(gs[0, :3])
-        #     ax_main.plot(sigma_samples, color='steelblue')
-        #     ax_main.set_xlabel('Iteration')
-        #     ax_main.set_ylabel('Sigma')
-        #     ax_main.set_title('Sigma Trace')
-
-        #     # Histogram (right, narrow)
-        #     ax_hist = plt.subplot(gs[0, 3], sharey=ax_main)
-        #     ax_hist.hist(sigma_samples, bins=30, orientation='horizontal', density=True, color='lightcoral', edgecolor='black')
-        #     ax_hist.set_xlabel('Density')
-        #     ax_hist.tick_params(labelleft=False)  # hide y-tick labels to avoid clutter
-
-        #     plt.tight_layout()
-        #     plt.savefig(os.path.join(self.save_path, 'sigma.png'))
-        #     plt.close()
         
     def save_gif(self):
         frames = []
@@ -330,9 +277,6 @@ class MontrollCallback(BaseCallback):
         for epoch in range(n_frames):
             frame_path = os.path.join(temp_dir, f"frame_{epoch}.png")
             frames.append(Image.open(frame_path))
-        # frame_files = sorted(os.listdir(temp_dir))  # Sort by file name to maintain order
-        # print(frame_files)
-        # frames = [Image.open(os.path.join(temp_dir, frame)) for frame in frame_files]
         
         frames[0].save(
             os.path.join(self.save_path, "training_loss.gif"),
