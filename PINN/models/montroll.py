@@ -76,9 +76,6 @@ class Montroll(PhysicsModel):
         y = true_y.clone()
         return X, y, true_y
     
-    # def physics_law(self, X):
-    #     y = torch.sin(6 * X) ** 3
-    #     return y
     
     def differential_operator(self, model: torch.nn.Module, physics_X, pe_variables=None):
         if pe_variables is None:
