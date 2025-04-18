@@ -259,7 +259,7 @@ if __name__ == '__main__':
                 x_plot = x.squeeze().cpu().numpy()
                 y_plot = y_true.squeeze().cpu().numpy()
 
-                plt.plot(x_plot, y_plot, 'k-', linewidth=1, label="Ground Truth", color='red')
+                plt.plo(x_plot, y_plot, 'k-', linewidth=1, label="Ground Truth", color='red')
                 plt.scatter(x_plot, y.cpu().numpy(), label='Noisy Data', color='orange', alpha=0.3)
                 plt.plot(x_plot, pred_mean.cpu().numpy(), 'b-', label="Mean Prediction")
                 plt.fill_between(x_plot, lower.cpu().numpy(), upper.cpu().numpy(),
