@@ -44,7 +44,7 @@ class BaseDNN(nn.Module):
     
 
 class DropoutDNN(nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu, dropout_rate=0.01, positive_output=False):
+    def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu, dropout_rate=0.01, positive_output=False, sd_known=True):
         super(DropoutDNN, self).__init__()
         # Define input, output dimensions, hidden layers, and activation function
         self.input_dim = input_dim
@@ -59,6 +59,7 @@ class DropoutDNN(nn.Module):
         # Initialize layers
         self.layers = nn.ModuleList()
         self.layers.append(nn.Linear(input_dim, self.hidden_layers[0]))  # Input layer
+        self.sd_known = sd_known
 
         # Add hidden layers with dropout
         for i in range(1, len(self.hidden_layers)):
@@ -272,12 +273,13 @@ class BayesianPINNNet(nn.Module):
         return torch.cat([pde / (self.sigma_diff * 2 ** 0.5), u_bd / (self.sigma_sol * 2 ** 0.5)], dim=0)
     
 class BayesianNet(nn.Module):
-    def __init__(self, input_dim=1, output_dim=1, hidden_layers = [50, 50], activation_fn=torch.tanh):
+    def __init__(self, input_dim=1, output_dim=1, hidden_layers = [50, 50], activation_fn=torch.tanh, sd_known=True):
         super(BayesianNet, self).__init__()
         self.hidden_layers = hidden_layers
         # self.layer_list = []
         self.activation_fn = activation_fn
         # self.pe_variables = nn.Parameter(torch.randn(1), requires_grad=True)
+        self.sd_known = sd_known
 
         self.l1 = nn.Linear(input_dim, hidden_layers[0])
         self.l2 = nn.Linear(hidden_layers[0], hidden_layers[1])
