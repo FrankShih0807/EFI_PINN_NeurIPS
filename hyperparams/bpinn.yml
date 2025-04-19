@@ -121,8 +121,42 @@ montroll:
     activation_fn: tanh
     step_size: 1e-4
     L: 6
-    # sigma_diff: 0.05
     sigma_diff: 0.05
     sigma_sol: 0.05
     pretrain_epochs: 0
 
+
+montroll_theta:
+  n_samples: 100
+  epochs: 10000
+  eval_freq: -1
+  burn: 0.4
+  pinn:
+    positive_output: True
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: tanh
+    step_size: 1e-4
+    L: 6
+    sigma_diff: 0.05
+    sigma_sol: 0.05
+    pretrain_epochs: 0
+
+
+montroll_fixed:
+  n_samples: 100
+  epochs: 10000
+  eval_freq: -1
+  burn: 0.4
+  pinn:
+    positive_output: True
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: tanh
+    step_size: 1e-4
+    L: 6
+    sigma_diff: 0.05
+    sigma_sol: 0.05
+    pretrain_epochs: 0
