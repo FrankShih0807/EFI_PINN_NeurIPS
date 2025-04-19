@@ -27,6 +27,7 @@ class PINN_EFI(BasePINN):
         lam=1,
         lambda_pde=1,
         lambda_theta=1,
+        positive_output=False,
         save_path=None,
         device="cpu",
     ) -> None:
@@ -38,6 +39,7 @@ class PINN_EFI(BasePINN):
         self.lam = lam
         self.lambda_theta = lambda_theta
         self.pe_dim = physics_model.pe_dim
+        self.positive_output = positive_output
         
         super().__init__(
             physics_model=physics_model,
@@ -76,6 +78,7 @@ class PINN_EFI(BasePINN):
             hidden_layers=self.hidden_layers,
             activation_fn=self.activation_fn,
             pe_dim=self.pe_dim,
+            positive_output=self.positive_output,
             device=self.device,
             **self.encoder_kwargs
         )
@@ -254,7 +257,7 @@ class PINN_EFI(BasePINN):
 
         self.logger.record('train/theta_loss', theta_loss.item())
         
-        self.pe_variables = self.net.pe_variables.detach().cpu().numpy()
+        self.pe_variables = self.net.pe_variables
         return y_loss.item(), pde_loss.item()
 
     def train(self, epochs=10000, eval_freq=-1, burn=0.1, callback=None):

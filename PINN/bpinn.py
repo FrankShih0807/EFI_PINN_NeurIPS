@@ -21,6 +21,7 @@ class BayesianPINN(BasePINN):
         sigma_diff=0.01,
         sigma_sol=0.01,
         pretrain_epochs=0,
+        positive_output=False,
         save_path=None,
         device='cpu',
     ) -> None:
@@ -31,6 +32,7 @@ class BayesianPINN(BasePINN):
         self.pretrain_epochs = pretrain_epochs
 
         self.pe_dim = physics_model.pe_dim
+        self.positive_output = positive_output
 
         super().__init__(
             physics_model=physics_model,
@@ -50,7 +52,7 @@ class BayesianPINN(BasePINN):
         self.mse_loss = nn.MSELoss(reduction="sum")
 
     def _pinn_init(self):
-        self.net = BayesianNet(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers)
+        self.net = BayesianNet(input_dim=self.input_dim, output_dim=self.output_dim, hidden_layers=self.hidden_layers, positive_output=self.positive_output)
         for param in self.net.parameters():
             torch.nn.init.normal_(param)
         self.net.to(self.device)
