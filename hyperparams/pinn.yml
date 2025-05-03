@@ -69,6 +69,19 @@ poisson-inverse:
     lambda_pde: 1.0
     dropout_rate: 0.0
 
+poisson-2d:
+  epochs: 200_000
+  eval_freq: -1
+  burn: 0.5
+  pinn:
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: tanh
+    lr: 3e-4
+    lambda_pde: 1.0
+    dropout_rate: 0.0
+
 
 montroll:
   epochs: 100_000

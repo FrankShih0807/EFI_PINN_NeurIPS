@@ -78,6 +78,7 @@ class BasePINN(object):
         self.epochs = epochs
         if eval_freq == -1:
             eval_freq = epochs // 10
+        self.burn = burn
         self.callback = callback
         self.callback.init_callback(self, eval_freq=eval_freq, burn=burn)
         self.n_eval = 0

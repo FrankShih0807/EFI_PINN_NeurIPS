@@ -15,9 +15,9 @@ import random
 PoissonNonlinear: Poisson with parameter estimation 
 '''
 
-class Poisson2D(PhysicsModel):
+class TaylorGreen(PhysicsModel):
     def __init__(self, 
-                 t_start=-1.0,
+                 t_start=0.0,
                  t_end=1.0, 
                  boundary_sd=0.01,
                  sol_sd=0.01,
@@ -28,7 +28,7 @@ class Poisson2D(PhysicsModel):
                  n_sol_replicates=10,
                  n_diff_sensors=10,
                  n_diff_replicates=10,
-                 k = 0.0,
+                 nu = 0.01,
                  is_inverse=False,
                  ):
         super().__init__(t_start=t_start, 
@@ -42,7 +42,7 @@ class Poisson2D(PhysicsModel):
                          n_sol_replicates=n_sol_replicates,
                          n_diff_sensors=n_diff_sensors,
                          n_diff_replicates=n_diff_replicates,
-                         k=k,
+                         nu=nu,
                          is_inverse=is_inverse
                          )
         if is_inverse:
@@ -112,9 +112,6 @@ class Poisson2D(PhysicsModel):
 
     
     def get_diff_data(self):
-        # X1 = torch.rand(self.n_diff_sensors, 1) * (self.t_end - self.t_start) + self.t_start
-        # X2 = torch.rand(self.n_diff_sensors, 1) * (self.t_end - self.t_start) + self.t_start
-        # X = torch.cat([X1, X2], dim=1).repeat_interleave(self.n_diff_replicates, dim=0)
         X1 = torch.linspace(self.t_start, self.t_end, steps=self.n_diff_sensors)
         X2 = torch.linspace(self.t_start, self.t_end, steps=self.n_diff_sensors)
         X1, X2 = torch.meshgrid(X1, X2)
@@ -149,6 +146,13 @@ class Poisson2D(PhysicsModel):
         # u_xx = grad(u_x, physics_X)[0]
         pde = 0.01 * u_x1x1 + 0.01 * u_x2x2 + k * u ** 2
         return pde
+    
+    
+    def taylor_green_solution(self, t, x, y, nu):
+        u = -torch.cos(np.pi * x) * torch.sin(np.pi * y) * torch.exp(-2 * np.pi**2 * nu * t)
+        v = torch.sin(np.pi * x) * torch.cos(np.pi * y) * torch.exp(-2 * np.pi**2 * nu * t)
+        p = -0.25 * (torch.cos(2 * np.pi * x) + torch.cos(2 * np.pi * y)) * torch.exp(-4 * np.pi**2 * nu * t)
+        return u, v, p
 
     def plot_true_solution(self, save_path=None):
         grids = 25
@@ -180,7 +184,7 @@ class Poisson2D(PhysicsModel):
 
 
 
-class Poisson2DCallback(BaseCallback):
+class TaylorGreenCallback(BaseCallback):
     def __init__(self):
         super().__init__()
     
@@ -380,7 +384,7 @@ class Poisson2DCallback(BaseCallback):
         
 if __name__ == '__main__':
     # buffer = EvaluationBuffer()
-    poisson = Poisson2D(is_inverse=False, n_boundary_replicates=2, n_boundary_sensors=10)
+    poisson = TaylorGreen(is_inverse=False, n_boundary_replicates=2, n_boundary_sensors=10)
 
 
     poisson.plot_true_solution()
