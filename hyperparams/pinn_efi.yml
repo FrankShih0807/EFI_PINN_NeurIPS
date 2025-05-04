@@ -140,13 +140,13 @@ poisson-2d:
     hidden_layers:
     - 50
     - 50
-    activation_fn: tanh
+    activation_fn: silu
     annealing_period: 0.1
     grad_norm_max: -1.0
-    lr: 'poly_1e-6_10.0_0.55'
+    lr: 'poly_0.5e-6_10.0_0.55'
     sgd_momentum: 'linear_0.9_0.9'
     sgld_lr: 'poly_5e-4_10.0_0.95'
-    sgld_alpha: 1.0
+    sgld_alpha: 'linear_0.1_1.0'
     lam: 'log_50.0_1000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
@@ -154,8 +154,8 @@ poisson-2d:
       encoder_hidden_layers:
       - 256
       - 256
-      - 16
-      encoder_activation: leaky_relu
+      - 32
+      encoder_activation: silu
       prior_sd: 10.0
   
 

@@ -148,10 +148,10 @@ class TaylorGreen(PhysicsModel):
         return pde
     
     
-    def taylor_green_solution(self, t, x, y, nu):
-        u = -torch.cos(np.pi * x) * torch.sin(np.pi * y) * torch.exp(-2 * np.pi**2 * nu * t)
-        v = torch.sin(np.pi * x) * torch.cos(np.pi * y) * torch.exp(-2 * np.pi**2 * nu * t)
-        p = -0.25 * (torch.cos(2 * np.pi * x) + torch.cos(2 * np.pi * y)) * torch.exp(-4 * np.pi**2 * nu * t)
+    def taylor_green_solution(self, t, x, y):
+        u = -torch.cos(np.pi * x) * torch.sin(np.pi * y) * torch.exp(-2 * np.pi**2 * self.nu * t)
+        v = torch.sin(np.pi * x) * torch.cos(np.pi * y) * torch.exp(-2 * np.pi**2 * self.nu * t)
+        p = -0.25 * (torch.cos(2 * np.pi * x) + torch.cos(2 * np.pi * y)) * torch.exp(-4 * np.pi**2 * self.nu * t)
         return u, v, p
 
     def plot_true_solution(self, save_path=None):

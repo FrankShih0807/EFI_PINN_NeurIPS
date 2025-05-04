@@ -16,6 +16,7 @@ def get_activation_fn(activation):
         'elu': nn.ELU,
         'selu': nn.SELU,
         'gelu': nn.GELU,
+        'silu': nn.SiLU,
     }
     
     # If the activation is already an instance of a PyTorch activation, return it directly
