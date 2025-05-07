@@ -19,29 +19,19 @@ class TaylorGreen(PhysicsModel):
     def __init__(self, 
                  t_start=0.0,
                  t_end=1.0, 
-                 boundary_sd=0.01,
-                 sol_sd=0.01,
-                 diff_sd=0.01,
-                 n_boundary_sensors=25,
-                 n_boundary_replicates=10,
-                 n_sol_sensors=10,
-                 n_sol_replicates=10,
-                 n_diff_sensors=10,
-                 n_diff_replicates=10,
+                 sol_sd=0.1,
+                 diff_sd=0.0,
+                 n_sol=10,
+                 n_diff=10,
                  nu = 0.01,
                  is_inverse=False,
                  ):
         super().__init__(t_start=t_start, 
                          t_end=t_end, 
-                         boundary_sd=boundary_sd,
                          sol_sd=sol_sd, 
                          diff_sd=diff_sd, 
-                         n_boundary_sensors=n_boundary_sensors,
-                         n_boundary_replicates=n_boundary_replicates,
-                         n_sol_sensors=n_sol_sensors,
-                         n_sol_replicates=n_sol_replicates,
-                         n_diff_sensors=n_diff_sensors,
-                         n_diff_replicates=n_diff_replicates,
+                         n_sol=n_sol,
+                         n_diff=n_diff,
                          nu=nu,
                          is_inverse=is_inverse
                          )
@@ -52,107 +42,95 @@ class TaylorGreen(PhysicsModel):
 
     def generate_data(self, device):
         dataset = PINNDataset(device=device)
-        if self.n_boundary_sensors > 0:
-            bd_X, bd_y, bd_true_y = self.get_boundary_data()
-            dataset.add_data(bd_X, bd_y, bd_true_y, category='solution', noise_sd=self.boundary_sd)
-        if self.n_sol_sensors > 0:
+        if self.n_sol > 0:
             sol_X, sol_y, sol_true_y = self.get_sol_data()
             dataset.add_data(sol_X, sol_y, sol_true_y, category='solution', noise_sd=self.sol_sd)
-        if self.n_diff_sensors > 0:
+        if self.n_diff > 0:
             diff_X, diff_y, diff_true_y = self.get_diff_data()
             dataset.add_data(diff_X, diff_y, diff_true_y, category='differential', noise_sd=self.diff_sd)
-        eval_X, eval_y = self.get_eval_data()
-        dataset.add_data(eval_X, eval_y, eval_y, category='evaluation', noise_sd=0)
+        eval_X, eval_Y = self.get_eval_data()
+        dataset.add_data(eval_X, eval_Y, eval_Y, category='evaluation', noise_sd=0)
         
         return dataset
     
     def get_eval_data(self):
-        X1 = torch.linspace(self.t_start, self.t_end, steps=25)
-        X2 = torch.linspace(self.t_start, self.t_end, steps=25)
-        X1, X2 = torch.meshgrid(X1, X2)
-        eval_X = torch.cat([X1.reshape(-1, 1), X2.reshape(-1, 1)], dim=1)
-        eval_y = self.physics_law(eval_X)
-        return eval_X, eval_y
+        t = torch.linspace(self.t_start, self.t_end, steps=3)
+        x = torch.linspace(-1, 1, steps=100)
+        y = torch.linspace(-1, 1, steps=100)
+        
+        t, x, y = torch.meshgrid(t, x, y, indexing='ij')
+        t, x, y = t.reshape(-1, 1), x.reshape(-1, 1), y.reshape(-1, 1)
+        eval_X = torch.cat([t, x, y], dim=1)
+        eval_Y = self.taylor_green_solution(eval_X)
+        
+        return eval_X, eval_Y
     
-    def get_boundary_data(self):
-        
-        X1_up = torch.linspace(self.t_start, self.t_end, steps=self.n_boundary_sensors+1)[:self.n_boundary_sensors]
-        X2_up = torch.linspace(self.t_end, self.t_end, steps=self.n_boundary_sensors+1)[:self.n_boundary_sensors]
-        X_up = torch.cat([X1_up.reshape(-1, 1), X2_up.reshape(-1, 1)], dim=1)
-        
-        X1_down = torch.linspace(self.t_start, self.t_end, steps=self.n_boundary_sensors+1)[1:]
-        X2_down = torch.linspace(self.t_start, self.t_start, steps=self.n_boundary_sensors+1)[1:]
-        X_down = torch.cat([X1_down.reshape(-1, 1), X2_down.reshape(-1, 1)], dim=1)
-        
-        X1_left = torch.linspace(self.t_start, self.t_start, steps=self.n_boundary_sensors+1)[:self.n_boundary_sensors]
-        X2_left = torch.linspace(self.t_start, self.t_end, steps=self.n_boundary_sensors+1)[:self.n_boundary_sensors]
-        X_left = torch.cat([X1_left.reshape(-1, 1), X2_left.reshape(-1, 1)], dim=1)
-        
-        X1_right = torch.linspace(self.t_end, self.t_end, steps=self.n_boundary_sensors+1)[1:]
-        X2_right = torch.linspace(self.t_start, self.t_end, steps=self.n_boundary_sensors+1)[1:]
-        X_right = torch.cat([X1_right.reshape(-1, 1), X2_right.reshape(-1, 1)], dim=1)
-        
-        boundary_X = torch.cat([X_up, X_down, X_left, X_right], dim=0).repeat_interleave(self.n_boundary_replicates, dim=0)
-        true_boundary_y = self.physics_law(boundary_X)
-        boundary_y = true_boundary_y + self.boundary_sd * torch.randn_like(true_boundary_y)
-
-        return boundary_X, boundary_y, true_boundary_y
     
     def get_sol_data(self):
-        # X1 = torch.rand(self.n_sol_sensors, 1) * (self.t_end - self.t_start) + self.t_start
-        # X2 = torch.rand(self.n_sol_sensors, 1) * (self.t_end - self.t_start) + self.t_start
-        X1 = torch.linspace(self.t_start, self.t_end, steps=self.n_sol_sensors)
-        X2 = torch.linspace(self.t_start, self.t_end, steps=self.n_sol_sensors)
-        X1, X2 = torch.meshgrid(X1, X2)
-        X = torch.cat([X1.reshape(-1, 1), X2.reshape(-1, 1)], dim=1).repeat_interleave(self.n_sol_replicates, dim=0)
+        x_ic = 2 * torch.rand(self.n_sol, 1) - 1
+        y_ic = 2 * torch.rand(self.n_sol, 1) - 1
+        t_ic = torch.zeros_like(x_ic)
+        txy_ic = torch.cat([t_ic, x_ic, y_ic], dim=1)
+        uvp_ic = self.taylor_green_solution(txy_ic)
+
+        uvp_ic_noisy = uvp_ic + self.sol_sd * torch.randn_like(uvp_ic)
         
-        true_y = self.physics_law(X)
-        y = true_y + self.sol_sd * torch.randn_like(true_y)
-        return X, y, true_y
+        return txy_ic, uvp_ic_noisy, uvp_ic
+    
+    def generate_domain(self, n):
+        t = torch.rand(n, 1)
+        x = 2 * torch.rand(n, 1) - 1
+        y = 2 * torch.rand(n, 1) - 1
+        return torch.cat([t, x, y], dim=1)
 
     
     def get_diff_data(self):
-        X1 = torch.linspace(self.t_start, self.t_end, steps=self.n_diff_sensors)
-        X2 = torch.linspace(self.t_start, self.t_end, steps=self.n_diff_sensors)
-        X1, X2 = torch.meshgrid(X1, X2)
-        X = torch.cat([X1.reshape(-1, 1), X2.reshape(-1, 1)], dim=1).repeat_interleave(self.n_diff_replicates, dim=0)
-
-        true_y = self.differential_function(X)
-        y = true_y + self.diff_sd * torch.randn_like(true_y)
-        return X, y, true_y
-    
-    def physics_law(self, X):
-        y = torch.sin(torch.pi * X).prod(dim=1, keepdim=True)
-        return y
-    
-    def differential_function(self, X):
-        y = - 0.01 * torch.pi ** 2 * (torch.sin(torch.pi * X).prod(dim=1, keepdim=True)) + self.k * (torch.sin(torch.pi * X).prod(dim=1, keepdim=True)) ** 2
-        return y
-    
-    def differential_operator(self, model: torch.nn.Module, physics_X, pe_variables=None):
-        if pe_variables is None:
-            k = self.k
-        else:
-            k = pe_variables[0]
-            
-        u = model(physics_X)
-        grads = grad(u, physics_X)[0]
-        dudx1 = grads[:, 0].view(-1, 1)
-        dudx2 = grads[:, 1].view(-1, 1)
-        u_x1x1 = grad(dudx1, physics_X)[0][:, 0].view(-1, 1)
-        u_x2x2 = grad(dudx2, physics_X)[0][:, 1].view(-1, 1)
+        X = self.generate_domain(self.n_diff)
         
-        # u_x = grad(u, physics_X)[0]
-        # u_xx = grad(u_x, physics_X)[0]
-        pde = 0.01 * u_x1x1 + 0.01 * u_x2x2 + k * u ** 2
+        true_Y = torch.zeros(X.shape[0], 3)
+        Y = true_Y + self.diff_sd * torch.randn_like(true_Y)
+        return X, Y, true_Y
+
+    def differential_operator(self, model: torch.nn.Module, physics_X, pe_variables=None):
+            
+        uvp = model(physics_X)
+        u, v, p = uvp[:, 0:1], uvp[:, 1:2], uvp[:, 2:3]
+
+        u_t = grad(u, physics_X)[:, 0:1]
+        u_x = grad(u, physics_X)[:, 1:2]
+        u_y = grad(u, physics_X)[:, 2:3]
+        u_xx = grad(u_x, physics_X)[:, 1:2]
+        u_yy = grad(u_y, physics_X)[:, 2:3]
+
+        v_t = grad(v, physics_X)[:, 0:1]
+        v_x = grad(v, physics_X)[:, 1:2]
+        v_y = grad(v, physics_X)[:, 2:3]
+        v_xx = grad(v_x, physics_X)[:, 1:2]
+        v_yy = grad(v_y, physics_X)[:, 2:3]
+
+        p_x = grad(p, physics_X)[:, 1:2]
+        p_y = grad(p, physics_X)[:, 2:3]
+
+        cont = u_x + v_y
+        mom_u = u_t + u * u_x + v * u_y + p_x - self.nu * (u_xx + u_yy)
+        mom_v = v_t + u * v_x + v * v_y + p_y - self.nu * (v_xx + v_yy)
+        
+        
+        pde = torch.cat([mom_u, mom_v, cont], dim=0)
+        
         return pde
     
     
-    def taylor_green_solution(self, t, x, y):
+    def taylor_green_solution(self, X):
+        t = X[:, 0:1]
+        x = X[:, 1:2]
+        y = X[:, 2:3]
         u = -torch.cos(np.pi * x) * torch.sin(np.pi * y) * torch.exp(-2 * np.pi**2 * self.nu * t)
         v = torch.sin(np.pi * x) * torch.cos(np.pi * y) * torch.exp(-2 * np.pi**2 * self.nu * t)
         p = -0.25 * (torch.cos(2 * np.pi * x) + torch.cos(2 * np.pi * y)) * torch.exp(-4 * np.pi**2 * self.nu * t)
-        return u, v, p
+        
+        Y = torch.cat([u, v, p], dim=1)
+        return Y
 
     def plot_true_solution(self, save_path=None):
         grids = 25
@@ -384,8 +362,20 @@ class TaylorGreenCallback(BaseCallback):
         
 if __name__ == '__main__':
     # buffer = EvaluationBuffer()
-    poisson = TaylorGreen(is_inverse=False, n_boundary_replicates=2, n_boundary_sensors=10)
+    model = TaylorGreen(
+        t_start=0.0,
+        t_end=1.0,
+        sol_sd=0.1,
+        diff_sd=0.0,
+        n_sol=1000,
+        n_diff=10000,
+        nu = 0.01,
+        is_inverse=False
+    )
 
 
-    poisson.plot_true_solution()
+    dataset = model.generate_data(device='cpu')
+    
+    for d in dataset:
+        print(d['X'].shape, d['y'].shape, d['category'])
     

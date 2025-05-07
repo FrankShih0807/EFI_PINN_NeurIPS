@@ -83,13 +83,13 @@ poisson-2d:
   t_start: -1.0
   t_end: 1.0 
   boundary_sd: 0.05
-  sol_sd: 0.05
+  sol_sd: 0.1
   diff_sd: 0.0
   n_boundary_sensors: 0
   n_boundary_replicates: 10
   n_sol_sensors: 20
   n_sol_replicates: 1
-  n_diff_sensors: 10
+  n_diff_sensors: 20
   n_diff_replicates: 1
   k : 0.0
   is_inverse: False

@@ -1,14 +1,13 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-import torch.distributions as dist
+import torch.nn.utils as utils
 from collections import defaultdict
-from PINN.common.gmm import GaussianMixtureModel
 from PINN.common.utils import get_activation_fn
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from PINN.common.losses import gmm_loss
-    
+from torch.func import functional_call
+from collections import OrderedDict 
     
 def initialize_weights(module):
     if isinstance(module, nn.Linear):
@@ -18,7 +17,7 @@ def initialize_weights(module):
 
 
 class BaseDNN(nn.Module):
-    def __init__(self, input_dim, hidden_layers, output_dim=None, activation_fn='relu'):
+    def __init__(self, input_dim, hidden_layers=None, output_dim=None, activation_fn='relu'):
         super(BaseDNN, self).__init__()
         # Define the initial layers
         self.input_dim = input_dim
@@ -27,22 +26,207 @@ class BaseDNN(nn.Module):
         self.activation_fn = get_activation_fn(activation_fn)
         
         self.layers = nn.ModuleList()
+        
+        # Initialize layers
+        if hidden_layers is not None:
+            
+            if len(hidden_layers) > 0:
+                self.layers.append(nn.Linear(input_dim, self.hidden_layers[0]))
+                # Add hidden layers
+                for i in range(1, len(self.hidden_layers)):
+                    self.layers.append(nn.Linear(self.hidden_layers[i-1], self.hidden_layers[i]))
+                # Add the output layer
+                if self.output_dim is not None:
+                    self.layers.append(nn.Linear(self.hidden_layers[-1], self.output_dim))
+            else:
+                if self.output_dim is not None:
+                    self.layers.append(nn.Linear(self.input_dim, self.output_dim))
+                else:
+                    raise ValueError("Either hidden_layers or output_dim must be specified.")
+
+    def forward(self, x):
+        if self.hidden_layers is not None:
+            for layer in self.layers[:-1]:
+                x = layer(x)
+                x = self.activation_fn(x)
+            x = self.layers[-1](x)
+        return x
+    
+
+class HyperEncoder(nn.Module):
+    def __init__(self, 
+                 input_dim, 
+                 hidden_layers, 
+                 output_dim, 
+                 pe_dim,
+                 param_shapes,
+                 activation_fn='relu', 
+                 neck_layer_activation='identity',
+                 device='cpu'
+                 ):
+        super().__init__()
+        # Define the initial layers
+        self.input_dim = input_dim
+        self.hidden_layers = hidden_layers
+        self.output_dim = output_dim
+        self.pe_dim = pe_dim
+        self.param_shapes = param_shapes
+        self.activation_fn = get_activation_fn(activation_fn)
+        self.neck_layer_activation = get_activation_fn(neck_layer_activation)
+        self.device = device
+        
+        self.layers = nn.ModuleList()
         self.layers.append(nn.Linear(input_dim, self.hidden_layers[0]))
         # Add hidden layers
         for i in range(1, len(self.hidden_layers)):
             self.layers.append(nn.Linear(self.hidden_layers[i-1], self.hidden_layers[i]))
         # Add the output layer
-        if self.output_dim is not None:
-            self.layers.append(nn.Linear(self.hidden_layers[-1], self.output_dim))
+        self.output_layer = nn.Linear(self.hidden_layers[-1], self.output_dim)
 
-    def forward(self, x):
+    def forward(self, X, Y, Z):
+        x = torch.cat([X, Y, Z], dim=1)  # shape: [B, D]
+        x = x.to(self.device)
+        batch_size = x.shape[0]
         for layer in self.layers[:-1]:
             x = layer(x)
             x = self.activation_fn(x)
         x = self.layers[-1](x)
-        return x
+        x = self.neck_layer_activation(x)
+        theta_all = self.output_layer(x)
+        theta_mean = theta_all.mean(dim=0)
+        
+
+        theta_loss = ((theta_all - theta_mean.repeat(batch_size, 1))**2).sum()
+        param_dict, log_sd, pe_variables = self.split_encoder_output(theta_mean)
+        
+        return theta_loss, theta_mean, param_dict, log_sd, pe_variables
+    
+    def split_encoder_output(self, flat_vector):
+        param_dict = OrderedDict()
+        offset = 0
+        for name, shape in self.param_shapes.items():
+            numel = torch.tensor(shape).prod().item()
+            param_dict[name] = flat_vector[offset: offset + numel].view(shape)
+            offset += numel
+        log_sd = flat_vector[offset]
+        pe_variables = flat_vector[offset+1:] if self.pe_dim > 0 else None
+        return param_dict, log_sd, pe_variables
     
 
+
+class TransferEFI(nn.Module):
+    def __init__(self,
+                 input_dim=1,
+                 output_dim=1,
+                 latent_Z_dim=1,
+                 feature_extractor_layers=None,
+                 feature_dim=None,
+                 efi_hidden_layers=[50, 50, 50],
+                 activation_fn='relu',
+                 pe_dim=0,
+                 encoder_hidden_layers=[32, 32, 16],
+                 encoder_activation='relu',
+                 neck_layer_activation='identity',
+                 positive_output=False,
+                 sd_known=True,
+                 device='cpu'):
+        super().__init__()
+        
+    
+        self.device = device
+        self.pe_dim = pe_dim
+        self.positive_output = positive_output
+        self.sd_known = sd_known
+        if feature_dim is not None:
+            self.feature_dim = feature_dim
+        else:
+            self.feature_dim = input_dim
+            
+        if feature_extractor_layers is not None and isinstance(feature_extractor_layers, list):
+            self.feature_extractor = BaseDNN(
+            input_dim=input_dim,
+            hidden_layers=feature_extractor_layers,
+            output_dim=self.feature_dim,
+            activation_fn=activation_fn
+            )
+        else:
+            self.feature_extractor = nn.Identity()
+        
+        self.efi_layers = BaseDNN(
+            input_dim=self.feature_dim,
+            hidden_layers=efi_hidden_layers,
+            output_dim=output_dim,
+            activation_fn=activation_fn
+        )
+        self.param_shapes = {
+            name: param.shape for name, param in self.efi_layers.named_parameters()
+        }
+        self.total_params = sum(p.numel() for p in self.efi_layers.parameters())
+        
+        self.hyper = HyperEncoder(
+            input_dim=self.feature_dim + output_dim + latent_Z_dim,
+            hidden_layers=encoder_hidden_layers,
+            output_dim=self.total_params + pe_dim + 1,
+            pe_dim=pe_dim,
+            param_shapes=self.param_shapes,
+            activation_fn=encoder_activation,
+            neck_layer_activation=neck_layer_activation,
+            device=device
+        )
+
+        self.param_dict = None
+        self.pe_variables = None
+        self.log_sd = None
+        
+        self.efi_on = False
+        
+    def encode_efi_params(self, X, Y, Z):
+        X = self.feature_extractor(X)
+        theta_loss, theta_mean, param_dict, log_sd, pe_variables = self.hyper(X, Y, Z)  # shape: [total_params + pe_dim]
+        self.param_dict = param_dict
+        self.log_sd = log_sd
+        self.pe_variables = pe_variables
+        self.theta_mean = theta_mean
+        return theta_loss
+
+    def forward(self, x: torch.Tensor):
+        x = x.to(self.device)
+
+        if self.efi_on == False:
+            x = self.feature_extractor(x)
+            out = self.efi_layers(x)
+            # print('efi off')
+        else:
+            if self.param_dict is None:
+                raise RuntimeError("Must call encode_efi_params before forward")
+            x = self.feature_extractor(x)
+            out = functional_call(self.efi_layers, self.param_dict, (x,))
+            # print('efi on')
+        # out = functional_call(self.efi_layers, self.param_dict, (x,))
+        if self.positive_output:
+            out = torch.exp(out)
+        return out
+    
+    def pretrain(self, X, Y, Z):
+        optimizer = torch.optim.Adam(self.hyper.parameters(), lr=3e-4)
+        theta = utils.parameters_to_vector(self.efi_layers.parameters())
+        for _ in range(1000):
+            optimizer.zero_grad()
+            theta_loss = self.encode_efi_params(X, Y, Z)
+
+            loss = F.mse_loss(self.theta_mean[:(-1-self.pe_dim)], theta) + theta_loss
+            loss.backward()
+            optimizer.step()
+        
+        self.efi_on = True
+        for p in self.feature_extractor.parameters():
+            p.requires_grad = False
+        for p in self.efi_layers.parameters():
+            p.requires_grad = False
+            
+        print('pretrain done and efi on')
+            
+            
 class DropoutDNN(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu, dropout_rate=0.01, positive_output=False, sd_known=True):
         super(DropoutDNN, self).__init__()

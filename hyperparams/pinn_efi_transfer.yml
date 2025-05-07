@@ -29,11 +29,14 @@ european_call:
 
 poisson:
   epochs: 200_000
-  eval_freq: -1
+  eval_freq: 2000
   burn: 0.1
   pinn:
-    hidden_layers:
+    feature_extractor_layers:
     - 50
+    - 50
+    feature_dim: 50
+    efi_hidden_layers:
     - 50
     activation_fn: tanh
     annealing_period: 0.1
@@ -46,20 +49,21 @@ poisson:
     lambda_theta: 1.0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 16
-      - 16
+      - 64
+      - 64
       - 16
       encoder_activation: leaky_relu
-      prior_sd: 10.0
 
 
 poisson-v2:
   epochs: 200_000
-  eval_freq: 1000
+  eval_freq: 2000
   burn: 0.1
   pinn:
-    hidden_layers:
+    feature_extractor_layers:
     - 50
+    feature_dim: 50
+    efi_hidden_layers:
     - 50
     activation_fn: tanh
     annealing_period: 0.1
@@ -132,32 +136,57 @@ poisson-inverse:
       prior_sd: 10.0
 
 
+# poisson-2d:
+#   epochs: 200_000
+#   eval_freq: 2000
+#   burn: 0.1
+#   pinn:
+#     hidden_layers:
+#     - 50
+#     - 50
+#     activation_fn: silu
+#     annealing_period: 0.1
+#     grad_norm_max: -1.0
+#     lr: 'poly_0.5e-6_10.0_0.55'
+#     sgd_momentum: 'linear_0.9_0.9'
+#     sgld_lr: 'poly_2.5e-4_10.0_0.55'
+#     sgld_alpha: 'linear_0.1_1.0'
+#     lam: 'log_50.0_1000.0'
+#     lambda_pde: 0.1
+#     lambda_theta: 1.0
+#     encoder_kwargs:
+#       encoder_hidden_layers:
+#       - 512
+#       - 512
+#       - 16
+#       encoder_activation: leaky_relu
+#       prior_sd: 10.0
+  
 poisson-2d:
   epochs: 200_000
   eval_freq: 2000
   burn: 0.1
   pinn:
-    hidden_layers:
+    feature_extractor_layers:
     - 50
+    feature_dim: 50
+    efi_hidden_layers:
     - 50
     activation_fn: silu
     annealing_period: 0.1
-    grad_norm_max: -1.0
-    lr: 'poly_0.5e-6_10.0_0.55'
+    lr: 'poly_1e-6_10.0_0.55'
     sgd_momentum: 'linear_0.9_0.9'
-    sgld_lr: 'poly_2.5e-4_10.0_0.55'
-    sgld_alpha: 'linear_0.1_1.0'
-    lam: 'log_50.0_1000.0'
-    lambda_pde: 0.1
+    sgld_lr: 'poly_5e-4_10.0_0.95'
+    sgld_alpha: 1.0
+    lam: 'log_10.0_500.0'
+    lambda_pde: 0.2
     lambda_theta: 1.0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 512
-      - 512
+      - 256
+      - 256
       - 16
       encoder_activation: leaky_relu
-      prior_sd: 10.0
-  
 
 linear-1d:
   epochs: 200_000
