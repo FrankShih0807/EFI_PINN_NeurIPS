@@ -55,8 +55,10 @@ class TaylorGreen(PhysicsModel):
     
     def get_eval_data(self):
         t = torch.linspace(self.t_start, self.t_end, steps=3)
-        x = torch.linspace(-1, 1, steps=100)
-        y = torch.linspace(-1, 1, steps=100)
+        x = torch.linspace(-1, 1, steps=101)
+        y = torch.linspace(-1, 1, steps=101)
+        
+        
         
         t, x, y = torch.meshgrid(t, x, y, indexing='ij')
         t, x, y = t.reshape(-1, 1), x.reshape(-1, 1), y.reshape(-1, 1)
@@ -133,33 +135,58 @@ class TaylorGreen(PhysicsModel):
         return Y
 
     def plot_true_solution(self, save_path=None):
-        grids = 25
-        X1 = torch.linspace(self.t_start, self.t_end, steps=grids)
-        X2 = torch.linspace(self.t_start, self.t_end, steps=grids)
-        X1, X2 = torch.meshgrid(X1, X2, indexing='ij')
-        y = self.physics_law(torch.cat([X1.reshape(-1, 1), X2.reshape(-1, 1)], dim=1))
-        y_reshaped = y.reshape(grids, grids)
-        
-        # sns.set_theme()
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        surface = ax.plot_surface(X1, X2, y.reshape(grids, grids), cmap='plasma')
-        ax.contourf(X1, X2, y_reshaped, zdir='z', offset=y_reshaped.min()-0.5, cmap='plasma', alpha=0.7)
-        
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        ax.set_zlabel('u')
-        ax.set_xticks([-1, -0.5, 0, 0.5, 1])
-        ax.set_yticks([-1, -0.5, 0, 0.5, 1])
-        ax.set_zticks([-1, -0.5, 0, 0.5, 1])
-        ax.view_init(elev=20, azim=-120)
-        fig.colorbar(surface, ax=ax, shrink=0.5, aspect=10)
-        plt.tight_layout()
+        eval_X, eval_Y = self.get_eval_data()
+        # Parse tensors
+        t, x, y = eval_X[:, 0:1], eval_X[:, 1:2], eval_X[:, 2:3]
+        u, v, p = eval_Y[:, 0:1], eval_Y[:, 1:2], eval_Y[:, 2:3]
+
+        # Define time points and get indices
+        times = [0, 0.5, 1.0]
+        time_indices = [(eval_X[:, 0] == t_val).nonzero(as_tuple=True)[0] for t_val in times]
+
+        # Collect slices
+        u_slices = [u[idx] for idx in time_indices]
+        v_slices = [v[idx] for idx in time_indices]
+        p_slices = [p[idx] for idx in time_indices]
+
+        # Determine global vmin/vmax per row (per field)
+        u_min, u_max = torch.min(torch.cat(u_slices)).item(), torch.max(torch.cat(u_slices)).item()
+        v_min, v_max = torch.min(torch.cat(v_slices)).item(), torch.max(torch.cat(v_slices)).item()
+        p_min, p_max = torch.min(torch.cat(p_slices)).item(), torch.max(torch.cat(p_slices)).item()
+
+        # Create 3x3 plot
+        fig, axes = plt.subplots(3, 3, figsize=(18, 12), constrained_layout=True)
+        field_data = [
+            ('u', u, u_min, u_max, 'PuOr'),
+            ('v', v, v_min, v_max, 'BrBG'),
+            ('p', p, p_min, p_max, 'coolwarm')
+        ]
+
+        for row, (field_name, field_tensor, vmin, vmax, cmap) in enumerate(field_data):
+            for col, (t_val, idx) in enumerate(zip(times, time_indices)):
+                x_vals = eval_X[idx, 1].reshape(101, 101)
+                y_vals = eval_X[idx, 2].reshape(101, 101)
+                f_vals = field_tensor[idx].reshape(101, 101)
+
+                contour = axes[row, col].contourf(
+                    x_vals, y_vals, f_vals,
+                    levels=20, cmap=cmap,
+                    vmin=vmin, vmax=vmax
+                )
+                axes[row, col].set_title(f'{field_name} at t={t_val:.2f}')
+                axes[row, col].set_xlabel('x')
+                axes[row, col].set_ylabel('y')
+
+            # Shared colorbar per row
+            cbar = fig.colorbar(contour, ax=axes[row, :], orientation='vertical', fraction=0.02, pad=0.05)
+            cbar.set_label(f'{field_name}')
+
+        # Save or show
         if save_path:
-            plt.savefig(os.path.join(save_path, 'true_solution.png'))
+            plt.savefig(os.path.join(save_path, 'u_v_p_contour_grid_colormap.png'))
+            plt.close()
         else:
             plt.show()
-
 
 
 class TaylorGreenCallback(BaseCallback):
@@ -377,5 +404,8 @@ if __name__ == '__main__':
     dataset = model.generate_data(device='cpu')
     
     for d in dataset:
-        print(d['X'].shape, d['y'].shape, d['category'])
+        print(d['X'].shape, d['y'].shape, d['true_y'].shape, d['category'])
+        
+        
+    model.plot_true_solution()
     
