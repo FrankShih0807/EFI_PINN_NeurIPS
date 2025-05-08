@@ -48,8 +48,8 @@ class BasePINN(object):
         self.eval_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'evaluation'], dim=0).to(self.device)
         self.eval_y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'evaluation'], dim=0).to(self.device)
         
-        self.input_dim = self.sol_X.shape[1]
-        self.output_dim = self.sol_y.shape[1]
+        self.input_dim = self.eval_X.shape[1]
+        self.output_dim = self.eval_y.shape[1]
         
         self.verbose = verbose
         if self.verbose == 1:
