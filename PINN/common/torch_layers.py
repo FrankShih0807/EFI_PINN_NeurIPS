@@ -132,7 +132,6 @@ class TransferEFI(nn.Module):
                  device='cpu'):
         super().__init__()
         
-    
         self.device = device
         self.pe_dim = pe_dim
         self.positive_output = positive_output
@@ -173,6 +172,9 @@ class TransferEFI(nn.Module):
             neck_layer_activation=neck_layer_activation,
             device=device
         )
+        self.feature_extractor.to(self.device)
+        self.efi_layers.to(self.device)
+        self.hyper.to(self.device)
 
         self.param_dict = None
         self.pe_variables = None

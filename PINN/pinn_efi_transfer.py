@@ -6,7 +6,7 @@ from PINN.common import SGHMC
 from PINN.common.torch_layers import TransferEFI
 from PINN.common.base_pinn import BasePINN
 from PINN.common.scheduler import get_schedule
-
+import time
 
 class PINN_EFI_Transfer(BasePINN):
     def __init__(
@@ -74,7 +74,9 @@ class PINN_EFI_Transfer(BasePINN):
             else:
                 self.latent_Z.append(None)
                 self.noise_sd.append(0)
-        self.latent_Z_dim = len([ Z for Z in self.latent_Z if Z is not None])
+        # self.latent_Z_dim = len([ Z for Z in self.latent_Z if Z is not None])
+        self.latent_Z_dim = sum([ Z.shape[1] for Z in self.latent_Z if Z is not None])
+        print(f"latent_Z_dim: {self.latent_Z_dim}")
         # init EFI net and optimiser
         self.net = TransferEFI(
             input_dim=self.input_dim,
@@ -94,6 +96,7 @@ class PINN_EFI_Transfer(BasePINN):
         
         self.pretrain_optimiser = optim.Adam( list(self.net.feature_extractor.parameters()) + list(self.net.efi_layers.parameters()) , lr=0.3e-3)
         self.optimiser = optim.SGD(self.net.hyper.parameters(), lr=self.lr(0), momentum=self.sgd_momentum(0))
+        # self.optimiser = optim.SGD(list(self.net.feature_extractor.parameters()) + list(self.net.hyper.parameters()) , lr=self.lr(0), momentum=self.sgd_momentum(0))
         self.sampler = SGHMC([ Z for Z in self.latent_Z if Z is not None], self.sgld_lr(0), alpha=self.sgld_alpha(0))
 
     def _get_scheduler(self):
@@ -115,12 +118,12 @@ class PINN_EFI_Transfer(BasePINN):
         loss = 0
         for i, d in enumerate(self.dataset):
             if d['category'] == 'solution' and d['noise_sd'] > 0:
-                # loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i])
-                # loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i] * d['noise_sd'])
-                loss += F.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i] * d['noise_sd'], reduction=reduction)
+                y_dim = d['y'].shape[1]
+                # print(f"y_dim: {y_dim}")
+                # print(self.net(d['X']).shape)
+                loss += F.mse_loss(d['y'], self.net(d['X'])[:, 0:y_dim] + self.latent_Z[i] * d['noise_sd'], reduction=reduction)
             elif d['category'] == 'solution':
-                # loss += self.mse_loss(d['y'], self.net(d['X']))
-                loss += F.mse_loss(d['y'], self.net(d['X']), reduction=reduction)
+                loss += F.mse_loss(d['y'], self.net(d['X'])[:, 0:y_dim], reduction=reduction)
         return loss
     
     def theta_loss(self):
@@ -158,11 +161,9 @@ class PINN_EFI_Transfer(BasePINN):
             if d['category'] == 'differential':
                 if d['noise_sd'] > 0:
                     diff_o = self.differential_operator(self.net, d['X'], pe_variables) + self.latent_Z[i] * d['noise_sd']
-                    # loss += self.mse_loss(diff_o, d['y'])
                     loss += F.mse_loss(diff_o, d['y'], reduction=reduction)
                 else:
                     diff_o = self.differential_operator(self.net, d['X'], pe_variables)
-                    # loss += self.mse_loss(diff_o, d['y'])
                     loss += F.mse_loss(diff_o, d['y'], reduction=reduction)
         return loss
 
@@ -175,14 +176,13 @@ class PINN_EFI_Transfer(BasePINN):
         i = 0
         for d, Z in zip(self.dataset, self.latent_Z):
             if d['noise_sd'] > 0:
+                y_dim = d['y'].shape[1]
                 padded_Z = torch.zeros(d['X'].shape[0], self.latent_Z_dim, device=self.device, requires_grad=True)
                 padded_Z = padded_Z.clone()
-                padded_Z[:, i:i+1] = Z
+                padded_Z[:, i:i+y_dim] = Z
                 noise_Z.append(padded_Z)
-                i += 1
+                i += y_dim
         noise_Z = torch.cat(noise_Z, dim=0).detach().clone()
-        # batch_size = noise_X.shape[0]
-        
         self.net.pretrain(noise_X, noise_y, noise_Z)
         
 
@@ -190,7 +190,6 @@ class PINN_EFI_Transfer(BasePINN):
     def update(self):
         # update training parameters
         annealing_progress = self.progress / self.annealing_period
-        # non_annealing_progress = (self.progress - self.annealing_period) / (1 - self.annealing_period)
         lambda_pde = self.lambda_pde(annealing_progress)
         lam = self.lam(annealing_progress)
         lambda_theta = self.lambda_theta(annealing_progress)
@@ -254,7 +253,8 @@ class PINN_EFI_Transfer(BasePINN):
 
     def train(self, epochs=10000, eval_freq=-1, burn=0.1, callback=None):
         # Pretrain DNN
-        for epoch in range(30000):
+        tic = time.time()
+        for epoch in range(1000):
             
             y_loss = self.solution_loss(reduction='mean')
             pde_loss = self.pde_loss(reduction='mean')
@@ -263,8 +263,11 @@ class PINN_EFI_Transfer(BasePINN):
             loss.backward()            
             self.pretrain_optimiser.step()
             
-            if epoch % 2000 == 0:
-                print(f"Pretraining step {epoch}, Loss: {loss.item():.5f}")
+            if (epoch+1) % 1000 == 0:
+                toc = time.time()
+                print(f"Pretraining step {epoch+1}, Loss: {loss.item():.5f}, Time: {toc-tic:.2f}s")
+                tic = time.time()
+                # print(f"Pretraining step {epoch}, Loss: {loss.item():.5f}")
         
         self.optimize_encoder()
         super().train(epochs, eval_freq, burn, callback)

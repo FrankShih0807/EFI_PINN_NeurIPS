@@ -74,10 +74,12 @@ class TaylorGreen(PhysicsModel):
         t_ic = torch.zeros_like(x_ic)
         txy_ic = torch.cat([t_ic, x_ic, y_ic], dim=1)
         uvp_ic = self.taylor_green_solution(txy_ic)
+        uv_ic = uvp_ic[:, 0:2]
 
-        uvp_ic_noisy = uvp_ic + self.sol_sd * torch.randn_like(uvp_ic)
+        # uvp_ic_noisy = uvp_ic + self.sol_sd * torch.randn_like(uvp_ic)
+        uv_ic_noisy = uv_ic + self.sol_sd * torch.randn_like(uv_ic)
         
-        return txy_ic, uvp_ic_noisy, uvp_ic
+        return txy_ic, uv_ic_noisy, uv_ic
     
     def generate_domain(self, n):
         t = torch.rand(n, 1)
@@ -96,29 +98,35 @@ class TaylorGreen(PhysicsModel):
     def differential_operator(self, model: torch.nn.Module, physics_X, pe_variables=None):
             
         uvp = model(physics_X)
+        # print(uvp.shape)
         u, v, p = uvp[:, 0:1], uvp[:, 1:2], uvp[:, 2:3]
+        # print(u.shape, v.shape, p.shape)
 
-        u_t = grad(u, physics_X)[:, 0:1]
-        u_x = grad(u, physics_X)[:, 1:2]
-        u_y = grad(u, physics_X)[:, 2:3]
-        u_xx = grad(u_x, physics_X)[:, 1:2]
-        u_yy = grad(u_y, physics_X)[:, 2:3]
+        du = grad(u, physics_X)[0]
+        dudt = du[:, 0:1].view(-1, 1)
+        dudx = du[:, 1:2].view(-1, 1)
+        dudy = du[:, 2:3].view(-1, 1)
+        
+        d2udx2 = grad(dudx, physics_X)[0][:, 1:2].view(-1, 1)
+        d2udy2 = grad(dudy, physics_X)[0][:, 2:3].view(-1, 1)
 
-        v_t = grad(v, physics_X)[:, 0:1]
-        v_x = grad(v, physics_X)[:, 1:2]
-        v_y = grad(v, physics_X)[:, 2:3]
-        v_xx = grad(v_x, physics_X)[:, 1:2]
-        v_yy = grad(v_y, physics_X)[:, 2:3]
-
-        p_x = grad(p, physics_X)[:, 1:2]
-        p_y = grad(p, physics_X)[:, 2:3]
-
-        cont = u_x + v_y
-        mom_u = u_t + u * u_x + v * u_y + p_x - self.nu * (u_xx + u_yy)
-        mom_v = v_t + u * v_x + v * v_y + p_y - self.nu * (v_xx + v_yy)
+        dv = grad(v, physics_X)[0]
+        dvdt = dv[:, 0:1].view(-1, 1)
+        dvdx = dv[:, 1:2].view(-1, 1)
+        dvdy = dv[:, 2:3].view(-1, 1)
+        d2vdx2 = grad(dvdx, physics_X)[0][:, 1:2].view(-1, 1)
+        d2vdy2 = grad(dvdy, physics_X)[0][:, 2:3].view(-1, 1)
+        
+        dp = grad(p, physics_X)[0]
+        dpdx = dp[:, 1:2].view(-1, 1)
+        dpdy = dp[:, 2:3].view(-1, 1)
         
         
-        pde = torch.cat([mom_u, mom_v, cont], dim=0)
+        cont = dudx + dvdy
+        mom_u = dudt + u * dudx + v * dudy + dpdx - self.nu * (d2udx2 + d2udy2)
+        mom_v = dvdt + u * dvdx + v * dvdy + dpdy - self.nu * (d2vdx2 + d2vdy2)
+        
+        pde = torch.cat([mom_u, mom_v, cont], dim=1)
         
         return pde
     

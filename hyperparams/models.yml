@@ -126,3 +126,13 @@ montroll_fixed:
   k: 0.8311218
   C: 7.3327312
   theta: 0.16937177
+
+taylor_green:
+  t_start: 0.0
+  t_end: 1.0 
+  sol_sd: 0.1
+  diff_sd: 0.0
+  n_sol: 1000
+  n_diff: 10000
+  nu :  0.01
+  is_inverse: False
