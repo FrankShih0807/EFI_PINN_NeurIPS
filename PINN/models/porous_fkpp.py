@@ -112,7 +112,7 @@ class PorousFKPP(PhysicsModel):
         
         X = torch.cat([x_mesh.reshape(-1, 1), t_mesh.reshape(-1, 1)], dim=1)
         # print(X)
-        y = torch.zeros_like(X)
+        y = torch.zeros(X.shape[0], 1)
         return X, y
     
     def get_sol_data(self):
@@ -123,7 +123,7 @@ class PorousFKPP(PhysicsModel):
 
 
         X = torch.tensor(inputs, dtype=torch.float32 )
-        y = torch.tensor(outputs, dtype=torch.float32 )
+        y = torch.tensor(outputs, dtype=torch.float32 )/1000
         
         true_y = y.clone()
         
@@ -133,7 +133,7 @@ class PorousFKPP(PhysicsModel):
         x = torch.rand(self.n_diff_sensors, 1) * 2
         t = torch.rand(self.n_diff_sensors, 1) * 2
         X = torch.cat([x, t], dim=1)
-        true_y = torch.zeros_like(X)
+        true_y = torch.zeros(X.shape[0], 1)
         y = true_y.clone()
         return X, y, true_y
     
@@ -215,12 +215,12 @@ class PorousFKPPCallback(BaseCallback):
         self.X = self.dataset[0]['X'].flatten()
         self.y = self.dataset[0]['y'].flatten()
         
-        if self.physics_model.k is None:
-            self.k_buffer = ScalarBuffer(burn=self.burn)
-        if self.physics_model.C is None:
-            self.C_buffer = ScalarBuffer(burn=self.burn)
-        if self.physics_model.theta is None:
-            self.theta_buffer = ScalarBuffer(burn=self.burn)
+        if self.physics_model.D is None:
+            self.D_buffer = ScalarBuffer(burn=self.burn)
+        if self.physics_model.R is None:
+            self.R_buffer = ScalarBuffer(burn=self.burn)
+        if self.physics_model.M is None:
+            self.M_buffer = ScalarBuffer(burn=self.burn)
         
         try:
             self.sd_buffer = ScalarBuffer(burn=self.burn)
@@ -232,17 +232,17 @@ class PorousFKPPCallback(BaseCallback):
         
         
         pred_y = self.model.net(self.eval_X).detach().cpu()
-        self.eval_buffer.add(pred_y * 8)
+        self.eval_buffer.add(pred_y)
         
-        if self.physics_model.k is None:
-            self.k_buffer.add(np.exp(self.model.pe_variables[0].detach().cpu().numpy()) / 60)
-        if self.physics_model.C is None:
-            self.C_buffer.add(np.exp(self.model.pe_variables[1].detach().cpu().numpy()) * 8)
-        if self.physics_model.theta is None:
-            self.theta_buffer.add(np.exp(self.model.pe_variables[2].detach().cpu().numpy()))
+        if self.physics_model.D is None:
+            self.D_buffer.add(np.exp(self.model.pe_variables[0].detach().cpu().numpy()))
+        if self.physics_model.R is None:
+            self.R_buffer.add(np.exp(self.model.pe_variables[1].detach().cpu().numpy()))
+        if self.physics_model.M is None:
+            self.M_buffer.add(np.exp(self.model.pe_variables[2].detach().cpu().numpy()))
 
         try:
-            self.sd_buffer.add(self.model.net.log_sd.exp().item() * 8)
+            self.sd_buffer.add(self.model.net.log_sd.exp().item())
         except:
             pass
         
@@ -389,11 +389,11 @@ if __name__ == '__main__':
     X = dataset[0]['X']
     y = dataset[0]['y']
     
-    print(X.shape, y.shape)
+    # print(X.shape, y.shape)
     
     diff_X = dataset[1]['X']
     diff_y = dataset[1]['y']
-    print(diff_X.shape, diff_y.shape)
+    # print(diff_X, diff_y)
     
     model.plot_data(X, y)
     

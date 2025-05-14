@@ -136,3 +136,7 @@ taylor_green:
   n_diff: 10000
   nu :  0.01
   is_inverse: False
+
+porous_fkpp:
+  n_diff_sensors: 200
+  k: 1.7e3

@@ -105,8 +105,8 @@ class PINN_EFI_SD(BasePINN):
         loss = 0
         for i, d in enumerate(self.dataset):
             if d['category'] == 'solution' and d['noise_sd'] > 0:
-                loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i] * self.net.log_sd.exp() * d['X'].sqrt())
-                # loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i] * self.net.log_sd.exp())
+                # loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i] * self.net.log_sd.exp() * d['X'].sqrt())
+                loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i] * self.net.log_sd.exp())
                 # loss += self.mse_loss(d['y'], self.net(d['X']) + self.latent_Z[i] * d['noise_sd'])
             elif d['category'] == 'solution':
                 loss += self.mse_loss(d['y'], self.net(d['X']))
