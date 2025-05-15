@@ -94,6 +94,10 @@ class PorousFKPP(PhysicsModel):
     def generate_data(self, device):
         dataset = PINNDataset(device=device)
         sol_X, sol_y, sol_true_y = self.get_sol_data()
+        diff_X = sol_X.clone()
+        diff_y = torch.zeros(sol_X.shape[0], 1)
+        diff_true_y = torch.zeros(sol_X.shape[0], 1)
+        
         diff_X, diff_y, diff_true_y = self.get_diff_data()
         eval_X, eval_y = self.get_eval_data()
         dataset.add_data(sol_X, sol_y, sol_true_y, category='solution', noise_sd=1.0)
@@ -103,7 +107,18 @@ class PorousFKPP(PhysicsModel):
         return dataset
     
     def get_eval_data(self):
-        x = torch.linspace(0, 2, 100)
+        file_path = os.path.join(os.path.dirname(__file__), 'data','cell_density_profiles.npy')
+        initial_density = 5  # Change this to the desired density index
+        inputs, outputs, shape = load_cell_migration_data(file_path, initial_density, plot=False)
+        inputs = torch.tensor(inputs, dtype=torch.float32)
+        
+        # file_path = os.path.join(os.path.dirname(__file__), 'data','porous_fisher_KPP_data.npy')
+        # data = np.load(file_path, allow_pickle=True).item()
+        # inputs = torch.tensor(data['inputs'], dtype=torch.float32)
+        x_min = inputs[:, 0].min()
+        x_max = inputs[:, 0].max()
+        
+        x = torch.linspace(x_min, x_max, 100)
         t = torch.linspace(0, 2, 5)
         
         # print(x.shape, t.shape)
@@ -117,22 +132,46 @@ class PorousFKPP(PhysicsModel):
     
     def get_sol_data(self):
         file_path = os.path.join(os.path.dirname(__file__), 'data','cell_density_profiles.npy')
-        # file_path = os.path.join(os.path.dirname(__file__), 'data','porous_fisher_KPP_data.npy')
         initial_density = 5  # Change this to the desired density index
         inputs, outputs, shape = load_cell_migration_data(file_path, initial_density, plot=False)
+        inputs = torch.tensor(inputs, dtype=torch.float32)
+        
+        # file_path = os.path.join(os.path.dirname(__file__), 'data','porous_fisher_KPP_data.npy')
+        # data = np.load(file_path, allow_pickle=True).item()
+        # inputs = torch.tensor(data['inputs'], dtype=torch.float32)
+        # outputs = torch.tensor(data['outputs'], dtype=torch.float32).reshape(-1, 1)
+
 
 
         X = torch.tensor(inputs, dtype=torch.float32 )
-        y = torch.tensor(outputs, dtype=torch.float32 )/1000
+        y = torch.tensor(outputs, dtype=torch.float32 )/2000
         
         true_y = y.clone()
         
         return X, y, true_y
     
     def get_diff_data(self):
-        x = torch.rand(self.n_diff_sensors, 1) * 2
-        t = torch.rand(self.n_diff_sensors, 1) * 2
-        X = torch.cat([x, t], dim=1)
+        file_path = os.path.join(os.path.dirname(__file__), 'data','cell_density_profiles.npy')
+        initial_density = 5  # Change this to the desired density index
+        inputs, outputs, shape = load_cell_migration_data(file_path, initial_density, plot=False)
+        inputs = torch.tensor(inputs, dtype=torch.float32)
+        
+        # file_path = os.path.join(os.path.dirname(__file__), 'data','porous_fisher_KPP_data.npy')
+        # data = np.load(file_path, allow_pickle=True).item()
+        # inputs = torch.tensor(data['inputs'], dtype=torch.float32)
+
+        
+        x_min = inputs[:, 0].min()
+        x_max = inputs[:, 0].max()
+
+        if self.n_diff_sensors > 0:
+            x = torch.rand(self.n_diff_sensors, 1) * (x_max - x_min) + x_min
+            t = torch.rand(self.n_diff_sensors, 1) * 2
+            X = torch.cat([x, t], dim=1)
+            
+            X = torch.cat([X, inputs], dim=0)
+        else:
+            X = inputs
         true_y = torch.zeros(X.shape[0], 1)
         y = true_y.clone()
         return X, y, true_y
@@ -193,7 +232,7 @@ class PorousFKPP(PhysicsModel):
             x_plot = x_plot[sort_idx]
             y_plot = y_plot[sort_idx]
 
-            plt.plot(x_plot, y_plot, marker=markers[i], color=colors[i], label=f"{t} days", linestyle='-')
+            plt.scatter(x_plot, y_plot, marker=markers[i], color=colors[i], label=f"{t} days")
 
         plt.title("P-FKPP Data")
         plt.xlabel("Position (mm)")
@@ -212,8 +251,9 @@ class PorousFKPPCallback(BaseCallback):
         self.eval_X = torch.cat([d['X'] for d in self.dataset if d['category'] == 'evaluation'], dim=0).to(self.device)
         self.eval_X_cpu = self.eval_X.clone().detach().cpu()
         
-        self.X = self.dataset[0]['X'].flatten()
-        self.y = self.dataset[0]['y'].flatten()
+        self.X = self.dataset[0]['X']
+        self.y = self.dataset[0]['y']
+
         
         if self.physics_model.D is None:
             self.D_buffer = ScalarBuffer(burn=self.burn)
@@ -253,26 +293,26 @@ class PorousFKPPCallback(BaseCallback):
 
         self.logger.record('eval/ci_range', ci_range)
             
-        if self.physics_model.k is None:
-            k_mean = self.k_buffer.get_mean()
-            k_low, k_high = self.k_buffer.get_ci()
-            self.logger.record('eval/k_low', k_low)
-            self.logger.record('eval/k_high', k_high)
-            self.logger.record('eval/k_mean', k_mean)
+        if self.physics_model.D is None:
+            D_mean = self.D_buffer.get_mean()
+            D_low, D_high = self.D_buffer.get_ci()
+            self.logger.record('eval/D_low', D_low)
+            self.logger.record('eval/D_high', D_high)
+            self.logger.record('eval/D_mean', D_mean)
         
-        if self.physics_model.C is None:
-            C_mean = self.C_buffer.get_mean()
-            C_low, C_high = self.C_buffer.get_ci()
-            self.logger.record('eval/C_low', C_low)
-            self.logger.record('eval/C_high', C_high)
-            self.logger.record('eval/C_mean', C_mean)
+        if self.physics_model.R is None:
+            R_mean = self.R_buffer.get_mean()
+            R_low, R_high = self.R_buffer.get_ci()
+            self.logger.record('eval/R_low', R_low)
+            self.logger.record('eval/R_high', R_high)
+            self.logger.record('eval/R_mean', R_mean)
         
-        if self.physics_model.theta is None:
-            theta_mean = self.theta_buffer.get_mean()
-            theta_low, theta_high = self.theta_buffer.get_ci()
-            self.logger.record('eval/theta_low', theta_low)
-            self.logger.record('eval/theta_high', theta_high)
-            self.logger.record('eval/theta_mean', theta_mean)
+        if self.physics_model.M is None:
+            M_mean = self.M_buffer.get_mean()
+            M_low, M_high = self.M_buffer.get_ci()
+            self.logger.record('eval/M_low', M_low)
+            self.logger.record('eval/M_high', M_high)
+            self.logger.record('eval/M_mean', M_mean)
         
         try:
             sd_mean = self.sd_buffer.get_mean()
@@ -285,21 +325,21 @@ class PorousFKPPCallback(BaseCallback):
         
         self.save_evaluation()
         
-        if self.physics_model.k is None and self.physics_model.theta is None:
-            self.plot_k_vs_theta()
-        try:
-            self.plot_latent_Z()
-        except:
-            pass    
+        # if self.physics_model.k is None and self.physics_model.theta is None:
+        #     self.plot_k_vs_theta()
+        # try:
+        #     self.plot_latent_Z()
+        # except:
+        #     pass    
         
         if self.model.progress <= self.eval_buffer.burn:
             self.eval_buffer.reset()
-            if self.physics_model.k is None:
-                self.k_buffer.reset()
-            if self.physics_model.C is None:
-                self.C_buffer.reset()
-            if self.physics_model.theta is None:
-                self.theta_buffer.reset()
+            if self.physics_model.D is None:
+                self.D_buffer.reset()
+            if self.physics_model.R is None:
+                self.R_buffer.reset()
+            if self.physics_model.M is None:
+                self.M_buffer.reset()
             try:
                 self.sd_buffer.reset()
             except:
@@ -335,25 +375,62 @@ class PorousFKPPCallback(BaseCallback):
         
         
     def save_evaluation(self):
-        X = self.eval_X_cpu.flatten().numpy() * 60
-        
-        preds_mean = self.eval_buffer.get_mean()
-        preds_upper, preds_lower = self.eval_buffer.get_ci()
-        
-        sns.set_theme()
-        plt.subplots(figsize=(8, 6))
-        # plt.plot(X, y, alpha=0.8, color='b', label='True')
-        plt.plot(X, preds_mean, alpha=0.8, color='g', label='Predicted')
-        plt.scatter(self.X, self.y, marker='o', linestyle='-', color='r', label='Data')
-        # plt.plot(self.model.sol_X.clone().cpu().numpy() , self.model.sol_y.clone().cpu().numpy(), 'x', label='Training data', color='orange')
-        
-        plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
-        plt.legend(loc='upper left', bbox_to_anchor=(0.1, 0.95))
-        plt.ylabel('Volume')
-        plt.xlabel('Time')
+
         # plt.ylim(-1.5, 1.5)
-        plt.savefig(os.path.join(self.save_path, 'pred_solution.png'))
+
+        X_eval = self.eval_X_cpu.numpy()
+        x_eval = X_eval[:, 0]
+        t_eval = X_eval[:, 1]
+        y_eval = self.eval_buffer.get_mean().numpy()
         
+        y_upper, y_lower = self.eval_buffer.get_ci()
+        
+        X_data = self.X.clone().cpu().numpy()
+        y_data = self.y.clone().cpu().numpy()
+        # preds_mean = self.eval_buffer.get_mean()
+        # preds_upper, preds_lower = self.eval_buffer.get_ci()
+        
+        x_data = X_data[:, 0]
+        t_data = X_data[:, 1]
+
+        # Choose time points to visualize (e.g., 0, 0.5, 1.0, 1.5, 2.0)
+        time_points = [0.0, 0.5, 1.0, 1.5, 2.0]
+        markers = ['x', 'o', 's', 'd', '^']
+        colors = ['blue', 'orange', 'green', 'red', 'purple']
+
+        plt.figure(figsize=(8, 5))
+
+        for i, t in enumerate(time_points):
+            idx = np.where(np.isclose(t_data, t, atol=1e-3))[0]
+            x_plot = x_data[idx]
+            y_plot = y_data[idx]
+            
+            idx_eval = np.where(np.isclose(t_eval, t, atol=1e-3))[0]
+            x_plot_eval = x_eval[idx_eval]
+            y_plot_eval = y_eval[idx_eval]
+            
+            # Sort by x for smoother plotting
+            sort_idx = np.argsort(x_plot)
+            x_plot = x_plot[sort_idx]
+            y_plot = y_plot[sort_idx]
+            
+            sort_idx_eval = np.argsort(x_plot_eval)
+            x_plot_eval = x_plot_eval[sort_idx_eval]
+            y_plot_eval = y_plot_eval[sort_idx_eval]
+
+            plt.scatter(x_plot, y_plot, marker=markers[i], color=colors[i], label=f"{t} days")
+            plt.plot(x_plot_eval, y_plot_eval, color=colors[i], label=f"{t} days predict", linestyle='--', alpha=0.5)
+            
+            plt.fill_between(x_plot_eval, y_lower[idx_eval], y_upper[idx_eval], color=colors[i], alpha=0.2)
+            # plt.plot(x_plot, y_plot, marker=markers[i], color=colors[i], label=f"{t} days", linestyle='-')
+
+        plt.title("P-FKPP Data")
+        plt.xlabel("Position (mm)")
+        plt.ylabel("Cell density (cells/mm²)")
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.save_path, 'pred_solution.png'))
         
         # save temp frames
         temp_dir = os.path.join(self.save_path, 'temp_frames')
@@ -386,6 +463,9 @@ if __name__ == '__main__':
     model = PorousFKPP()
     dataset = model.generate_data(device='cpu')
     
+    for d in dataset:
+        print(d['category'])
+        print(d['X'].shape, d['y'].shape)
     X = dataset[0]['X']
     y = dataset[0]['y']
     
@@ -394,6 +474,13 @@ if __name__ == '__main__':
     diff_X = dataset[1]['X']
     diff_y = dataset[1]['y']
     # print(diff_X, diff_y)
+    
+    eval_X = dataset[2]['X']
+    eval_y = dataset[2]['y']
+    
+    pred_y = eval_X[:, 0:1] + eval_X[:, 1:2]
+    # print(eval_X)
+    # print(pred_y.reshape())
     
     model.plot_data(X, y)
     

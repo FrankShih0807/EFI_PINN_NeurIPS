@@ -138,5 +138,5 @@ taylor_green:
   is_inverse: False
 
 porous_fkpp:
-  n_diff_sensors: 200
+  n_diff_sensors: 0
   k: 1.7e3
