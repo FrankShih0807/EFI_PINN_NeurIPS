@@ -270,6 +270,7 @@ class PorousFKPPCallback(BaseCallback):
     
     def _on_training(self):
         
+        self.logger.record('train/gls_loss', self.GLS_loss().item())
         
         pred_y = self.model.net(self.eval_X).detach().cpu()
         self.eval_buffer.add(pred_y)
@@ -362,7 +363,7 @@ class PorousFKPPCallback(BaseCallback):
         plt.close()
         
     def plot_latent_Z(self):
-        sol_X = self.dataset[0]['X'].flatten() * 60
+        sol_X = self.X[:, 0].flatten().detach().cpu().numpy()
         latent_Z = self.model.latent_Z[0].flatten().detach().cpu().numpy()
         
         
@@ -424,7 +425,7 @@ class PorousFKPPCallback(BaseCallback):
             plt.fill_between(x_plot_eval, y_lower[idx_eval], y_upper[idx_eval], color=colors[i], alpha=0.2)
             # plt.plot(x_plot, y_plot, marker=markers[i], color=colors[i], label=f"{t} days", linestyle='-')
 
-        plt.title("P-FKPP Data")
+        # plt.title("P-FKPP Data")
         plt.xlabel("Position (mm)")
         plt.ylabel("Cell density (cells/mm²)")
         plt.legend()
@@ -457,6 +458,14 @@ class PorousFKPPCallback(BaseCallback):
         for frame_path in os.listdir(temp_dir):
             os.remove(os.path.join(temp_dir, frame_path))
         os.rmdir(temp_dir)
+        
+    def GLS_loss(self):
+        sol_X = self.X
+        sol_y = self.y
+        
+        loss = torch.mean(((2000 * sol_y - 2000 * self.model.net(sol_X)) / (2000 * self.model.net(sol_X).abs()).pow(0.2) )**2).detach()
+
+        return loss
         
         
 if __name__ == '__main__':

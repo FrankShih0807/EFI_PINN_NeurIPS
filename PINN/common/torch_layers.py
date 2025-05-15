@@ -206,8 +206,8 @@ class TransferEFI(nn.Module):
             # print('efi on')
         # out = functional_call(self.efi_layers, self.param_dict, (x,))
         if self.positive_output:
-            # out = F.softplus(out)
-            out = torch.exp(out)
+            out = F.softplus(out)
+            # out = torch.exp(out)
         return out
     
     def pretrain(self, X, Y, Z):
