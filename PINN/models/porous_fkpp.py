@@ -76,21 +76,29 @@ PorousFKPP model for tumor growth (real data)
 class PorousFKPP(PhysicsModel):
     def __init__(self, 
                  n_diff_sensors=200,
-                 k = 1.7,
+                 k = 1.7e3,
                  D = None,
                  R = None,
                  M = None,
+                 initial_density=5,
+                 y_scale=2000,
                  ):
         super().__init__(n_diff_sensors=n_diff_sensors,
                          k=k,
                          D=D,
                          R=R,
                          M=M,
+                         initial_density=initial_density,
+                         y_scale=y_scale,
                          )
 
         self.pe_dim = 3
         
-
+        file_path = os.path.join(os.path.dirname(__file__), 'data','cell_density_profiles.npy')# Change this to the desired density index
+        inputs, outputs, shape = load_cell_migration_data(file_path, self.initial_density, plot=False)
+        self.inputs = torch.tensor(inputs, dtype=torch.float32)
+        self.outputs = torch.tensor(outputs, dtype=torch.float32)
+        
     def generate_data(self, device):
         dataset = PINNDataset(device=device)
         sol_X, sol_y, sol_true_y = self.get_sol_data()
@@ -107,16 +115,11 @@ class PorousFKPP(PhysicsModel):
         return dataset
     
     def get_eval_data(self):
-        file_path = os.path.join(os.path.dirname(__file__), 'data','cell_density_profiles.npy')
-        initial_density = 5  # Change this to the desired density index
-        inputs, outputs, shape = load_cell_migration_data(file_path, initial_density, plot=False)
-        inputs = torch.tensor(inputs, dtype=torch.float32)
-        
         # file_path = os.path.join(os.path.dirname(__file__), 'data','porous_fisher_KPP_data.npy')
         # data = np.load(file_path, allow_pickle=True).item()
         # inputs = torch.tensor(data['inputs'], dtype=torch.float32)
-        x_min = inputs[:, 0].min()
-        x_max = inputs[:, 0].max()
+        x_min = self.inputs[:, 0].min()
+        x_max = self.inputs[:, 0].max()
         
         x = torch.linspace(x_min, x_max, 100)
         t = torch.linspace(0, 2, 5)
@@ -126,52 +129,32 @@ class PorousFKPP(PhysicsModel):
         x_mesh, t_mesh = torch.meshgrid(x, t, indexing='ij')
         
         X = torch.cat([x_mesh.reshape(-1, 1), t_mesh.reshape(-1, 1)], dim=1)
-        # print(X)
         y = torch.zeros(X.shape[0], 1)
         return X, y
     
     def get_sol_data(self):
-        file_path = os.path.join(os.path.dirname(__file__), 'data','cell_density_profiles.npy')
-        initial_density = 5  # Change this to the desired density index
-        inputs, outputs, shape = load_cell_migration_data(file_path, initial_density, plot=False)
-        inputs = torch.tensor(inputs, dtype=torch.float32)
         
-        # file_path = os.path.join(os.path.dirname(__file__), 'data','porous_fisher_KPP_data.npy')
-        # data = np.load(file_path, allow_pickle=True).item()
-        # inputs = torch.tensor(data['inputs'], dtype=torch.float32)
-        # outputs = torch.tensor(data['outputs'], dtype=torch.float32).reshape(-1, 1)
 
-
-
-        X = torch.tensor(inputs, dtype=torch.float32 )
-        y = torch.tensor(outputs, dtype=torch.float32 )/1000
+        X = self.inputs.clone()
+        y = self.outputs.clone() / self.y_scale
         
         true_y = y.clone()
         
         return X, y, true_y
     
     def get_diff_data(self):
-        file_path = os.path.join(os.path.dirname(__file__), 'data','cell_density_profiles.npy')
-        initial_density = 5  # Change this to the desired density index
-        inputs, outputs, shape = load_cell_migration_data(file_path, initial_density, plot=False)
-        inputs = torch.tensor(inputs, dtype=torch.float32)
         
-        # file_path = os.path.join(os.path.dirname(__file__), 'data','porous_fisher_KPP_data.npy')
-        # data = np.load(file_path, allow_pickle=True).item()
-        # inputs = torch.tensor(data['inputs'], dtype=torch.float32)
-
-        
-        x_min = inputs[:, 0].min()
-        x_max = inputs[:, 0].max()
+        x_min = self.inputs[:, 0].min()
+        x_max = self.inputs[:, 0].max()
 
         if self.n_diff_sensors > 0:
             x = torch.rand(self.n_diff_sensors, 1) * (x_max - x_min) + x_min
             t = torch.rand(self.n_diff_sensors, 1) * 2
             X = torch.cat([x, t], dim=1)
             
-            X = torch.cat([X, inputs], dim=0)
+            X = torch.cat([X, self.inputs], dim=0)
         else:
-            X = inputs
+            X = self.inputs
         true_y = torch.zeros(X.shape[0], 1)
         y = true_y.clone()
         return X, y, true_y
@@ -225,7 +208,7 @@ class PorousFKPP(PhysicsModel):
         for i, t in enumerate(time_points):
             idx = np.where(np.isclose(t_vals, t, atol=1e-3))[0]
             x_plot = x_vals[idx]
-            y_plot = y[idx]
+            y_plot = y[idx] * self.y_scale
             
             # Sort by x for smoother plotting
             sort_idx = np.argsort(x_plot)
@@ -270,9 +253,9 @@ class PorousFKPPCallback(BaseCallback):
     
     def _on_training(self):
         
-        self.logger.record('train/gls_loss', self.GLS_loss().item())
+        self.logger.record_mean('train/gls_loss', self.GLS_loss().item())
         
-        pred_y = self.model.net(self.eval_X).detach().cpu()
+        pred_y = self.model.net(self.eval_X).detach().cpu() * self.physics_model.y_scale
         self.eval_buffer.add(pred_y)
         
         if self.physics_model.D is None:
@@ -387,7 +370,7 @@ class PorousFKPPCallback(BaseCallback):
         y_upper, y_lower = self.eval_buffer.get_ci()
         
         X_data = self.X.clone().cpu().numpy()
-        y_data = self.y.clone().cpu().numpy()
+        y_data = self.y.clone().cpu().numpy() * self.physics_model.y_scale
         # preds_mean = self.eval_buffer.get_mean()
         # preds_upper, preds_lower = self.eval_buffer.get_ci()
         
@@ -463,13 +446,13 @@ class PorousFKPPCallback(BaseCallback):
         sol_X = self.X
         sol_y = self.y
         
-        loss = torch.mean(((1000 * sol_y - 1000 * self.model.net(sol_X)) / (1000 * self.model.net(sol_X).abs()).pow(0.2) )**2).detach()
+        loss = torch.mean(((self.physics_model.y_scale * sol_y - self.physics_model.y_scale * self.model.net(sol_X)) / (self.physics_model.y_scale * self.model.net(sol_X).abs()).pow(0.2) )**2).detach()
 
         return loss
         
         
 if __name__ == '__main__':
-    model = PorousFKPP()
+    model = PorousFKPP(initial_density=0)
     dataset = model.generate_data(device='cpu')
     
     for d in dataset:
