@@ -280,8 +280,8 @@ porous_fkpp:
     sgd_momentum: 'linear_0.9_0.9'
     sgld_lr: 'poly_1e-4_10.0_0.95'
     sgld_alpha: 1.0
-    lam: 'log_50.0_1000.0'
-    lambda_pde: 'linear_0.0_0.5'
+    lam: 'log_50.0_500.0'
+    lambda_pde: 'linear_0.0_1.0'
     lambda_theta: 1.0
     encoder_kwargs:
       encoder_hidden_layers:

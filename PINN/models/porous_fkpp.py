@@ -76,7 +76,7 @@ PorousFKPP model for tumor growth (real data)
 class PorousFKPP(PhysicsModel):
     def __init__(self, 
                  n_diff_sensors=200,
-                 k = 1.7e3,
+                 k = 1.7,
                  D = None,
                  R = None,
                  M = None,
@@ -144,7 +144,7 @@ class PorousFKPP(PhysicsModel):
 
 
         X = torch.tensor(inputs, dtype=torch.float32 )
-        y = torch.tensor(outputs, dtype=torch.float32 )/2000
+        y = torch.tensor(outputs, dtype=torch.float32 )/1000
         
         true_y = y.clone()
         
@@ -463,7 +463,7 @@ class PorousFKPPCallback(BaseCallback):
         sol_X = self.X
         sol_y = self.y
         
-        loss = torch.mean(((2000 * sol_y - 2000 * self.model.net(sol_X)) / (2000 * self.model.net(sol_X).abs()).pow(0.2) )**2).detach()
+        loss = torch.mean(((1000 * sol_y - 1000 * self.model.net(sol_X)) / (1000 * self.model.net(sol_X).abs()).pow(0.2) )**2).detach()
 
         return loss
         
