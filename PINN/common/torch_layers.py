@@ -401,7 +401,8 @@ class EFI_Net_PE(nn.Module):
             x = self.activation_fn(F.linear(x, self.weight_tensors[i], self.bias_tensors[i]))
         x = F.linear(x, self.weight_tensors[-1], self.bias_tensors[-1])
         if self.positive_output:
-            x = torch.exp(x)
+            # x = torch.exp(x)
+            x = F.softplus(x)
         return x
 
     

@@ -137,6 +137,7 @@ class MontrollCallback(BaseCallback):
         
         
         pred_y = self.model.net(self.eval_X).detach().cpu()
+        # pred_y += torch.randn_like(pred_y) * self.model.net.log_sd.exp().detach() * torch.sqrt(self.eval_X)
         self.eval_buffer.add(pred_y * 8)
         
         if self.physics_model.k is None:
