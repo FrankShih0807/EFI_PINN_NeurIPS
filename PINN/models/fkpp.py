@@ -71,15 +71,14 @@ def load_cell_migration_data(file_path, initial_density, plot=False, path=None):
         
     return inputs, outputs, shape
 '''
-PorousFKPP model for tumor growth (real data)
+FKPP model for tumor growth (real data)
 '''
-class PorousFKPP(PhysicsModel):
+class FKPP(PhysicsModel):
     def __init__(self, 
                  n_diff_sensors=200,
                  k = 1.7e3,
                  D = None,
                  R = None,
-                 M = None,
                  initial_density=5,
                  y_scale=2000,
                  ):
@@ -87,7 +86,6 @@ class PorousFKPP(PhysicsModel):
                          k=k,
                          D=D,
                          R=R,
-                         M=M,
                          initial_density=initial_density,
                          y_scale=y_scale,
                          )
@@ -175,7 +173,7 @@ class PorousFKPP(PhysicsModel):
         dudt = du[:, 1:2]
         dudx = du[:, 0:1]
         
-        T = D * (u/self.k) ** M * dudx
+        T = D * dudx
         dTdx = grad(T, physics_X)[0][:, 0:1]
         
         # pde = p_t - k * p * (1 - (p / C).abs() ** theta)
@@ -226,7 +224,7 @@ class PorousFKPP(PhysicsModel):
         plt.show()
 
 
-class PorousFKPPCallback(BaseCallback):
+class FKPPCallback(BaseCallback):
     def __init__(self):
         super().__init__()
     
@@ -452,7 +450,7 @@ class PorousFKPPCallback(BaseCallback):
         
         
 if __name__ == '__main__':
-    model = PorousFKPP(initial_density=0)
+    model = FKPP(initial_density=0)
     dataset = model.generate_data(device='cpu')
     
     for d in dataset:
