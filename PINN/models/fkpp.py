@@ -215,7 +215,7 @@ class FKPP(PhysicsModel):
 
             plt.scatter(x_plot, y_plot, marker=markers[i], color=colors[i], label=f"{t} days")
 
-        plt.title("P-FKPP Data")
+        plt.title("FKPP Data")
         plt.xlabel("Position (mm)")
         plt.ylabel("Cell density (cells/mm²)")
         plt.legend()
@@ -240,8 +240,6 @@ class FKPPCallback(BaseCallback):
             self.D_buffer = ScalarBuffer(burn=self.burn)
         if self.physics_model.R is None:
             self.R_buffer = ScalarBuffer(burn=self.burn)
-        if self.physics_model.M is None:
-            self.M_buffer = ScalarBuffer(burn=self.burn)
         
         try:
             self.sd_buffer = ScalarBuffer(burn=self.burn)
@@ -260,9 +258,6 @@ class FKPPCallback(BaseCallback):
             self.D_buffer.add(np.exp(self.model.pe_variables[0].detach().cpu().numpy()))
         if self.physics_model.R is None:
             self.R_buffer.add(np.exp(self.model.pe_variables[1].detach().cpu().numpy()))
-        if self.physics_model.M is None:
-            self.M_buffer.add(np.exp(self.model.pe_variables[2].detach().cpu().numpy()))
-
         try:
             self.sd_buffer.add(self.model.net.log_sd.exp().item())
         except:
@@ -289,13 +284,6 @@ class FKPPCallback(BaseCallback):
             self.logger.record('eval/R_high', R_high)
             self.logger.record('eval/R_mean', R_mean)
         
-        if self.physics_model.M is None:
-            M_mean = self.M_buffer.get_mean()
-            M_low, M_high = self.M_buffer.get_ci()
-            self.logger.record('eval/M_low', M_low)
-            self.logger.record('eval/M_high', M_high)
-            self.logger.record('eval/M_mean', M_mean)
-        
         try:
             sd_mean = self.sd_buffer.get_mean()
             sd_low, sd_high = self.sd_buffer.get_ci()
@@ -320,8 +308,6 @@ class FKPPCallback(BaseCallback):
                 self.D_buffer.reset()
             if self.physics_model.R is None:
                 self.R_buffer.reset()
-            if self.physics_model.M is None:
-                self.M_buffer.reset()
             try:
                 self.sd_buffer.reset()
             except:
