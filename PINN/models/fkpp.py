@@ -14,6 +14,8 @@ import random
 from matplotlib import gridspec
 import pandas as pd
 from matplotlib import cm
+from matplotlib.lines import Line2D
+
 
 def load_cell_migration_data(file_path, initial_density, plot=False, path=None):
     
@@ -144,15 +146,23 @@ class FKPP(PhysicsModel):
         
         x_min = self.inputs[:, 0].min()
         x_max = self.inputs[:, 0].max()
-
-        if self.n_diff_sensors > 0:
-            x = torch.rand(self.n_diff_sensors, 1) * (x_max - x_min) + x_min
-            t = torch.rand(self.n_diff_sensors, 1) * 2
-            X = torch.cat([x, t], dim=1)
+        
+        t_grid = torch.linspace(0, 2, 5)
+        x_grid = torch.linspace(x_min, x_max, self.n_diff_sensors)
+        
+        x, t = torch.meshgrid(x_grid, t_grid, indexing='ij')
+        x = x.reshape(-1, 1)
+        t = t.reshape(-1, 1)
+        X = torch.cat([x, t], dim=1)
+        
+        # if self.n_diff_sensors > 0:
+        #     x = torch.rand(self.n_diff_sensors, 1) * (x_max - x_min) + x_min
+        #     t = torch.rand(self.n_diff_sensors, 1) * 2
+        #     X = torch.cat([x, t], dim=1)
             
-            X = torch.cat([X, self.inputs], dim=0)
-        else:
-            X = self.inputs
+        #     X = torch.cat([X, self.inputs], dim=0)
+        # else:
+        #     X = self.inputs
         true_y = torch.zeros(X.shape[0], 1)
         y = true_y.clone()
         return X, y, true_y
@@ -259,7 +269,7 @@ class FKPPCallback(BaseCallback):
         if self.physics_model.R is None:
             self.R_buffer.add(np.exp(self.model.pe_variables[1].detach().cpu().numpy()))
         try:
-            self.sd_buffer.add(self.model.net.log_sd.exp().item())
+            self.sd_buffer.add(self.model.net.log_sd.exp().item() * self.physics_model.y_scale)
         except:
             pass
         
@@ -365,7 +375,9 @@ class FKPPCallback(BaseCallback):
         time_points = [0.0, 0.5, 1.0, 1.5, 2.0]
         markers = ['x', 'o', 's', 'd', '^']
         colors = ['blue', 'orange', 'green', 'red', 'purple']
-
+        colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple']
+        labels = [f"{t} days" for t in time_points]
+        
         plt.figure(figsize=(8, 5))
 
         for i, t in enumerate(time_points):
@@ -386,16 +398,21 @@ class FKPPCallback(BaseCallback):
             x_plot_eval = x_plot_eval[sort_idx_eval]
             y_plot_eval = y_plot_eval[sort_idx_eval]
 
-            plt.scatter(x_plot, y_plot, marker=markers[i], color=colors[i], label=f"{t} days")
-            plt.plot(x_plot_eval, y_plot_eval, color=colors[i], label=f"{t} days predict", linestyle='--', alpha=0.5)
+            plt.scatter(x_plot, y_plot, marker=markers[i], color=colors[i])
+            plt.plot(x_plot_eval, y_plot_eval, color=colors[i], linestyle='--', alpha=0.5)
             
             plt.fill_between(x_plot_eval, y_lower[idx_eval], y_upper[idx_eval], color=colors[i], alpha=0.2)
             # plt.plot(x_plot, y_plot, marker=markers[i], color=colors[i], label=f"{t} days", linestyle='-')
-
+            
+        legend_elements = [
+            Line2D([0], [0], linestyle='-', marker=marker, color=color, label=label)
+            for marker, color, label in zip(markers, colors, labels)
+        ]
+        
         # plt.title("P-FKPP Data")
         plt.xlabel("Position (mm)")
         plt.ylabel("Cell density (cells/mm²)")
-        plt.legend()
+        plt.legend(handles=legend_elements)
         plt.grid(True)
         plt.tight_layout()
         plt.savefig(os.path.join(self.save_path, 'pred_solution.png'))
