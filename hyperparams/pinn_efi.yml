@@ -64,7 +64,7 @@ poisson-v2:
     activation_fn: tanh
     annealing_period: 0.1
     lr: 'poly_2e-6_10.0_0.55'
-    sgd_momentum: 'linear_0.9_0.0'
+    sgd_momentum: 'linear_0.9_0.9'
     sgld_lr: 'poly_7e-4_5.0_0.95'
     sgld_alpha: 1.0
     lam: 'linear_50.0_500.0'
