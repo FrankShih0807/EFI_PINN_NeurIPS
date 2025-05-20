@@ -1,0 +1,5 @@
+n_diff_sensors: 150
+initial_density: 1
+y_scale: 1000.0
+k: 1.7e3
+
