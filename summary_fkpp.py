@@ -85,6 +85,7 @@ if __name__ == '__main__':
     # Example usage
     output_dir = "output"
 
+    # models = ['porous_fkpp']
     models = ['fkpp', 'porous_fkpp']
     
 
