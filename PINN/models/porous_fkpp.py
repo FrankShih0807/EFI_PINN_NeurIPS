@@ -162,7 +162,7 @@ class PorousFKPP(PhysicsModel):
             t = torch.rand(self.n_diff_sensors, 1) * 2
             X = torch.cat([x, t], dim=1)
             
-            X = torch.cat([X, self.inputs], dim=0)
+            # X = torch.cat([X, self.inputs], dim=0)
         else:
             X = self.inputs
         true_y = torch.zeros(X.shape[0], 1)

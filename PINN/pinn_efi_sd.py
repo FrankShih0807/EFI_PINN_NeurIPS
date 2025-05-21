@@ -274,7 +274,7 @@ class PINN_EFI_SD(BasePINN):
         # self.logger.record('eval/sd', self.net.log_sd.exp().item(), exclude='csv')
 
         self.logger.record('train/theta_loss', theta_loss.item())
-        self.logger.record('train/mse', mse.item())
+        self.logger.record_mean('train/mse', mse.item())
         
         self.pe_variables = self.net.pe_variables
         return y_loss.item(), pde_loss.item()
