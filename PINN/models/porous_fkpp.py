@@ -149,13 +149,7 @@ class PorousFKPP(PhysicsModel):
         x_min = self.inputs[:, 0].min()
         x_max = self.inputs[:, 0].max()
         
-        # t_grid = torch.linspace(0, 2, 5)
-        # x_grid = torch.linspace(x_min, x_max, self.n_diff_sensors)
         
-        # x, t = torch.meshgrid(x_grid, t_grid, indexing='ij')
-        # x = x.reshape(-1, 1)
-        # t = t.reshape(-1, 1)
-        # X = torch.cat([x, t], dim=1)
 
         if self.n_diff_sensors > 0:
             x = torch.rand(self.n_diff_sensors, 1) * (x_max - x_min) + x_min
