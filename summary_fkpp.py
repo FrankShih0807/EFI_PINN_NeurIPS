@@ -73,7 +73,7 @@ def collect_progress_data(output_dir, model, algo):
     combined_df.sort_values(by='initial_density', inplace=True)
     combined_df.reset_index(drop=True, inplace=True)
     # Reorder columns: put 'model', 'algo', 'initial_density' in the front
-    front_cols = ['model', 'algo', 'initial_density', 'gls_loss', 'sd_mean', 'ci_range']
+    front_cols = ['model', 'algo', 'initial_density', 'mse', 'sd_mean', 'ci_range']
     other_cols = [col for col in combined_df.columns if col not in front_cols]
     combined_df = combined_df[front_cols + other_cols]
     
