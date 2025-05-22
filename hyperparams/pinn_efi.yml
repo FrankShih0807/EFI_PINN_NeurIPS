@@ -107,7 +107,7 @@ poisson-nonlinear:
 
 poisson-inverse:
   epochs: 350_000
-  eval_freq: -1
+  eval_freq: 2000
   burn: 0.1
   pinn:
     hidden_layers:

@@ -45,11 +45,11 @@ poisson-v2:
   t_start: -0.7
   t_end: 0.7
   sol_sd: 0.05
-  diff_sd: 0.0
-  n_sol_sensors: 5
+  diff_sd: 0.05
+  n_sol_sensors: 4
   n_sol_replicates: 10
-  n_diff_sensors: 40
-  n_diff_replicates: 10
+  n_diff_sensors: 200
+  n_diff_replicates: 1
   # k: 0.0
   # is_inverse: False
 
@@ -60,8 +60,8 @@ poisson-nonlinear:
   diff_sd: 0.05
   n_sol_sensors: 4
   n_sol_replicates: 10
-  n_diff_sensors: 40
-  n_diff_replicates: 10
+  n_diff_sensors: 200
+  n_diff_replicates: 1
   k: 0.7
   is_inverse: False
 
