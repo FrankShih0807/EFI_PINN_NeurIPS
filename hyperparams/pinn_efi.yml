@@ -38,8 +38,8 @@ poisson:
     activation_fn: tanh
     annealing_period: 0.1
     lr: 'poly_2e-6_10.0_0.55'
-    sgd_momentum: 'linear_0.9_0.0'
-    sgld_lr: 'poly_7e-4_5.0_0.95'
+    sgd_momentum: 'linear_0.9_0.9'
+    sgld_lr: 'poly_7e-4_10.0_0.95'
     sgld_alpha: 1.0
     lam: 'log_50.0_500.0'
     lambda_pde: 1.0
@@ -65,7 +65,7 @@ poisson-v2:
     annealing_period: 0.1
     lr: 'poly_2e-6_10.0_0.55'
     sgd_momentum: 'linear_0.9_0.9'
-    sgld_lr: 'poly_7e-4_5.0_0.95'
+    sgld_lr: 'poly_7e-4_10.0_0.95'
     sgld_alpha: 1.0
     lam: 'linear_50.0_500.0'
     lambda_pde: 1.0
@@ -90,8 +90,8 @@ poisson-nonlinear:
     activation_fn: tanh
     annealing_period: 0.1
     lr: 'poly_2e-6_10.0_0.55'
-    sgd_momentum: 'linear_0.9_0.0'
-    sgld_lr: 'poly_7e-4_5.0_0.95'
+    sgd_momentum: 'linear_0.9_0.9'
+    sgld_lr: 'poly_7e-4_10.0_0.95'
     sgld_alpha: 1.0
     lam: 'linear_50.0_500.0'
     lambda_pde: 1.0
@@ -116,9 +116,9 @@ poisson-inverse:
     activation_fn: tanh
     annealing_period: 0.1
     grad_norm_max: -1.0
-    lr: 'poly_5e-6_100.0_0.55'
-    sgd_momentum: 'linear_0.9_0.0'
-    sgld_lr: 'poly_5e-6_100.0_0.55'
+    lr: 'poly_2e-6_10.0_0.55'
+    sgd_momentum: 'linear_0.9_0.9'
+    sgld_lr: 'poly_7e-4_10.0_0.95'
     sgld_alpha: 1.0
     lam: 'linear_10.0_1000.0'
     lambda_pde: 1.0

@@ -63,9 +63,10 @@ def collect_progress_data(output_dir, model, algo):
     combined_df.rename(columns=lambda x: x.split('/')[-1], inplace=True)
     
     drop_columns = ['time', 'callback_time', 'progress', 'epoch', 'done', 
-                    'R_mean', 'R_high', 'R_low', 
-                    'D_mean', 'D_high', 'D_low', 
-                    'M_mean', 'M_high', 'M_low']
+                    # 'R_mean', 'R_high', 'R_low', 
+                    # 'D_mean', 'D_high', 'D_low', 
+                    # 'M_mean', 'M_high', 'M_low'
+                    ]
     for col in drop_columns:
         if col in combined_df.columns:
             combined_df.drop(columns=[col], inplace=True)
