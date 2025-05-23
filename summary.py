@@ -311,7 +311,7 @@ if __name__ == '__main__':
     clear_dir('figures/latent_Z')
     clear_dir('figures/latent_Z_diff')
 
-    models = ['poisson']
+    models = ['poisson', 'poisson-v2', 'poisson-nonlinear']
     
     file = open('metric.txt', 'w')
     pd.set_option('display.max_rows', None)   
