@@ -199,7 +199,7 @@ montroll:
     activation_fn: softplus(beta=10)
     annealing_period: 0.1
     lr: 'poly_1e-6_10.0_0.55'
-    sgd_momentum: 'linear_0.9_0.99'
+    sgd_momentum: 'linear_0.9_0.9'
     sgld_lr: 'poly_1e-4_10.0_0.95'
     sgld_alpha: 1.0
     lam: 'log_50.0_500.0'
@@ -240,7 +240,7 @@ montroll_theta:
       prior_sd: 10.0
   
 montroll_fixed:
-  epochs: 500_000
+  epochs: 200_000
   eval_freq: 2000
   burn: 0.3
   pinn:

@@ -72,9 +72,9 @@ poisson-v2:
     lambda_theta: 1.0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 64
-      - 64
-      - 16
+      - 128
+      - 128
+      - 12
       encoder_activation: leaky_relu
       prior_sd: 10.0
 
