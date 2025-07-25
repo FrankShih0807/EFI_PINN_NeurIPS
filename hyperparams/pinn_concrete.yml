@@ -1,0 +1,12 @@
+poisson:
+  epochs: 100_000
+  eval_freq: -1
+  burn: 0.5
+  pinn:
+    hidden_layers:
+    - 50
+    - 50
+    activation_fn: tanh
+    lr: 3e-4
+    lambda_pde: 1.0
+
