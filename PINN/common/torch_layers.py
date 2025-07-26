@@ -299,7 +299,7 @@ class ConcreteDropout(nn.Module):
         input_dimensionality = x[0].numel() # Number of elements of first item in batch
         dropout_regularizer *= self.dropout_regularizer * input_dimensionality
         
-        regularization = weights_regularizer + dropout_regularizer
+        regularization = weights_regularizer + dropout_regularizer.abs()
         return out, regularization
         
     def _concrete_dropout(self, x, p):
@@ -337,6 +337,8 @@ class DropoutDNNConcrete(nn.Module):
         
         self.weight_regularizer = weight_regularizer
         self.dropout_regularizer = dropout_regularizer
+
+        self.total_regularization = 0
         
         self.layers = nn.ModuleList()
         self.concrete_dropouts = nn.ModuleList()
@@ -356,13 +358,13 @@ class DropoutDNNConcrete(nn.Module):
                                                       dropout_regularizer=self.dropout_regularizer))
     
     def forward(self, x):
-        total_regularization = 0
+        self.total_regularization = 0
         
         for i, layer in enumerate(self.layers[:-1]):
             if i > 0 and (i-1) < len(self.concrete_dropouts):
                 concrete_idx = (i-1)
                 x, reg = self.concrete_dropouts[concrete_idx](x, layer)
-                total_regularization += reg
+                self.total_regularization += reg
             else:
                 x = layer(x)
             
@@ -370,7 +372,7 @@ class DropoutDNNConcrete(nn.Module):
                 x = self.activation_fn(x)
         
         x, reg = self.concrete_dropouts[-1](x, self.layers[-1])
-        total_regularization += reg
+        self.total_regularization += reg
         
         if self.positive_output:
             x = torch.exp(x)
@@ -790,7 +792,8 @@ if __name__ == '__main__':
     # # for name, p in efi_net.named_parameters():
     # #     print(name, p.shape)
 
-    dropout_net = DropoutDNNConcrete(input_dim=1, output_dim=1, hidden_layers=[50, 50], activation_fn='relu', positive_output=True)
+    dropout_net = DropoutDNNConcrete(input_dim=1, output_dim=1, hidden_layers=[50, 50, 50], activation_fn='relu', positive_output=True)
     x = torch.randn(50, 1)
-    y, reg = dropout_net(x)
+    y = dropout_net(x)
+    reg = dropout_net.total_regularization
     print(y.mean(), reg)

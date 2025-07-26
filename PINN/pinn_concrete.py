@@ -68,7 +68,7 @@ class PINNConcrete(BasePINN):
         self.optimiser.zero_grad()
         sol_loss = self.solution_loss()
         pde_loss = self.pde_loss()
-        loss = sol_loss + self.lambda_pde * pde_loss
+        loss = sol_loss + self.lambda_pde * pde_loss + self.net.total_regularization
 
         loss.backward()
         self.optimiser.step()
