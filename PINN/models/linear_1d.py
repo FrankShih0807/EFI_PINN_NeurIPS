@@ -121,7 +121,7 @@ class Linear1DCallback(BaseCallback):
         y = torch.cat([d['y'] for d in self.dataset if d['category'] == 'solution'], dim=0).to('cpu')
         X_ols = torch.stack([torch.ones_like(X), X], dim=1).squeeze(dim=-1)
 
-
+        sd = self.dataset[0]['noise_sd']
         # Solve OLS: β = (X^T X)^(-1) X^T y
         XtX_inv = torch.linalg.inv(X_ols.T @ X_ols)  # (X^T X)^(-1)
         beta_hat = XtX_inv @ X_ols.T @ y  # OLS coefficients
@@ -135,7 +135,11 @@ class Linear1DCallback(BaseCallback):
 
         # Compute standard errors of predictions
         X_diag = torch.einsum('ij,jk,ik->i', X_ols, XtX_inv, X_ols).reshape(-1,1)  # Variance of predictions
-        se_pred = sigma_hat * torch.sqrt(X_diag)
+        
+        se_pred = sd * torch.sqrt(X_diag)
+
+        se0 = sd * torch.sqrt(XtX_inv[0, 0]).item()
+        se1 = sd * torch.sqrt(XtX_inv[1, 1]).item()
 
         # Compute confidence interval (95% CI)
         t_value = 1.96  # Approximate for large samples
@@ -146,7 +150,13 @@ class Linear1DCallback(BaseCallback):
         self.ols_y_pred = y_pred.flatten().numpy()
         self.ols_upper = y_upper.flatten().numpy()
         self.ols_lower = y_lower.flatten().numpy()
+        self.ols_b0_upper = beta_hat[0].item() + t_value * se0
+        self.ols_b0_lower = beta_hat[0].item() - t_value * se0
+        self.ols_b1_upper = beta_hat[1].item() + t_value * se1
+        self.ols_b1_lower = beta_hat[1].item() - t_value * se1
 
+        self.b0_buffer = ScalarBuffer(burn=self.burn)
+        self.b1_buffer = ScalarBuffer(burn=self.burn)
         # # Plotting
         # plt.figure(figsize=(8, 6))
         # plt.scatter(X.numpy(), y.numpy(), label="Observed data", color="gray", alpha=0.5)
@@ -183,6 +193,14 @@ class Linear1DCallback(BaseCallback):
         
         pred_y = self.model.net(self.eval_X).detach().cpu()
         self.eval_buffer.add(pred_y)
+
+        origin = torch.tensor([0.0], device=self.device).reshape(1, 1).requires_grad_()
+        b0_hat = self.model.net(origin).flatten().detach().cpu().item()
+        u = self.model.net(origin)
+        b1_hat = grad(u, origin)[0].detach().cpu().item()
+
+        self.b0_buffer.add(b0_hat)
+        self.b1_buffer.add(b1_hat)
         if self.physics_model.is_inverse:
             self.k_buffer.add(self.model.pe_variables[0].item())
         # print(len(self.eval_buffer))
@@ -207,7 +225,18 @@ class Linear1DCallback(BaseCallback):
             self.logger.record('eval/k_ci_range', k_ci_range)
             self.logger.record('eval/k_coverage_rate', k_cr)
             self.logger.record('eval/k_mean', k_mean)
+            
+        pred_b0_mean = self.b0_buffer.get_mean()
+        pred_b1_mean = self.b1_buffer.get_mean()
+        b0_low, b0_high = self.b0_buffer.get_ci()
+        b1_low, b1_high = self.b1_buffer.get_ci()
         
+        
+        self.logger.record('ci/ols_b0', '({:.2f}, {:.2f})'.format(self.ols_b0_lower, self.ols_b0_upper))
+        self.logger.record('ci/ols_b1', '({:.2f}, {:.2f})'.format(self.ols_b1_lower, self.ols_b1_upper))
+        self.logger.record('ci/efi_b0', '({:.2f}, {:.2f})'.format(b0_low, b0_high))
+        self.logger.record('ci/efi_b1', '({:.2f}, {:.2f})'.format(b1_low, b1_high))
+
         self.save_evaluation()
         # self.plot_latent_Z()
         try:
@@ -217,6 +246,8 @@ class Linear1DCallback(BaseCallback):
         
         if self.model.progress <= self.eval_buffer.burn:
             self.eval_buffer.reset()
+            self.b0_buffer.reset()
+            self.b1_buffer.reset()
             if self.physics_model.is_inverse:
                 self.k_buffer.reset()
         # self.physics_model.save_evaluation(self.model, self.save_path)
@@ -229,7 +260,7 @@ class Linear1DCallback(BaseCallback):
         true_y = self.dataset[0]['true_y'].flatten()
         sol_y = self.dataset[0]['y'].flatten()
         sd = self.dataset[0]['noise_sd']
-        true_Z = sol_y - true_y
+        true_Z = (sol_y - true_y) / sd
         
         latent_Z = self.model.latent_Z[0].flatten().detach().cpu().numpy()
         
@@ -240,29 +271,11 @@ class Linear1DCallback(BaseCallback):
         plt.scatter(true_Z, latent_Z, label='Latent Z')
         plt.xlabel('True Z')
         plt.ylabel('Latent Z')
-        plt.xlim(-3*sd, 3*sd)
-        plt.ylim(-3*sd, 3*sd)
+        plt.xlim(-3, 3)
+        plt.ylim(-3, 3)
         plt.savefig(os.path.join(self.save_path, 'latent_Z.png'))
         plt.close()
         
-        true_y = self.dataset[1]['true_y'].flatten()
-        sol_y = self.dataset[1]['y'].flatten()
-        sd = self.dataset[1]['noise_sd']
-        true_Z = sol_y - true_y
-        
-        latent_Z = self.model.latent_Z[1].flatten().detach().cpu().numpy()
-        
-        np.save(os.path.join(self.save_path, 'true_Z_diff.npy'), true_Z)
-        np.save(os.path.join(self.save_path, 'latent_Z_diff.npy'), latent_Z)
-        
-        plt.subplots(figsize=(6, 6))
-        plt.scatter(true_Z, latent_Z, label='Latent Z')
-        plt.xlabel('True Z')
-        plt.ylabel('Latent Z')
-        plt.xlim(-3*sd, 3*sd)
-        plt.ylim(-3*sd, 3*sd)
-        plt.savefig(os.path.join(self.save_path, 'latent_Z_diff.png'))
-        plt.close()
         
     def save_evaluation(self):
         X = self.eval_X_cpu.flatten().numpy()
@@ -273,22 +286,24 @@ class Linear1DCallback(BaseCallback):
         
         sns.set_theme()
         plt.subplots(figsize=(8, 6))
-        plt.plot(X, y, alpha=0.8, color='r', label='True')
-        plt.plot(X, preds_mean, alpha=0.8, color='g', label='Mean')
+        # plt.plot(X, y, alpha=0.8, color='r', label='True')
         plt.plot(self.model.sol_X.clone().cpu().numpy() , self.model.sol_y.clone().cpu().numpy(), 'x', label='Training data', color='orange')
-        
-        plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='95% CI')
-        
-        plt.plot(self.ols_X, self.ols_y_pred, label='OLS', color='blue', linestyle='--')
-        plt.fill_between(self.ols_X, self.ols_upper, self.ols_lower, alpha=0.1, color='blue', label='OLS 95% CI')
+        plt.plot(X, preds_mean, alpha=0.8, color='g', label='EFI')
+        plt.fill_between(X, preds_upper, preds_lower, alpha=0.2, color='g', label='EFI 95% CI')
+
+        plt.plot(self.ols_X, self.ols_y_pred, label='OLS', color='blue', linestyle='--', alpha=0.8)
+        plt.plot(self.ols_X, self.ols_upper, label='OLS 95% CI', color='blue', linestyle=':', alpha=0.8)
+        plt.plot(self.ols_X, self.ols_lower, color='blue', linestyle=':', alpha=0.8)
+
+        # plt.fill_between(self.ols_X, self.ols_upper, self.ols_lower, alpha=0.1, color='blue', label='OLS 95% CI')
         
         plt.legend(loc='upper left', bbox_to_anchor=(0.1, 0.95))
-        plt.ylabel('u')
+        plt.ylabel('y')
         plt.xlabel('x')
         # plt.ylim(-1.5, 1.5)
-        plt.savefig(os.path.join(self.save_path, 'pred_solution.png'))
-        
-        
+        plt.savefig(os.path.join(self.save_path, 'pred_solution.png'), dpi=300)
+
+
         # save temp frames
         temp_dir = os.path.join(self.save_path, 'temp_frames')
         os.makedirs(temp_dir, exist_ok=True)
