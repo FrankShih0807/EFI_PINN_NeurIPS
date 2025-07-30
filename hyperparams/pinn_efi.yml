@@ -48,7 +48,7 @@ poisson:
       encoder_hidden_layers:
       - 16
       - 16
-      - 16
+      - 1
       encoder_activation: leaky_relu
       prior_sd: 10.0
 

@@ -157,6 +157,8 @@ class Linear1DCallback(BaseCallback):
 
         self.b0_buffer = ScalarBuffer(burn=self.burn)
         self.b1_buffer = ScalarBuffer(burn=self.burn)
+        
+        self.eigen_mm_buffer = ScalarBuffer(burn=self.burn)
         # # Plotting
         # plt.figure(figsize=(8, 6))
         # plt.scatter(X.numpy(), y.numpy(), label="Observed data", color="gray", alpha=0.5)
@@ -201,6 +203,21 @@ class Linear1DCallback(BaseCallback):
 
         self.b0_buffer.add(b0_hat)
         self.b1_buffer.add(b1_hat)
+        
+        m = self.model.net.encoder.m.clone().detach().cpu()
+        mtm = m.T @ m
+
+        min_eigenvalue = torch.linalg.eigvalsh(mtm).min().item()
+        
+        # if min_eigenvalue < 0:
+        #     print(f"Warning: Negative eigenvalue detected: {min_eigenvalue}")
+        #     print(mtm)
+        #     raise ValueError("Negative eigenvalue detected in the model's encoder matrix.")
+
+        self.eigen_mm_buffer.add(min_eigenvalue)
+        
+        
+        
         if self.physics_model.is_inverse:
             self.k_buffer.add(self.model.pe_variables[0].item())
         # print(len(self.eval_buffer))
@@ -237,7 +254,10 @@ class Linear1DCallback(BaseCallback):
         self.logger.record('ci/efi_b0', '({:.2f}, {:.2f})'.format(b0_low, b0_high))
         self.logger.record('ci/efi_b1', '({:.2f}, {:.2f})'.format(b1_low, b1_high))
 
+        self.logger.record('eval/mm_min_eigenval', self.eigen_mm_buffer.last()[0])
+
         self.save_evaluation()
+        self.plot_min_eigenval()
         # self.plot_latent_Z()
         try:
             self.plot_latent_Z()
@@ -248,6 +268,7 @@ class Linear1DCallback(BaseCallback):
             self.eval_buffer.reset()
             self.b0_buffer.reset()
             self.b1_buffer.reset()
+            self.eigen_mm_buffer.reset()
             if self.physics_model.is_inverse:
                 self.k_buffer.reset()
         # self.physics_model.save_evaluation(self.model, self.save_path)
@@ -275,6 +296,18 @@ class Linear1DCallback(BaseCallback):
         plt.ylim(-3, 3)
         plt.savefig(os.path.join(self.save_path, 'latent_Z.png'))
         plt.close()
+    
+    def plot_min_eigenval(self):
+        eigenvals = self.eigen_mm_buffer.samples
+        plt.figure(figsize=(8, 6))
+        plt.plot(eigenvals, label='Min Eigenvalue')
+        plt.xlabel('Epoch')
+        plt.ylabel('Min Eigenvalue')
+        plt.title('Min Eigenvalue Over Epochs')
+        plt.legend()
+        plt.savefig(os.path.join(self.save_path, 'min_eigenvalue.png'))
+        plt.close()
+        
         
         
     def save_evaluation(self):

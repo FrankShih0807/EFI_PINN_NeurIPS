@@ -292,6 +292,7 @@ class BottleneckHypernet(nn.Module):
             x = self.activation_fn(x)
         x = self.layers[-1](x)
         x = self.neck_layer_activation(x)
+        self.m = x
         x = self.output_layer(x)
         return x
 
