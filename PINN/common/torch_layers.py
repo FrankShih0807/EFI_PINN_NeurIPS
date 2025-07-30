@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.utils as utils
+import numpy as np
+from torch.nn.parameter import Parameter
 from collections import defaultdict
 from PINN.common.utils import get_activation_fn
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
@@ -625,7 +627,188 @@ class MixedActivationNet(nn.Module):
         softplus_out = self.softplus_branch(x)
         combined = torch.cat((relu_out, softplus_out), dim=1)
         return self.output_layer(combined)
+    
+class HypernetWeight(nn.Module):
+    def __init__(self, shape, units=[16, 32, 64], bias=True,
+                 noise_shape=16, activation=nn.LeakyReLU(0.1)):
+        super(HypernetWeight, self).__init__()
+        self.shape = shape
+        self.noise_shape = noise_shape
 
+        layers = []
+        in_features = noise_shape
+        for out_features in units:
+            layers.append(nn.Linear(in_features, out_features, bias=bias))
+            layers.append(activation)
+            in_features = out_features
+
+        layers.append(nn.Linear(in_features, np.prod(shape), bias=bias))
+
+        self.net = nn.Sequential(*layers)
+
+    def forward(self, x=None, num_samples=1):
+        if x is None:
+            x = torch.randn((num_samples, self.noise_shape))
+        return self.net(x).reshape((x.shape[0], *self.shape))
+
+
+# class ToyNN(nn.Module):
+#     def __init__(self, units=[16, 32, 64]):
+#         super(ToyNN, self).__init__()
+#         self.layer1_w = HypernetWeight((100, 1), units=units)
+#         self.layer1_b = HypernetWeight((100, ), units=units)
+#         self.layer2_w = HypernetWeight((1, 100), units=units)
+#         self.layer2_b = HypernetWeight((1, ), units=units)
+
+#     def forward(self, x):
+#         n = torch.randn((1, 1))
+#         w1 = self.layer1_w(n)[0]
+#         b1 = self.layer1_b(n)[0]
+
+#         w2 = self.layer2_w(n)[0]
+#         b2 = self.layer2_b(n)[0]
+
+#         x = F.linear(x, w1, b1)
+#         x = F.relu(x)
+#         x = F.linear(x, w2, b2)
+
+#         return x
+
+#     def sample(self, num_samples=5):
+#         l1_w_samples = self.layer1_w(num_samples=num_samples).view((num_samples, -1))
+#         l1_b_samples = self.layer1_b(num_samples=num_samples).view((num_samples, -1))
+#         l2_w_samples = self.layer2_w(num_samples=num_samples).view((num_samples, -1))
+#         l2_b_samples = self.layer2_b(num_samples=num_samples).view((num_samples, -1))
+
+#         gen_weights = torch.cat([l1_w_samples, l1_b_samples, l2_w_samples, l2_b_samples], 1)
+
+#         return gen_weights
+
+#     def kl(self, num_samples=5, full_kernel=True):
+
+#         gen_weights = self.sample(num_samples=num_samples)
+#         gen_weights = gen_weights.transpose(1, 0)
+#         prior_samples = torch.randn_like(gen_weights)
+
+#         eye = torch.eye(num_samples, device=gen_weights.device)
+#         wp_distances = (prior_samples.unsqueeze(2) - gen_weights.unsqueeze(1)) ** 2
+#         # [weights, samples, samples]
+
+#         ww_distances = (gen_weights.unsqueeze(2) - gen_weights.unsqueeze(1)) ** 2
+
+#         if full_kernel:
+#             wp_distances = torch.sqrt(torch.sum(wp_distances, 0) + 1e-8)
+#             wp_dist = torch.min(wp_distances, 0)[0]
+
+#             ww_distances = torch.sqrt(
+#                 torch.sum(ww_distances, 0) + 1e-8) + eye * 1e10
+#             ww_dist = torch.min(ww_distances, 0)[0]
+
+#             # mean over samples
+#             kl = torch.mean(torch.log(wp_dist / (ww_dist + 1e-8) + 1e-8))
+#             kl *= gen_weights.shape[0]
+#             kl += np.log(float(num_samples) / (num_samples - 1))
+#         else:
+#             wp_distances = torch.sqrt(wp_distances + 1e-8)
+#             wp_dist = torch.min(wp_distances, 1)[0]
+
+#             ww_distances = (torch.sqrt(ww_distances + 1e-8)
+#                             + (eye.unsqueeze(0) * 1e10))
+#             ww_dist = torch.min(ww_distances, 1)[0]
+
+#             # sum over weights, mean over samples
+#             kl = torch.sum(torch.mean(
+#                 torch.log(wp_dist / (ww_dist + 1e-8) + 1e-8)
+#                 + torch.log(float(num_samples) / (num_samples - 1)), 1))
+
+#         return kl
+    
+class BayesHypernet(nn.Module):
+    def __init__(self, input_dim=1, hidden_layers=[50, 50], output_dim=1, units=[16, 32, 64], sd_known=True):
+        super(BayesHypernet, self).__init__()
+        assert len(hidden_layers) == 2, "This class supports exactly two hidden layers"
+
+        # Hypernets for each layer's weights and biases
+        self.layer1_w = HypernetWeight((hidden_layers[0], input_dim), units=units)
+        self.layer1_b = HypernetWeight((hidden_layers[0],), units=units)
+
+        self.layer2_w = HypernetWeight((hidden_layers[1], hidden_layers[0]), units=units)
+        self.layer2_b = HypernetWeight((hidden_layers[1],), units=units)
+
+        self.output_w = HypernetWeight((output_dim, hidden_layers[1]), units=units)
+        self.output_b = HypernetWeight((output_dim,), units=units)
+        self.sd_known = sd_known
+
+        
+        # self.n = torch.randn((1, 1))
+
+    def encode_weights(self):
+        n = torch.randn((1, 16))
+        # n = self.n
+        self.w1 = self.layer1_w(n)[0]
+        self.b1 = self.layer1_b(n)[0]
+        self.w2 = self.layer2_w(n)[0]
+        self.b2 = self.layer2_b(n)[0]
+        self.w_out = self.output_w(n)[0]
+        self.b_out = self.output_b(n)[0]
+        
+        self.layers = [self.w1, self.b1, self.w2, self.b2, self.w_out, self.b_out]
+        
+    def forward(self, x):
+        x = F.linear(x, self.w1, self.b1)
+        x = F.relu(x)
+        x = F.linear(x, self.w2, self.b2)
+        x = F.relu(x)
+        x = F.linear(x, self.w_out, self.b_out)
+        return x
+
+    def sample(self, num_samples=5):
+        l1_w_samples = self.layer1_w(num_samples=num_samples).view((num_samples, -1))
+        l1_b_samples = self.layer1_b(num_samples=num_samples).view((num_samples, -1))
+
+        l2_w_samples = self.layer2_w(num_samples=num_samples).view((num_samples, -1))
+        l2_b_samples = self.layer2_b(num_samples=num_samples).view((num_samples, -1))
+
+        out_w_samples = self.output_w(num_samples=num_samples).view((num_samples, -1))
+        out_b_samples = self.output_b(num_samples=num_samples).view((num_samples, -1))
+
+        gen_weights = torch.cat(
+            [l1_w_samples, l1_b_samples, l2_w_samples, l2_b_samples, out_w_samples, out_b_samples],
+            1
+        )
+        return gen_weights
+
+    def kl(self, num_samples=5, full_kernel=True):
+        gen_weights = self.sample(num_samples=num_samples)
+        gen_weights = gen_weights.transpose(1, 0)
+        prior_samples = torch.randn_like(gen_weights)
+
+        eye = torch.eye(num_samples, device=gen_weights.device)
+        wp_distances = (prior_samples.unsqueeze(2) - gen_weights.unsqueeze(1)) ** 2
+        ww_distances = (gen_weights.unsqueeze(2) - gen_weights.unsqueeze(1)) ** 2
+
+        if full_kernel:
+            wp_distances = torch.sqrt(torch.sum(wp_distances, 0) + 1e-8)
+            wp_dist = torch.min(wp_distances, 0)[0]
+
+            ww_distances = torch.sqrt(torch.sum(ww_distances, 0) + 1e-8) + eye * 1e10
+            ww_dist = torch.min(ww_distances, 0)[0]
+
+            kl = torch.mean(torch.log(wp_dist / (ww_dist + 1e-8) + 1e-8))
+            kl *= gen_weights.shape[0]
+            kl += np.log(float(num_samples) / (num_samples - 1))
+        else:
+            wp_distances = torch.sqrt(wp_distances + 1e-8)
+            wp_dist = torch.min(wp_distances, 1)[0]
+
+            ww_distances = torch.sqrt(ww_distances + 1e-8) + (eye.unsqueeze(0) * 1e10)
+            ww_dist = torch.min(ww_distances, 1)[0]
+
+            kl = torch.sum(torch.mean(
+                torch.log(wp_dist / (ww_dist + 1e-8) + 1e-8)
+                + torch.log(float(num_samples) / (num_samples - 1)), 1))
+        return kl
+        
 if __name__ == '__main__':
 
 
@@ -633,47 +816,57 @@ if __name__ == '__main__':
     y = torch.randn(10, 1)
     z = torch.randn(10, 1)
     
-    hypernet = nn.Sequential(
-        nn.Linear(3, 16),
-        nn.ReLU(),
-        nn.Linear(16, 16),
-        nn.ReLU(),
-        nn.Linear(16, 16),
-    )
     
-    feature = hypernet(torch.cat([x, y, z], dim=1))
-    print(feature.shape)
+    model = BayesHypernet(input_dim=1, hidden_layers=[30, 30], output_dim=1, units=[4, 8, 16])
     
-    layer = HyperLinear(30, 40, 16)
+    # print(model(x))
+    # y_pred1 = model(x)
+    # y_pred2 = model(x)
+    # print(y_pred1)
+    # print(y_pred2)
+    for name, p in model.named_parameters():
+        print(name, p.shape)
+    # hypernet = nn.Sequential(
+    #     nn.Linear(3, 16),
+    #     nn.ReLU(),
+    #     nn.Linear(16, 16),
+    #     nn.ReLU(),
+    #     nn.Linear(16, 16),
+    # )
     
-    theta_loss = layer.encode_weight(feature)
-    print(theta_loss)
+    # feature = hypernet(torch.cat([x, y, z], dim=1))
+    # print(feature.shape)
+    
+    # layer = HyperLinear(30, 40, 16)
+    
+    # theta_loss = layer.encode_weight(feature)
+    # print(theta_loss)
     
     
-    # for name, p in layer.named_parameters():
-    #     print(name, p.shape)
+    # # for name, p in layer.named_parameters():
+    # #     print(name, p.shape)
     
-    efi_net = EFI_Net_v2(input_dim=1, 
-                         output_dim=1, 
-                         latent_Z_dim=1, 
-                         hidden_layers=[30, 30], 
-                         activation_fn='relu', 
-                         encoder_hidden_layers=[16, 16, 16], 
-                         encoder_activation='relu', 
-                         prior_sd=0.1, 
-                         sparse_sd=0.01, 
-                         sparsity=1.0, 
-                         device='cpu'
-                         )
+    # efi_net = EFI_Net_v2(input_dim=1, 
+    #                      output_dim=1, 
+    #                      latent_Z_dim=1, 
+    #                      hidden_layers=[30, 30], 
+    #                      activation_fn='relu', 
+    #                      encoder_hidden_layers=[16, 16, 16], 
+    #                      encoder_activation='relu', 
+    #                      prior_sd=0.1, 
+    #                      sparse_sd=0.01, 
+    #                      sparsity=1.0, 
+    #                      device='cpu'
+    #                      )
     
-    theta_loss = efi_net.encode_weights(x, y, z)
-    print(theta_loss)
+    # theta_loss = efi_net.encode_weights(x, y, z)
+    # print(theta_loss)
     
-    y_pred = efi_net(x)
-    print(y_pred)
+    # y_pred = efi_net(x)
+    # print(y_pred)
     
-    gmm_loss = efi_net.gmm_prior_loss()
-    print(gmm_loss)
-    # for name, p in efi_net.named_parameters():
-    #     print(name, p.shape)
+    # gmm_loss = efi_net.gmm_prior_loss()
+    # print(gmm_loss)
+    # # for name, p in efi_net.named_parameters():
+    # #     print(name, p.shape)
     
