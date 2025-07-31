@@ -158,40 +158,17 @@ class Linear1DCallback(BaseCallback):
         self.b0_buffer = ScalarBuffer(burn=self.burn)
         self.b1_buffer = ScalarBuffer(burn=self.burn)
         
-        self.eigen_mm_buffer = ScalarBuffer(burn=self.burn)
-        # # Plotting
-        # plt.figure(figsize=(8, 6))
-        # plt.scatter(X.numpy(), y.numpy(), label="Observed data", color="gray", alpha=0.5)
-        # plt.plot(X.numpy(), y_pred.numpy(), label="OLS Fit", color="blue")
+        self.eigenvals_buffer = EvaluationBuffer(burn=self.burn)
 
-        # # Confidence band
-        # plt.fill_between(X.flatten().numpy(), y_lower.flatten().numpy(), y_upper.flatten().numpy(), color='blue', alpha=0.2, label="95% Confidence Band")
-
-        # # Labels and legend
-        # plt.xlabel("X")
-        # plt.ylabel("Response $y$")
-        # plt.title("OLS Regression with Confidence Band (PyTorch)")
-        # plt.legend()
-        # plt.show()
-        
-        # raise
         if self.physics_model.is_inverse:
             self.k_buffer = ScalarBuffer(burn=self.burn)
-
+        if self.model.net.sd_known==False:
+            self.sd_buffer = ScalarBuffer(burn=self.burn)
     
     def _on_training(self):
         
-        # if self.model.progress >= self.eval_buffer.burn and hasattr(self.model, 'sampler'):
-            
-        #     if hasattr(self, 'max_lr'):
-        #         self.max_lr = max(self.max_lr, self.model.cur_sgld_lr)
-        #         accept_rate = self.model.cur_sgld_lr / self.max_lr
-        #         if random.random() > accept_rate:
-        #             # print(f"Rejecting rate: {1-accept_rate}")
-        #             return
-        #     else:
-        #         self.max_lr = self.model.cur_sgld_lr
-
+        if self.model.net.sd_known==False:
+            self.sd_buffer.add(self.model.net.log_sd.exp().item())
         
         pred_y = self.model.net(self.eval_X).detach().cpu()
         self.eval_buffer.add(pred_y)
@@ -205,16 +182,16 @@ class Linear1DCallback(BaseCallback):
         self.b1_buffer.add(b1_hat)
         
         m = self.model.net.encoder.m.clone().detach().cpu()
-        mtm = m.T @ m
+        mtm = m.T @ m / m.shape[0]
 
-        min_eigenvalue = torch.linalg.eigvalsh(mtm).min().item()
+        eigenvals = torch.linalg.eigvalsh(mtm).sort()[0]
         
         # if min_eigenvalue < 0:
         #     print(f"Warning: Negative eigenvalue detected: {min_eigenvalue}")
         #     print(mtm)
         #     raise ValueError("Negative eigenvalue detected in the model's encoder matrix.")
 
-        self.eigen_mm_buffer.add(min_eigenvalue)
+        self.eigenvals_buffer.add(eigenvals)
         
         
         
@@ -242,7 +219,18 @@ class Linear1DCallback(BaseCallback):
             self.logger.record('eval/k_ci_range', k_ci_range)
             self.logger.record('eval/k_coverage_rate', k_cr)
             self.logger.record('eval/k_mean', k_mean)
+        
+        if self.model.net.sd_known==False:
+            sd_mean = self.sd_buffer.get_mean()
+            sd_low, sd_high = self.sd_buffer.get_ci()
+            sd_ci_range = sd_high - sd_low
+            sd_cr = ((sd_low <= self.physics_model.sol_sd) & (self.physics_model.sol_sd <= sd_high))
             
+            self.logger.record('eval/sd_ci_range', sd_ci_range)
+            self.logger.record('eval/sd_coverage_rate', sd_cr)
+            self.logger.record('eval/sd_mean', sd_mean)
+        
+        
         pred_b0_mean = self.b0_buffer.get_mean()
         pred_b1_mean = self.b1_buffer.get_mean()
         b0_low, b0_high = self.b0_buffer.get_ci()
@@ -254,10 +242,10 @@ class Linear1DCallback(BaseCallback):
         self.logger.record('ci/efi_b0', '({:.2f}, {:.2f})'.format(b0_low, b0_high))
         self.logger.record('ci/efi_b1', '({:.2f}, {:.2f})'.format(b1_low, b1_high))
 
-        self.logger.record('eval/mm_min_eigenval', self.eigen_mm_buffer.last()[0])
+        # self.logger.record('eval/mm_min_eigenval', self.eigen_mm_buffer.last()[0])
 
         self.save_evaluation()
-        self.plot_min_eigenval()
+        self.plot_eigenvals()
         # self.plot_latent_Z()
         try:
             self.plot_latent_Z()
@@ -268,11 +256,11 @@ class Linear1DCallback(BaseCallback):
             self.eval_buffer.reset()
             self.b0_buffer.reset()
             self.b1_buffer.reset()
-            self.eigen_mm_buffer.reset()
+            self.eigenvals_buffer.reset()
             if self.physics_model.is_inverse:
                 self.k_buffer.reset()
-        # self.physics_model.save_evaluation(self.model, self.save_path)
-        # self.physics_model.save_temp_frames(self.model, self.n_evals, self.save_path)
+            if self.model.net.sd_known==False:
+                self.sd_buffer.reset()
     
     def _on_training_end(self) -> None:
         self.save_gif()
@@ -297,17 +285,18 @@ class Linear1DCallback(BaseCallback):
         plt.savefig(os.path.join(self.save_path, 'latent_Z.png'))
         plt.close()
     
-    def plot_min_eigenval(self):
-        eigenvals = self.eigen_mm_buffer.samples
-        plt.figure(figsize=(8, 6))
-        plt.plot(eigenvals, label='Min Eigenvalue')
-        plt.xlabel('Epoch')
-        plt.ylabel('Min Eigenvalue')
-        plt.title('Min Eigenvalue Over Epochs')
-        plt.legend()
-        plt.savefig(os.path.join(self.save_path, 'min_eigenvalue.png'))
-        plt.close()
+    def plot_eigenvals(self):
+        eigenvals = torch.cat(self.eigenvals_buffer.memory, dim=0)
         
+        for i in range(eigenvals.shape[1]):
+            plt.figure(figsize=(8, 6))
+            plt.plot(eigenvals[:, i].cpu().numpy(), label=f'Eigenvalue {i+1}')
+            plt.xlabel('Sample')
+            plt.ylabel(f'Eigenvalue {i+1}')
+            plt.title(f'Eigenvalue {i+1} over time')
+            plt.legend()
+            plt.savefig(os.path.join(self.save_path, f'eigenvalue_{i+1}.png'))
+            plt.close()
         
         
     def save_evaluation(self):

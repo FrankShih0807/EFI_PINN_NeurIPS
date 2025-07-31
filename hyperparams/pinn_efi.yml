@@ -48,7 +48,7 @@ poisson:
       encoder_hidden_layers:
       - 16
       - 16
-      - 1
+      - 16
       encoder_activation: leaky_relu
       prior_sd: 10.0
 
@@ -143,18 +143,18 @@ poisson-2d:
     activation_fn: silu
     annealing_period: 0.1
     grad_norm_max: -1.0
-    lr: 'poly_0.5e-6_10.0_0.55'
+    lr: 'poly_1e-6_10.0_0.55'
     sgd_momentum: 'linear_0.9_0.9'
-    sgld_lr: 'poly_2.5e-4_10.0_0.55'
-    sgld_alpha: 'linear_0.1_1.0'
-    lam: 'log_50.0_1000.0'
+    sgld_lr: 'poly_7e-4_10.0_0.95'
+    sgld_alpha: 1.0
+    lam: 'log_50.0_500.0'
     lambda_pde: 0.1
     lambda_theta: 1.0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 512
-      - 512
+      - 32
       - 16
+      - 2
       encoder_activation: leaky_relu
       prior_sd: 10.0
   
@@ -175,12 +175,12 @@ linear-1d:
     sgld_alpha: 1.0
     lam: 'log_10.0_100.0'
     lambda_pde: 1.0
-    lambda_theta: 1.0
+    lambda_theta: 0.01
     encoder_kwargs:
       encoder_hidden_layers:
       - 16
       - 16
-      - 8
+      - 3
       encoder_activation: leaky_relu
       prior_sd: 10.0
 
