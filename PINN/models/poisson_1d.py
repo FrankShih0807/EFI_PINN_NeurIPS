@@ -127,6 +127,10 @@ class Poisson1DCallback(BaseCallback):
             self.k_buffer = ScalarBuffer(burn=self.burn)
         if self.model.net.sd_known==False:
             self.sd_buffer = ScalarBuffer(burn=self.burn)
+            
+        self.eigen_min_buffer = ScalarBuffer(burn=self.burn)
+        self.eigen_max_buffer = ScalarBuffer(burn=self.burn)
+        
     
     def _on_training(self):
         
@@ -138,6 +142,15 @@ class Poisson1DCallback(BaseCallback):
             self.sd_buffer.add(self.model.net.log_sd.exp().item())
         # print(len(self.eval_buffer))
         
+        try:
+            m = self.model.net.encoder.m.clone().detach().cpu()
+            mtm = m.T @ m / m.shape[0]
+            min_eigenvalue = torch.linalg.eigvalsh(mtm).min().item()
+            max_eigenvalue = torch.linalg.eigvalsh(mtm).max().item()
+            self.eigen_min_buffer.add(min_eigenvalue)
+            self.eigen_max_buffer.add(max_eigenvalue)
+        except:
+            pass
     
     def _on_eval(self):
         pred_y_mean = self.eval_buffer.get_mean()
@@ -172,6 +185,16 @@ class Poisson1DCallback(BaseCallback):
         self.save_evaluation()
         # self.plot_latent_Z()
         try:
+            self.logger.record('eval/mm_min_eigenval', self.eigen_min_buffer.last()[0])
+            self.logger.record('eval/mm_max_eigenval', self.eigen_max_buffer.last()[0])
+            self.plot_eigenval()
+            if self.model.progress <= self.eval_buffer.burn:
+                self.eigen_max_buffer.reset()
+                self.eigen_min_buffer.reset()
+        except:
+            pass
+
+        try:
             self.plot_latent_Z()
         except:
             pass    
@@ -188,6 +211,19 @@ class Poisson1DCallback(BaseCallback):
     def _on_training_end(self) -> None:
         self.save_gif()
         
+    def plot_eigenval(self):
+        min_eigenvals = self.eigen_min_buffer.samples
+        max_eigenvals = self.eigen_max_buffer.samples
+        plt.figure(figsize=(8, 6))
+        plt.plot(min_eigenvals, label='Min Eigenvalue')
+        plt.plot(max_eigenvals, label='Max Eigenvalue')
+        plt.xlabel('Epoch')
+        plt.ylabel('Eigenvalue')
+        plt.title('Eigenvalues Over Epochs')
+        plt.legend()
+        plt.savefig(os.path.join(self.save_path, 'min_eigenvalue.png'))
+        plt.close()
+         
     def plot_latent_Z(self):
         true_y = self.dataset[0]['true_y'].flatten()
         sol_y = self.dataset[0]['y'].flatten()

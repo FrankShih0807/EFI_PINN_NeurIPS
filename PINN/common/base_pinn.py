@@ -82,12 +82,14 @@ class BasePINN(object):
         self.callback = callback
         self.callback.init_callback(self, eval_freq=eval_freq, burn=burn)
         self.n_eval = 0
+        self.wall_time = 0
 
         for ep in range(epochs):
             self.progress = (ep+1) / epochs
             tic = time.time()
             sol_loss, pde_loss = self.update()
             toc = time.time()
+            self.wall_time += toc - tic
             
             self.callback.on_training()
             toc2 = time.time()
@@ -98,6 +100,7 @@ class BasePINN(object):
             self.logger.record_mean('train/pde_loss', pde_loss)
             self.logger.record_mean('train/time', toc-tic)
             self.logger.record_mean('train/callback_time', toc2-toc)
+            self.logger.record('train/wall_time', self.wall_time)
             
             ## 3. Loss calculation
             if (ep+1) % eval_freq == 0:

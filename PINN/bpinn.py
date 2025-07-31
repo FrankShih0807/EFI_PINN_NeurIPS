@@ -121,12 +121,14 @@ class BayesianPINN(BasePINN):
         self.callback = callback
         self.callback.init_callback(self, eval_freq=eval_freq, burn=burn)
         self.n_eval = 0
+        self.wall_time = 0
 
         for ep in range(epochs):
             self.progress = (ep+1) / epochs
             tic = time.time()
             params_hmc = self.sample_posterior(num_samples=2)
             toc = time.time()
+            self.wall_time += toc - tic
 
             self.params_hmc += params_hmc
             if self.pe_dim > 0:
@@ -141,6 +143,7 @@ class BayesianPINN(BasePINN):
             self.logger.record('train/progress', self.progress)
             self.logger.record('train/epoch', ep+1)
             self.logger.record('train/time', toc-tic)
+            self.logger.record('train/wall_time', self.wall_time)
 
             if (ep+1) % eval_freq == 0:
                 self.callback.on_eval()
