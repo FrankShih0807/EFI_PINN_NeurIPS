@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -267,6 +268,120 @@ class DropoutDNN(nn.Module):
         if self.positive_output:
             x = torch.exp(x)
         return x
+
+
+class ConcreteDropout(nn.Module):
+    def __init__(self, weight_regularizer=1e-6,
+                 dropout_regularizer=1e-5, init_min=0.1, init_max=0.1):
+        super(ConcreteDropout, self).__init__()
+
+        
+        self.weight_regularizer = weight_regularizer
+        self.dropout_regularizer = dropout_regularizer
+        
+        init_min = np.log(init_min) - np.log(1. - init_min)
+        init_max = np.log(init_max) - np.log(1. - init_max)
+        
+        self.p_logit = nn.Parameter(torch.empty(1).uniform_(init_min, init_max))
+        
+    def forward(self, x, layer):
+        p = torch.sigmoid(self.p_logit)
+        
+        out = layer(self._concrete_dropout(x, p))
+        
+        sum_of_square = 0
+        for param in layer.parameters():
+            sum_of_square += torch.sum(torch.pow(param, 2))
+        
+        weights_regularizer = self.weight_regularizer * sum_of_square / (1 - p)
+        
+        dropout_regularizer = p * torch.log(p)
+        dropout_regularizer += (1. - p) * torch.log(1. - p)
+        
+        input_dimensionality = x[0].numel() # Number of elements of first item in batch
+        dropout_regularizer *= self.dropout_regularizer * input_dimensionality
+        
+        regularization = weights_regularizer + dropout_regularizer.abs()
+        return out, regularization
+        
+    def _concrete_dropout(self, x, p):
+        eps = 1e-7
+        temp = 0.1
+
+        unif_noise = torch.rand_like(x)
+
+        drop_prob = (torch.log(p + eps)
+                    - torch.log(1 - p + eps)
+                    + torch.log(unif_noise + eps)
+                    - torch.log(1 - unif_noise + eps))
+        
+        drop_prob = torch.sigmoid(drop_prob / temp)
+        random_tensor = 1 - drop_prob
+        retain_prob = 1 - p
+        
+        x  = torch.mul(x, random_tensor)
+        x /= retain_prob
+        
+        return x
+    
+
+class DropoutDNNConcrete(nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_layers=None, activation_fn=F.relu, 
+                 positive_output=False, sd_known=True,
+                 weight_regularizer=1e-6, dropout_regularizer=1e-5):
+        super(DropoutDNNConcrete, self).__init__()
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.hidden_layers = hidden_layers
+        self.activation_fn = get_activation_fn(activation_fn)
+        self.positive_output = positive_output
+        self.sd_known = sd_known
+        
+        self.weight_regularizer = weight_regularizer
+        self.dropout_regularizer = dropout_regularizer
+
+        self.total_regularization = 0
+        
+        self.layers = nn.ModuleList()
+        self.concrete_dropouts = nn.ModuleList()
+        
+        # input layer
+        self.layers.append(nn.Linear(input_dim, self.hidden_layers[0]))
+        
+        # hidden layers with Concrete Dropout
+        for i in range(1, len(self.hidden_layers)):
+            self.layers.append(nn.Linear(self.hidden_layers[i-1], self.hidden_layers[i]))
+            self.concrete_dropouts.append(ConcreteDropout(weight_regularizer=self.weight_regularizer, 
+                                                          dropout_regularizer=self.dropout_regularizer))
+
+        # output layer
+        self.layers.append(nn.Linear(self.hidden_layers[-1], self.output_dim))
+        self.concrete_dropouts.append(ConcreteDropout(weight_regularizer=self.weight_regularizer,
+                                                      dropout_regularizer=self.dropout_regularizer))
+    
+    def forward(self, x):
+        self.total_regularization = 0
+        
+        for i, layer in enumerate(self.layers[:-1]):
+            if i > 0 and (i-1) < len(self.concrete_dropouts):
+                concrete_idx = (i-1)
+                x, reg = self.concrete_dropouts[concrete_idx](x, layer)
+                self.total_regularization += reg
+            else:
+                x = layer(x)
+            
+            if isinstance(layer, nn.Linear):
+                x = self.activation_fn(x)
+        
+        x, reg = self.concrete_dropouts[-1](x, self.layers[-1])
+        self.total_regularization += reg
+        
+        if self.positive_output:
+            x = torch.exp(x)
+        
+        # return x, total_regularization
+        return x
+
 
 class BottleneckHypernet(nn.Module):
     def __init__(self, input_dim, hidden_layers, output_dim, activation_fn='relu', neck_layer_activation='identity'):
@@ -814,9 +929,17 @@ class BayesHypernet(nn.Module):
 if __name__ == '__main__':
 
 
-    x = torch.randn(10, 1)
-    y = torch.randn(10, 1)
-    z = torch.randn(10, 1)
+    # x = torch.randn(10, 1)
+    # y = torch.randn(10, 1)
+    # z = torch.randn(10, 1)
+    
+    # hypernet = nn.Sequential(
+    #     nn.Linear(3, 16),
+    #     nn.ReLU(),
+    #     nn.Linear(16, 16),
+    #     nn.ReLU(),
+    #     nn.Linear(16, 16),
+    # )
     
     
     model = BayesHypernet(input_dim=1, hidden_layers=[30, 30], output_dim=1, units=[4, 8, 16])
@@ -871,4 +994,9 @@ if __name__ == '__main__':
     # print(gmm_loss)
     # # for name, p in efi_net.named_parameters():
     # #     print(name, p.shape)
-    
+
+    dropout_net = DropoutDNNConcrete(input_dim=1, output_dim=1, hidden_layers=[50, 50, 50], activation_fn='relu', positive_output=True)
+    x = torch.randn(50, 1)
+    y = dropout_net(x)
+    reg = dropout_net.total_regularization
+    print(y.mean(), reg)
