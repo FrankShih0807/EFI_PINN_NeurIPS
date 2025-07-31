@@ -9,7 +9,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
 from PINN.common.callbacks import BaseCallback
-from PINN import PINN, PINNConcrete, PINN_EFI, BayesianPINN, PINN_EFI_SD, PINN_EFI_Transfer
 from PINN import PINN, PINNConcrete, PINN_EFI, BayesianPINN, PINN_EFI_SD, PINN_EFI_Transfer, BayesHyperPINN
 from PINN.models import EuropeanCall, Poisson1D, Poisson2D, Linear1D, Montroll, TaylorGreen, PorousFKPP, FKPP
 from PINN.models import Poisson1DCallback, EuropeanCallCallback, Poisson2DCallback, Linear1DCallback, MontrollCallback, TaylorGreenCallback, PorousFKPPCallback, FKPPCallback
