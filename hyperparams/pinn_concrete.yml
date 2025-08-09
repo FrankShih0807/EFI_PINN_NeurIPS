@@ -9,4 +9,5 @@ poisson:
     activation_fn: tanh
     lr: 3e-4
     lambda_pde: 1.0
-
+    weight_regularizer: 1e-6
+    dropout_regularizer: 0.05

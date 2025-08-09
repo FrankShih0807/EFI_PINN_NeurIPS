@@ -14,13 +14,17 @@ class PINNConcrete(BasePINN):
         lr=1e-3,
         lambda_pde=1,
         positive_output=False,
+        weight_regularizer=1e-6,
+        dropout_regularizer=1e-5,
         save_path=None,
         device='cpu'
     ) -> None:
         
         self.positive_output = positive_output
         self.pe_dim = physics_model.pe_dim
-        
+        self.weight_regularizer = weight_regularizer
+        self.dropout_regularizer = dropout_regularizer
+
         super().__init__(
             physics_model=physics_model,
             dataset=dataset,
@@ -40,6 +44,8 @@ class PINNConcrete(BasePINN):
             hidden_layers=self.hidden_layers,
             activation_fn=self.activation_fn,
             positive_output=self.positive_output,
+            weight_regularizer=self.weight_regularizer,
+            dropout_regularizer=self.dropout_regularizer,
         )
         self.net.to(self.device)
         if self.pe_dim > 0:
