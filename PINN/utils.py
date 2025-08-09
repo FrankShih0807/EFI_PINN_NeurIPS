@@ -164,6 +164,8 @@ default_types = {
     'dropout_rate': float,
     'lr': float,
     'lambda_pde': float,
+    'weight_regularizer': float,
+    'dropout_regularizer': float
 }
         
 class StoreDictHyperparams(argparse.Action):
