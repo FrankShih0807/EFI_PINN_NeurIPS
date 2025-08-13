@@ -39,17 +39,17 @@ poisson:
     annealing_period: 0.1
     lr: 'poly_2e-6_10.0_0.55'
     # sgd_momentum: 'linear_0.9_0.0'
-    sgd_momentum: 'linear_0.9_0.995'
-    sgld_lr: 'poly_3e-4_4.0_0.95'
+    sgd_momentum: 'linear_0.9_0.9'
+    sgld_lr: 'poly_7e-4_10.0_0.95'
     sgld_alpha: 1.0
     lam: 'log_10.0_2000.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
     encoder_kwargs:
       encoder_hidden_layers:
-      - 32
-      - 32
       - 16
+      - 16
+      - 4
       encoder_activation: leaky_relu
       prior_sd: 10.0
 
