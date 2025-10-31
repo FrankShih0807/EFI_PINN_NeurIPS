@@ -60,5 +60,5 @@ class SGHMC(Optimizer):
                 if 'momentum' not in state:
                     state['momentum'] = torch.zeros_like(p)
                 v = state['momentum']
-                v = (1 - alpha) * v + lr * p.grad + np.sqrt(2 * alpha * lr) * torch.randn_like(p, device=p.device)
-                p.sub_(v)
+                v = (1 - alpha) * v - lr * p.grad + np.sqrt(2 * alpha * lr) * torch.randn_like(p, device=p.device)
+                p.add_(v)
