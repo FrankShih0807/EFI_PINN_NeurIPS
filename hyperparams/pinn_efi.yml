@@ -40,7 +40,7 @@ poisson:
     lr: 'poly_2e-6_10.0_0.55'
     sgd_momentum: 'linear_0.9_0.9'
     sgld_lr: 'poly_5e-4_10.0_0.95'
-    sgld_alpha: 'linear_0.1_1.0'
+    sgld_alpha: 0.1
     lam: 'log_50.0_500.0'
     lambda_pde: 1.0
     lambda_theta: 1.0
