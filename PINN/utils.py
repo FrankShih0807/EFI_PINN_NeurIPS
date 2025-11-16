@@ -9,9 +9,9 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from PINN.common.base_pinn import BasePINN
 from PINN.common.base_physics import PhysicsModel
 from PINN.common.callbacks import BaseCallback
-from PINN import PINN, PINNConcrete, PINN_EFI, BayesianPINN, PINN_EFI_SD, PINN_EFI_Transfer, BayesHyperPINN
-from PINN.models import EuropeanCall, Poisson1D, Poisson2D, Linear1D, Montroll, TaylorGreen, PorousFKPP, FKPP
-from PINN.models import Poisson1DCallback, EuropeanCallCallback, Poisson2DCallback, Linear1DCallback, MontrollCallback, TaylorGreenCallback, PorousFKPPCallback, FKPPCallback
+from PINN import PINN, PINNConcrete, PINN_EFI, BayesianPINN, PINN_EFI_SD
+from PINN.models import Poisson1D, Montroll
+from PINN.models import Poisson1DCallback, MontrollCallback
 
 from torch.utils.data import Dataset
 
@@ -25,24 +25,16 @@ ALGOS: Dict[str, Type[BasePINN]] = {
     "pinn_efi": PINN_EFI,
     "bpinn": BayesianPINN,
     "pinn_efi_sd": PINN_EFI_SD,
-    "pinn_efi_transfer": PINN_EFI_Transfer,
-    "bhyper": BayesHyperPINN,
 }
 
 MODELS: Dict[str, Type[PhysicsModel]] = {
-    "european_call": EuropeanCall,
     "poisson": Poisson1D,
     "poisson-v2": Poisson1D,
     "poisson-nonlinear": Poisson1D,
     "poisson-inverse": Poisson1D,
-    "poisson-2d": Poisson2D,
-    "linear-1d": Linear1D,
     "montroll": Montroll,
     "montroll_theta": Montroll,
     "montroll_fixed": Montroll,
-    "taylor_green": TaylorGreen,
-    "porous_fkpp": PorousFKPP,
-    "fkpp": FKPP,
 }
 
 CALLBACKS: Dict[str, Callable] = {
@@ -50,15 +42,9 @@ CALLBACKS: Dict[str, Callable] = {
     "poisson-v2": Poisson1DCallback,
     "poisson-inverse": Poisson1DCallback,
     "poisson-nonlinear": Poisson1DCallback,
-    "european_call": EuropeanCallCallback,
-    "poisson-2d": Poisson2DCallback,
-    "linear-1d": Linear1DCallback,
     "montroll": MontrollCallback,
     "montroll_theta": MontrollCallback,
     "montroll_fixed": MontrollCallback,
-    "taylor_green": TaylorGreenCallback,
-    "porous_fkpp": PorousFKPPCallback,
-    "fkpp": FKPPCallback,
 }
 
 def get_callback(key: str) -> Callable:

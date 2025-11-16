@@ -15,3 +15,11 @@ requirements are:
 pip install --use-pep517 -e .
 pip install -r requirements.txt
 ```
+
+## run efi pinn
+```bash
+python train.py --algo pinn_efi --model poisson
+python train.py --algo pinn_efi --model poisson-inverse
+
+python train.py --algo pinn_efi_sd --model montroll
+```
