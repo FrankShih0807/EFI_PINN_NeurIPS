@@ -64,13 +64,15 @@ Outputs (figures, metrics, checkpoints) are saved under `output/<dataset-or-prob
 Until the official NeurIPS proceedings are available, please cite the arXiv preprint (and OpenReview entry if preferred). If you find this repository helpful, please cite:
 
 ```bibtex
-@article{shih2025uncertainty,
-  title   = {Uncertainty Quantification for Physics-Informed Neural Networks with Extended Fiducial Inference},
-  author  = {Shih, Frank and Jiang, Zhenghao and Liang, Faming},
-  journal = {arXiv preprint arXiv:2505.19136},
-  year    = {2025},
-  doi     = {10.48550/arXiv.2505.19136},
-  url     = {https://arxiv.org/abs/2505.19136}
+@misc{shih2025uncertaintyquantificationphysicsinformedneural,
+  title         = {Uncertainty Quantification for Physics-Informed Neural Networks with Extended Fiducial Inference},
+  author        = {Frank Shih and Zhenghao Jiang and Faming Liang},
+  year          = {2025},
+  eprint        = {2505.19136},
+  archivePrefix = {arXiv},
+  primaryClass  = {stat.ML},
+  doi           = {10.48550/arXiv.2505.19136},
+  url           = {https://arxiv.org/abs/2505.19136}
 }
 ```
 
