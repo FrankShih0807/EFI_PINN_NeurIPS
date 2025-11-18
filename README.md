@@ -16,7 +16,7 @@ pip install --use-pep517 -e .
 pip install -r requirements.txt
 ```
 
-## run efi pinn
+## run EFI PINN
 ```bash
 python train.py --algo pinn_efi --model poisson
 python train.py --algo pinn_efi --model poisson-inverse
