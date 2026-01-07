@@ -72,7 +72,7 @@ def save_yaml(config, file_path):
 def create_parser():
     parser = argparse.ArgumentParser(description='Initial Argument Parser')
     parser.add_argument('--algo', help="PINN algorithms", type=str, default="pinn", required=False, choices=list(ALGOS.keys()))
-    parser.add_argument('--model', help="Physics model", type=str, default="cooling", required=False, choices=list(MODELS.keys()))
+    parser.add_argument('--model', help="Physics model", type=str, default="poisson", required=False, choices=list(MODELS.keys()))
     parser.add_argument('--task_id', type=int, default=-1)
 
     parser.add_argument('--exp_name', type=str, default=None)
